@@ -10,39 +10,71 @@ def generate_improved_star_example(
     career_code: str,
 ) -> str:
     """
-    Utiliza Ollama para redactar un ejemplo mejorado bajo la metodología STAR
-    para una de las dos respuestas más débiles de la sesión. Incluye respaldo inmediato.
+    Utiliza `gemini-3.8-flash` o `gpt-4o-mini` (configurados en `.env`) para redactar
+    un ejemplo crítico y concreto de cómo debió responderse la pregunta bajo el método STAR.
     """
     prompt = (
-        f"Reescribe y mejora la siguiente respuesta de entrevista para el puesto de {target_role} ({career_code}) "
-        f"aplicando de forma concisa el método STAR (Situación, Tarea, Acción y Resultado con métricas cuantitativas).\n"
+        f"Reescribe y mejora de forma rigurosa la siguiente respuesta de entrevista para el puesto de {target_role} ({career_code}) "
+        f"aplicando el método STAR (Situación, Tarea, Acción técnica en primera persona y Resultado con métricas cuantitativas).\n"
         f"Pregunta: {question_text}\n"
-        f"Respuesta original: {candidate_response}\n"
-        "Devuelve un párrafo fluido en primera persona sin etiquetas de requerimientos."
+        f"Respuesta original deficiente o incompleta: {candidate_response}\n"
+        "Devuelve un solo párrafo fluido en primera persona sin introducciones."
     )
 
-    try:
-        with httpx.Client(timeout=3.0) as client:
-            resp = client.post(
-                f"{settings.OLLAMA_BASE_URL}/api/generate",
-                json={
-                    "model": settings.OLLAMA_MODEL,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": 0.2},
-                },
-            )
-            if resp.status_code == 200:
-                text = resp.json().get("response", "").strip()
-                if len(text) > 30:
-                    return text
-    except Exception:
-        pass
+    # =========================================================================
+    # >>> SÍNTESIS DE REPORTE CON GEMINI 3.8 FLASH (GEMINI_API_KEY EN .env) <<<
+    # =========================================================================
+    if (
+        settings.GEMINI_API_KEY
+        and not settings.GEMINI_API_KEY.startswith("PON_AQUI")
+    ):
+        for mdl in [settings.GEMINI_MODEL or "gemini-3.8-flash", "gemini-2.5-flash"]:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{mdl}:generateContent?key={settings.GEMINI_API_KEY}"
+                with httpx.Client(timeout=4.0) as client:
+                    resp = client.post(
+                        url,
+                        json={"contents": [{"parts": [{"text": prompt}]}]},
+                    )
+                    if resp.status_code == 200:
+                        candidates = resp.json().get("candidates", [])
+                        if candidates:
+                            text = candidates[0]["content"]["parts"][0]["text"].strip()
+                            if len(text) > 30:
+                                return text
+            except Exception:
+                continue
+
+    # =========================================================================
+    # >>> SÍNTESIS DE REPORTE CON GPT-4o MINI (OPENAI_API_KEY EN .env) <<<
+    # =========================================================================
+    if (
+        settings.OPENAI_API_KEY
+        and not settings.OPENAI_API_KEY.startswith("PON_AQUI")
+    ):
+        try:
+            with httpx.Client(timeout=4.0) as client:
+                resp = client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}"},
+                    json={
+                        "model": settings.OPENAI_CHAT_MODEL or "gpt-4o-mini",
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": 0.2,
+                        "max_tokens": 200,
+                    },
+                )
+                if resp.status_code == 200:
+                    text = resp.json()["choices"][0]["message"]["content"].strip()
+                    if len(text) > 30:
+                        return text
+        except Exception:
+            pass
 
     return (
-        f"En un proyecto reciente orientado a {target_role} (Situación), asumí la responsabilidad de resolver el reto planteado en la pregunta "
-        f"definiendo criterios técnicos medibles desde el inicio (Tarea). Implementé una solución estructurada validando cada etapa con pruebas "
-        f"y herramientas propias de {career_code} (Acción), logrando reducir los tiempos de ejecución en un 35% y cumpliendo el 100% de los criterios de calidad (Resultado)."
+        f"En un proyecto reciente orientado a {target_role} (Situación), tenía la responsabilidad directa de resolver el problema planteado "
+        f"cumpliendo los estándares técnicos y tiempos de entrega (Tarea). Diagnosticué la causa raíz e implementé personalmente la solución aplicando "
+        f"herramientas especializadas de {career_code} y pruebas de validación (Acción), logrando reducir los fallos en un 38% y mejorando el tiempo de ejecución en un 45% (Resultado)."
     )
 
 
@@ -53,10 +85,6 @@ def synthesize_final_report(
     career_code: str,
     evolution_rate: float,
 ) -> Dict[str, Any]:
-    """
-    Identifica las dos respuestas con menor puntaje promedio, genera ejemplos redactados
-    de mejora bajo el método STAR y estructura el Plan de Acción Personalizado.
-    """
     if not turns_with_evals:
         return {
             "overall_score": 0.0,

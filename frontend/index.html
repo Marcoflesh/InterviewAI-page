@@ -7,7 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- Librería oficial jsPDF para descarga directa del reporte en PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- SDK Oficial de Google Identity Services para Inicio de Sesión con Google -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -18,27 +21,19 @@
       <span class="brand-dot"></span>
       <span>InterviewAI</span>
     </div>
-    <div style="display: flex; align-items: center; gap: 0.6rem;">
-      <button id="btn-open-api-modal" type="button" class="btn btn-outline" style="padding: 0.45rem 0.75rem; font-size: 0.8rem;">
-        Configurar API / IA
-      </button>
-      <div id="topbar-nav" class="nav-actions hidden">
-        <span id="user-avatar-chip" class="avatar-circle" style="width: 26px; height: 26px; font-size: 0.75rem;">M</span>
-        <span id="user-badge" style="font-size: 0.84rem; color: var(--text); font-weight: 500; margin-right: 0.35rem;"></span>
-        <button id="nav-new-session" type="button" class="btn btn-outline">Nueva práctica</button>
-        <button id="nav-history" type="button" class="btn btn-outline">Historial</button>
-        <button id="btn-logout" type="button" class="btn btn-outline">Salir</button>
-      </div>
+    <div id="topbar-nav" class="nav-actions hidden">
+      <span id="user-avatar-chip" class="avatar-circle" style="width: 26px; height: 26px; font-size: 0.75rem;">U</span>
+      <span id="user-badge" style="font-size: 0.84rem; color: var(--text); font-weight: 500; margin-right: 0.35rem;"></span>
+      <button id="nav-new-session" type="button" class="btn btn-outline">Nueva práctica</button>
+      <button id="nav-history" type="button" class="btn btn-outline">Historial</button>
+      <button id="btn-logout" type="button" class="btn btn-outline">Salir</button>
     </div>
   </header>
 
-  <!-- VISTA 1: Autenticación (Iniciar Sesión, Registrarse o Iniciar Sesión con Google) -->
+  <!-- VISTA 1: Autenticación (Iniciar Sesión, Registrar o Verificador Oficial de Google) -->
   <main id="view-login" class="login-wrapper">
     <div class="card login-card">
-      <h1 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 0.35rem;">Bienvenido a InterviewAI</h1>
-      <p style="font-size: 0.84rem; color: var(--muted); margin-bottom: 1.25rem;">
-        Inicia sesión con tu cuenta existente, regístrate o accede con Google.
-      </p>
+      <h1 style="font-size: 1.35rem; font-weight: 600; margin-bottom: 1.2rem;">Bienvenido a InterviewAI</h1>
 
       <!-- Pestañas: Iniciar Sesión vs. Registrar -->
       <div class="auth-tabs" role="tablist">
@@ -49,40 +44,35 @@
       <!-- Formulario 1: Iniciar Sesión (Cuentas existentes) -->
       <div id="form-login-panel">
         <div class="field">
-          <label for="login-email">Correo electrónico registrado</label>
-          <input id="login-email" type="email" value="a01709802@tec.mx" placeholder="correo@ejemplo.com" />
+          <label for="login-email">Correo electrónico</label>
+          <input id="login-email" type="email" value="" placeholder="Ingresa tu correo registrado" autocomplete="email" />
         </div>
         <div class="field">
           <label for="login-password">Contraseña</label>
-          <input id="login-password" type="password" value="Interview2026!" placeholder="Tu contraseña" />
-        </div>
-        <div style="text-align: right; margin-top: -0.4rem; margin-bottom: 0.85rem;">
-          <button id="btn-fill-demo" type="button" style="background: none; border: none; color: var(--blue); font-size: 0.76rem; cursor: pointer;">
-            Autocompletar cuenta demo verificada
-          </button>
+          <input id="login-password" type="password" value="" placeholder="Ingresa tu contraseña" autocomplete="current-password" />
         </div>
         <button id="btn-submit-login" type="button" class="btn btn-primary" style="width: 100%; padding: 0.7rem;">
           Iniciar sesión
         </button>
       </div>
 
-      <!-- Formulario 2: Registrar nueva cuenta -->
+      <!-- Formulario 2: Registrar nueva cuenta (Con validador de correo real y registros MX) -->
       <div id="form-register-panel" class="hidden">
         <div class="field">
           <label for="login-name">Nombre completo</label>
-          <input id="login-name" type="text" placeholder="Ej. Ana Sofía Morales" />
+          <input id="login-name" type="text" value="" placeholder="Escribe tu nombre y apellidos" autocomplete="name" />
         </div>
         <div class="field">
           <label for="reg-email">Correo electrónico</label>
-          <input id="reg-email" type="email" placeholder="usuario@dominio.com" />
+          <input id="reg-email" type="email" value="" placeholder="Escribe un correo real (ej. usuario@gmail.com)" autocomplete="email" />
         </div>
         <div class="field">
           <label for="reg-university">Universidad o institución</label>
-          <input id="reg-university" type="text" value="Tecnológico de Monterrey" placeholder="Nombre de tu institución" />
+          <input id="reg-university" type="text" value="" placeholder="Escribe tu universidad o institución" />
         </div>
         <div class="field">
-          <label for="reg-password">Crear contraseña (mín. 6 caracteres)</label>
-          <input id="reg-password" type="password" placeholder="Mínimo 6 caracteres" />
+          <label for="reg-password">Contraseña</label>
+          <input id="reg-password" type="password" value="" placeholder="Crea una contraseña (mínimo 6 caracteres)" autocomplete="new-password" />
         </div>
         <button id="btn-submit-register" type="button" class="btn btn-primary" style="width: 100%; padding: 0.7rem;">
           Registrar cuenta
@@ -91,9 +81,10 @@
 
       <p id="auth-feedback" class="hidden" style="font-size: 0.8rem; margin-top: 0.75rem;"></p>
 
-      <div class="divider">o continúa con tu cuenta de Google</div>
+      <div class="divider">o</div>
 
-      <!-- Opción 3: Iniciar Sesión con Google -->
+      <!-- Contenedor oficial de Google Identity Services + Botón OAuth 2.0 de Google -->
+      <div id="google-gsi-button-container" style="display: flex; justify-content: center; margin-bottom: 0.35rem;"></div>
       <button id="btn-google-login" type="button" class="btn btn-google">
         <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -101,45 +92,34 @@
           <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
           <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
         </svg>
-        <span>Continuar con Google</span>
+        <span>Iniciar sesión con Google</span>
       </button>
     </div>
   </main>
 
-  <!-- VISTA 2: Configuración Minimalista de la Sesión -->
+  <!-- VISTA 2: Configuración Minimalista de la Sesión (Sin campos autorrellenados ni ventana de conteo) -->
   <section id="view-setup" class="container-narrow hidden">
     <div class="card">
-      <h2 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.35rem;">Configura tu entrevista</h2>
-      <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 1.4rem;">
-        El simulador generará una cantidad aleatoria de entre <strong>15 y 20 preguntas</strong> adaptadas a tu carrera y al contexto de la vacante.
-      </p>
+      <h2 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1.2rem;">Configura tu entrevista</h2>
 
       <div class="field">
         <label for="setup-career">Carrera profesional</label>
         <select id="setup-career"></select>
       </div>
 
-      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
-        <div class="field">
-          <label for="setup-role">Puesto objetivo</label>
-          <input id="setup-role" type="text" placeholder="Ej. Software Engineer Intern" />
-        </div>
-        <div class="field">
-          <label for="setup-count">Preguntas generadas (15–20)</label>
-          <div style="display: flex; gap: 0.4rem;">
-            <input id="setup-count" type="text" value="Aleatorias (15-20)" readonly style="background: #f9fafb; color: var(--muted); font-weight: 500;" />
-          </div>
-        </div>
+      <div class="field">
+        <label for="setup-role">Puesto objetivo</label>
+        <input id="setup-role" type="text" value="" placeholder="Escribe el puesto al que aspiras (ej. Desarrollador Backend Jr, Analista Financiero)" />
       </div>
 
       <div class="field">
         <label for="setup-cv">Resumen de tu currículum o proyectos</label>
-        <textarea id="setup-cv" rows="3" placeholder="Pega aquí tu experiencia, proyectos académicos y herramientas que dominas...">Estudiante de últimos semestres con experiencia en desarrollo de aplicaciones en Python, consultas SQL, contenedores Docker, análisis de datos y trabajo en equipos ágiles.</textarea>
+        <textarea id="setup-cv" rows="3" placeholder="Escribe tu experiencia, proyectos realizados, tecnologías o metodologías que dominas"></textarea>
       </div>
 
       <div class="field">
         <label for="setup-jd">Contexto de la vacante</label>
-        <textarea id="setup-jd" rows="3" placeholder="Describe el contexto del puesto, tecnologías o retos principales de la vacante...">Vacante para puesto Junior / Intern enfocada en resolución de problemas técnicos, optimización de procesos, trabajo colaborativo y comunicación de resultados con métricas.</textarea>
+        <textarea id="setup-jd" rows="3" placeholder="Escribe las responsabilidades, herramientas y retos principales que pide la vacante para adaptar tus preguntas"></textarea>
       </div>
 
       <p id="setup-status" class="hidden" style="color: var(--red); font-size: 0.82rem; margin-bottom: 0.9rem;"></p>
@@ -150,7 +130,7 @@
     </div>
   </section>
 
-  <!-- VISTA 3: Entrevista por Chat (Solo Texto) + Indicadores STAR en Vivo -->
+  <!-- VISTA 3: Entrevista por Chat (Solo Texto) + Evaluación Crítica STAR (0 a 5) -->
   <section id="view-chat" class="container-wide hidden">
     <div class="chat-grid">
       <!-- Conversación por texto -->
@@ -158,7 +138,7 @@
         <div style="padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
           <div>
             <span style="font-weight: 600; font-size: 0.9rem;">Entrevista en curso</span>
-            <span id="chat-progress-label" style="font-size: 0.8rem; color: var(--muted); margin-left: 0.6rem;">Pregunta 1 de 17</span>
+            <span id="chat-progress-label" style="font-size: 0.8rem; color: var(--muted); margin-left: 0.6rem;">Pregunta 1</span>
           </div>
           <button id="btn-finish-early" type="button" class="btn btn-outline" style="padding: 0.35rem 0.7rem; font-size: 0.78rem;">
             Finalizar y ver reporte
@@ -168,16 +148,16 @@
         <div id="chat-messages" class="chat-messages"></div>
 
         <div class="chat-input-bar">
-          <textarea id="chat-input" placeholder="Escribe tu respuesta aplicando STAR (Situación, Tarea, Acción en 1ra persona y Resultado con métricas)..."></textarea>
+          <textarea id="chat-input" placeholder="Escribe tu respuesta"></textarea>
           <button id="btn-send-chat" type="button" class="btn btn-primary">Enviar</button>
         </div>
       </div>
 
-      <!-- Panel lateral minimalista de métricas en vivo -->
+      <!-- Panel lateral minimalista de métricas críticas en vivo (Escala 0 a 5) -->
       <aside class="card" style="padding: 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem;">
-          <h3 style="font-size: 0.95rem; font-weight: 600;">Evaluación del turno</h3>
-          <span id="turn-avg-badge" style="font-size: 0.8rem; font-weight: 600; color: var(--muted);">- / 5.0</span>
+          <h3 style="font-size: 0.95rem; font-weight: 600;">Evaluación crítica (0–5)</h3>
+          <span id="turn-avg-badge" style="font-size: 0.82rem; font-weight: 600; color: var(--muted);">- / 5.0</span>
         </div>
 
         <div class="meter-row">
@@ -191,12 +171,12 @@
         </div>
 
         <div class="meter-row">
-          <div class="meter-header"><span>Acción (1ra persona)</span><span id="val-action">-</span></div>
+          <div class="meter-header"><span>Acción (Ejecución propia)</span><span id="val-action">-</span></div>
           <div class="meter-track"><div id="bar-action" class="meter-fill" style="width: 0%;"></div></div>
         </div>
 
         <div class="meter-row">
-          <div class="meter-header"><span>Resultado (Métricas)</span><span id="val-result">-</span></div>
+          <div class="meter-header"><span>Resultado (Impacto/Métricas)</span><span id="val-result">-</span></div>
           <div class="meter-track"><div id="bar-result" class="meter-fill" style="width: 0%;"></div></div>
         </div>
 
@@ -206,17 +186,17 @@
         </div>
 
         <div class="meter-row">
-          <div class="meter-header"><span>Pertinencia a la pregunta</span><span id="val-relevance">-</span></div>
+          <div class="meter-header"><span>Pertinencia con la vacante</span><span id="val-relevance">-</span></div>
           <div class="meter-track"><div id="bar-relevance" class="meter-fill" style="width: 0%;"></div></div>
         </div>
 
         <div id="live-signals-box" style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--border); font-size: 0.76rem; color: var(--muted);">
-          <div><strong>Métricas detectadas:</strong> <span id="detected-metrics-tags">Ninguna aún</span></div>
-          <div style="margin-top: 0.35rem;"><strong>Conceptos clave:</strong> <span id="detected-tech-tags">Ninguno aún</span></div>
+          <div><strong>Métricas detectadas:</strong> <span id="detected-metrics-tags">Ninguna</span></div>
+          <div style="margin-top: 0.35rem;"><strong>Evidencia técnica:</strong> <span id="detected-tech-tags">Ninguna</span></div>
         </div>
 
         <p id="live-feedback-note" style="font-size: 0.8rem; color: var(--text); margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
-          Tus indicadores se calculan dinámicamente según la pregunta actual, tus verbos de acción, vocabulario técnico y métricas cuantitativas.
+          El evaluador califica de 0 a 5 cada dimensión sin complacencia. Una habilidad no demostrada o respuesta sin sentido recibe 0/5.
         </p>
       </aside>
     </div>
@@ -236,7 +216,7 @@
         </div>
       </div>
 
-      <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem;">Respuestas con mayor oportunidad de mejora</h3>
+      <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem;">Análisis crítico de tus respuestas más débiles</h3>
       <div id="rep-weakest-list" style="margin-bottom: 1.5rem;"></div>
 
       <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem;">Plan de acción recomendado</h3>
@@ -262,11 +242,14 @@
     </div>
   </section>
 
-  <!-- VISTA 5: Historial de Sesiones -->
+  <!-- VISTA 5: Historial Personal del Usuario Activo -->
   <section id="view-history" class="container-narrow hidden">
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-        <h2 style="font-size: 1.15rem; font-weight: 600;">Historial de prácticas</h2>
+        <div>
+          <h2 style="font-size: 1.15rem; font-weight: 600;">Tu historial personal de prácticas</h2>
+          <p id="history-owner-label" style="font-size: 0.8rem; color: var(--muted);"></p>
+        </div>
         <button id="btn-back-from-history" type="button" class="btn btn-outline">Volver</button>
       </div>
       <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: left;">
@@ -282,93 +265,6 @@
       </table>
     </div>
   </section>
-
-  <!-- MODAL 1: Selector y Verificador de Cuenta de Google (OAuth 2.0) -->
-  <div id="google-oauth-modal" class="modal-backdrop hidden">
-    <div class="modal-card">
-      <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem;">
-        <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
-          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </svg>
-        <div>
-          <div style="font-weight: 600; font-size: 0.98rem;">Iniciar sesión con Google</div>
-          <div style="font-size: 0.78rem; color: var(--muted);">Elige una cuenta de Google para cargar tus datos en InterviewAI</div>
-        </div>
-      </div>
-
-      <div id="google-accounts-list" style="margin-bottom: 1rem;">
-        <button type="button" class="google-account-item" data-gname="Marco Antonio Hernández Roque" data-gemail="a01709802@tec.mx" data-guni="Tecnológico de Monterrey">
-          <span class="avatar-circle">MH</span>
-          <div>
-            <div style="font-weight: 500; font-size: 0.86rem;">Marco Antonio Hernández Roque</div>
-            <div style="font-size: 0.76rem; color: var(--muted);">a01709802@tec.mx · Cuenta institucional verificada</div>
-          </div>
-        </button>
-        <button type="button" class="google-account-item" data-gname="Marco Hernández" data-gemail="marcoflesh.dev@gmail.com" data-guni="Tecnológico de Monterrey">
-          <span class="avatar-circle" style="background: #16a34a;">MF</span>
-          <div>
-            <div style="font-weight: 500; font-size: 0.86rem;">Marco Hernández</div>
-            <div style="font-size: 0.76rem; color: var(--muted);">marcoflesh.dev@gmail.com · Cuenta de Google</div>
-          </div>
-        </button>
-      </div>
-
-      <div style="border-top: 1px solid var(--border); padding-top: 0.85rem;">
-        <div style="font-size: 0.8rem; font-weight: 500; margin-bottom: 0.5rem;">O ingresa otra cuenta de Google (@gmail.com / Workspace):</div>
-        <div class="field" style="margin-bottom: 0.6rem;">
-          <input id="google-custom-name" type="text" placeholder="Nombre de tu perfil de Google" />
-        </div>
-        <div class="field" style="margin-bottom: 0.6rem;">
-          <input id="google-custom-email" type="email" placeholder="tucuenta@gmail.com o institucional" />
-        </div>
-        <p id="google-modal-error" class="hidden" style="color: var(--red); font-size: 0.78rem; margin-bottom: 0.6rem;"></p>
-        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-          <button id="btn-close-google-modal" type="button" class="btn btn-outline">Cancelar</button>
-          <button id="btn-confirm-google-custom" type="button" class="btn btn-primary">Verificar y cargar cuenta</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL 2: Configuración de Llaves API / Motor IA (Ollama, Gemini, OpenAI, Groq) -->
-  <div id="api-settings-modal" class="modal-backdrop hidden">
-    <div class="modal-card">
-      <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem;">Motor de IA y Llaves API</h3>
-      <p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 1rem;">
-        Conecta tu llave API para que el Agente Evaluador y el Agente Entrevistador usen tu proveedor directamente, o usa el motor local/Ollama.
-      </p>
-
-      <div class="field">
-        <label for="api-provider-select">Proveedor de IA</label>
-        <select id="api-provider-select">
-          <option value="local">Evaluador Semántico Local + Ollama (Por defecto)</option>
-          <option value="gemini">Google Gemini API (gemini-2.5-flash)</option>
-          <option value="openai">OpenAI API (gpt-4o-mini)</option>
-          <option value="groq">Groq Cloud API (llama-3.3-70b-versatile)</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="api-key-input">Llave API (API Key)</label>
-        <input id="api-key-input" type="password" placeholder="Pega tu API Key aquí (AIza... / sk-... / gsk_...)" />
-      </div>
-
-      <div class="field">
-        <label for="api-model-input">Modelo (opcional)</label>
-        <input id="api-model-input" type="text" placeholder="Ej. gemini-2.5-flash, gpt-4o-mini o llama3.2:3b" />
-      </div>
-
-      <p id="api-modal-status" class="hidden" style="font-size: 0.78rem; color: var(--green); margin-bottom: 0.75rem;"></p>
-
-      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-        <button id="btn-close-api-modal" type="button" class="btn btn-outline">Cerrar</button>
-        <button id="btn-save-api-settings" type="button" class="btn btn-primary">Guardar configuración</button>
-      </div>
-    </div>
-  </div>
 
   <script src="js/app.js"></script>
 </body>

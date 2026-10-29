@@ -28,16 +28,17 @@ from app.schemas import (
 )
 from app.auth import (
     hash_password,
-    validate_email_format,
+    validate_real_email,
     verify_google_token,
     verify_password,
 )
 from app.services.anonymizer import anonymize_pii, extract_auxiliary_features
 from app.services.question_selector import select_randomized_questions_for_career
 from app.agents.graph import interview_graph
+from app.agents.interviewer import contextualize_question_with_vacancy
 from app.agents.synthesizer import synthesize_final_report
 
-app = FastAPI(title=settings.APP_NAME, version="0.2.0")
+app = FastAPI(title=settings.APP_NAME, version="0.3.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,15 +54,30 @@ def health_check():
     return {
         "status": "ok",
         "service": settings.APP_NAME,
-        "version": "0.2.0",
-        "ollama_model": settings.OLLAMA_MODEL,
+        "version": "0.3.0",
+        "interviewer_model": settings.OPENAI_CHAT_MODEL,
+        "evaluator_model": settings.GEMINI_MODEL,
         "followups_enabled_by_default": settings.ENABLE_FOLLOWUP_QUESTIONS,
+    }
+
+
+@app.get("/api/auth/google-config")
+def get_google_oauth_config():
+    """
+    Entrega al frontend el GOOGLE_CLIENT_ID configurado en `.env` para inicializar
+    el botón verificador oficial de Google Identity Services (`accounts.google.com/gsi/client`).
+    """
+    client_id = settings.GOOGLE_CLIENT_ID
+    is_configured = bool(client_id and not client_id.startswith("PON_AQUI"))
+    return {
+        "google_client_id": client_id if is_configured else "",
+        "is_configured": is_configured,
     }
 
 
 @app.post("/api/auth/register", response_model=UserProfileResponse)
 def register_local_user(payload: LocalRegisterRequest, db: Session = Depends(get_db)):
-    clean_email = validate_email_format(payload.email)
+    clean_email = validate_real_email(payload.email, verify_dns_mx=True)
     existing = db.query(User).filter(User.email == clean_email).first()
     if existing:
         raise HTTPException(
@@ -75,7 +91,7 @@ def register_local_user(payload: LocalRegisterRequest, db: Session = Depends(get
         auth_provider="local",
         email_verified=True,
         full_name=payload.full_name.strip(),
-        university=payload.university.strip() or "Tecnológico de Monterrey",
+        university=payload.university.strip(),
         role_code="student",
     )
     db.add(user)
@@ -96,17 +112,17 @@ def register_local_user(payload: LocalRegisterRequest, db: Session = Depends(get
 
 @app.post("/api/auth/login", response_model=UserProfileResponse)
 def login_local_user(payload: LocalLoginRequest, db: Session = Depends(get_db)):
-    clean_email = validate_email_format(payload.email)
+    clean_email = validate_real_email(payload.email, verify_dns_mx=False)
     user = db.query(User).filter(User.email == clean_email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No encontramos una cuenta con ese correo electrónico. Regístrate primero o usa Google.",
+            detail="No encontramos una cuenta con ese correo electrónico. Regístrate primero.",
         )
     if user.auth_provider == "google" and not user.password_hash:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Esta cuenta fue creada con Google. Usa el botón 'Iniciar Sesión con Google'.",
+            detail="Esta cuenta está vinculada con Google. Usa el verificador oficial de Google.",
         )
     if not verify_password(payload.password, user.password_hash):
         raise HTTPException(
@@ -194,12 +210,16 @@ def start_interview_session(
     anonymized_cv = anonymize_pii(payload.cv_text)
     anonymized_jd = anonymize_pii(payload.job_description_text)
 
-    # Número aleatorio realista de preguntas entre 15 y 20
     random_count = payload.total_questions or random.randint(15, 20)
     random_count = max(15, min(20, random_count))
 
     selected_questions = select_randomized_questions_for_career(
-        db=db, career_code=payload.career_code, count=random_count
+        db=db,
+        career_code=payload.career_code,
+        count=random_count,
+        vacancy_context=anonymized_jd,
+        cv_text=anonymized_cv,
+        target_role=payload.target_role,
     )
     if not selected_questions:
         raise HTTPException(
@@ -208,7 +228,13 @@ def start_interview_session(
         )
 
     q_ids = [q.question_id for q in selected_questions]
-    first_question = selected_questions[0]
+    first_question_raw = selected_questions[0].question_text
+    first_question_adapted = contextualize_question_with_vacancy(
+        base_question=first_question_raw,
+        target_role=payload.target_role,
+        vacancy_context=anonymized_jd,
+        cv_summary=anonymized_cv,
+    )
 
     session_obj = InterviewSession(
         user_id=payload.user_id,
@@ -232,8 +258,8 @@ def start_interview_session(
         "target_role": session_obj.target_role,
         "total_questions": session_obj.total_questions,
         "current_question_number": 1,
-        "question_text": first_question.question_text,
-        "competency": first_question.competency,
+        "question_text": first_question_adapted,
+        "competency": selected_questions[0].competency,
         "anonymized_cv_preview": anonymized_cv[:200],
     }
 
@@ -292,9 +318,9 @@ def submit_interview_turn(
             "auxiliary_features": aux_features,
             "allow_followups": payload.allow_followups,
             "is_followup_turn": session_obj.session_state == "profundizar_pregunta",
-            "llm_provider": payload.llm_provider,
-            "llm_api_key": payload.llm_api_key,
-            "llm_model": payload.llm_model,
+            "llm_provider": None,
+            "llm_api_key": None,
+            "llm_model": None,
             "evaluation_result": {},
             "session_state": session_obj.session_state,
             "next_question_bank_text": next_q_text,
@@ -438,7 +464,7 @@ def get_final_report(session_id: str, db: Session = Depends(get_db)):
         evolution_rate=0.0,
     )
 
-    if prev_sessions and prev_sessions[0].overall_score:
+    if prev_sessions and prev_sessions[0].overall_score is not None:
         prev_score = float(prev_sessions[0].overall_score)
         if prev_score > 0:
             evolution = round(
@@ -491,7 +517,7 @@ def get_user_history(user_id: str, db: Session = Depends(get_db)):
             "session_id": str(s.session_id),
             "career_code": s.career_code,
             "target_role": s.target_role,
-            "overall_score": float(s.overall_score) if s.overall_score else None,
+            "overall_score": float(s.overall_score) if s.overall_score is not None else None,
             "score_evolution_rate": float(s.score_evolution_rate or 0.0),
             "session_state": s.session_state,
             "started_at": s.started_at.isoformat() if s.started_at else None,

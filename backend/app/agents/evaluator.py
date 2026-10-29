@@ -6,16 +6,29 @@ import httpx
 from app.config import settings
 from app.agents.state import InterviewGraphState
 
-EVALUATOR_SYSTEM_PROMPT = """Eres el Agente Evaluador (LLM-as-a-Judge) de InterviewAI.
-Tu tarea es evaluar con rigor realista la respuesta del candidato frente a la pregunta actual, su carrera y el contexto de la vacante.
-Reglas de calificación estricta (escala entera de 1 a 5):
-- Si la respuesta es evasiva ("no sé", "hola"), irrelevante a la pregunta o tiene menos de 10 palabras, asigna 1 en todas las dimensiones.
-- star_situation (1 a 5): ¿Describe un contexto real, proyecto, entorno y problema inicial específico? (1=ausente, 3=mención general, 5=contexto específico y claro).
-- star_task (1 a 5): ¿Explica cuál era su responsabilidad concreta, meta, restricción o reto a resolver? (1=ausente, 3=implícito, 5=objetivo y alcance claros).
-- star_action (1 a 5): ¿Detalla en primera persona las acciones técnicas y metodológicas que ejecutó directamente? (1=ausente o vago, 3=acciones generales, 5=pasos técnicos precisos y fundamentados).
-- star_result (1 a 5): ¿Expone el desenlace real respaldado con métricas cuantitativas verificables (%, tiempos, ahorro, precisión, usuarios)? (1=sin resultado, 2=resultado subjetivo sin números, 4=una métrica clara, 5=impacto cuantificado antes/después).
-- technical_clarity (1 a 5): Precisión en el uso de conceptos, herramientas y estándares propios de su carrera.
-- relevance (1 a 5): Qué tan directamente responde a la pregunta específica planteada sin divagar.
+# =============================================================================
+# PROMPT DEL AGENTE EVALUADOR CRÍTICO (Escala 0 a 5 — Cero Complacencia)
+# Modelos soportados: gemini-3.8-flash (Google Gemini) y gpt-4o-mini (OpenAI)
+# =============================================================================
+EVALUATOR_SYSTEM_PROMPT = """Eres el Agente Evaluador Senior (LLM-as-a-Judge) de InterviewAI.
+Tu función es evaluar de forma crítica, objetiva y rigurosa la respuesta del candidato frente a la pregunta planteada y el contexto de la vacante.
+ESTÁ ESTRICTAMENTE PROHIBIDO ser complaciente, condescendiente o regalar puntos.
+
+ESCALA ESTRICTA DE 0 A 5 POR DIMENSIÓN:
+- 0 (Nulo / Inexistente / Tontería): No demuestra la habilidad en absoluto, la respuesta es evasiva ("no sé", "nada"), incoherente, broma, o ignora por completo esta dimensión.
+- 1 (Muy Deficiente): Mención vaga de una línea sin sustento técnico ni relación clara con el problema.
+- 2 (Insuficiente / Superficial): Idea general comprensible pero ambigua, sin detallar el reto real, sin acciones concretas propias o sin ningún resultado verificable.
+- 3 (Aceptable / Estándar): Cumple con explicar el punto de forma coherente y pertinente a la vacante, aunque con alcance moderado o métricas parciales.
+- 4 (Sólido / Bien Desarrollado): Explicación clara, estructurada, técnicamente precisa y directamente alineada con la pregunta y el contexto de la vacante.
+- 5 (Sobresaliente): Dominio total; detalla contexto complejo, responsabilidad crítica, ejecución técnica rigurosa en primera persona e impacto cuantificado (antes/después, %, tiempos, ahorros o indicadores clave).
+
+DIMENSIONES A CALIFICAR (enteros de 0 a 5):
+1. star_situation (0-5): Contexto del proyecto, escenario real y problema inicial.
+2. star_task (0-5): Objetivo técnico, restricción, meta o responsabilidad asignada al candidato.
+3. star_action (0-5): Pasos técnicos/metodológicos ejecutados por el candidato (decisiones, herramientas y ejecución).
+4. star_result (0-5): Desenlace real e impacto medible (cualitativo claro = máx 3; con métricas cuantitativas verificables = 4 o 5; sin resultado = 0).
+5. technical_clarity (0-5): Rigor conceptual, precisión terminológica y estructura lógica de la explicación.
+6. relevance (0-5): Alineación directa con lo que exige la pregunta actual y el contexto de la vacante.
 
 Devuelve ÚNICAMENTE un objeto JSON válido con estas llaves exactas:
 {
@@ -25,8 +38,8 @@ Devuelve ÚNICAMENTE un objeto JSON válido con estas llaves exactas:
   "star_result": int,
   "technical_clarity": int,
   "relevance": int,
-  "strengths": "retroalimentación específica sobre lo que sí hizo bien en esta respuesta",
-  "improvement_areas": "retroalimentación accionable indicando qué dimensión STAR o concepto técnico faltó en esta pregunta"
+  "strengths": "Análisis crítico y objetivo de los puntos bien fundamentados (o indicar directamente si no hubo ninguno)",
+  "improvement_areas": "Crítica directa, concisa y accionable señalando exactamente qué carencias técnicas o estructurales tuvo la respuesta"
 }"""
 
 STOPWORDS_ES = {
@@ -40,239 +53,307 @@ STOPWORDS_ES = {
 
 CAREER_LEXICONS: Dict[str, List[str]] = {
     "ITC": [
-        "api", "rest", "sql", "base de datos", "índice", "query", "latencia", "caché", "redis",
-        "docker", "contenedor", "git", "rama", "merge", "pr", "test", "unitario", "integración",
-        "ci/cd", "backend", "frontend", "react", "python", "fastapi", "node", "arquitectura",
-        "microservicio", "autenticación", "oauth", "jwt", "endpoint", "bug", "logs", "memoria",
-        "algoritmo", "complejidad", "asíncrono", "concurrencia", "esquema", "migración", "css",
+        "api", "rest", "graphql", "sql", "postgres", "mysql", "mongo", "base de datos", "indice",
+        "query", "consulta", "latencia", "cache", "redis", "docker", "contenedor", "kubernetes",
+        "git", "rama", "merge", "pull request", "test", "prueba", "unitario", "integracion",
+        "ci/cd", "pipeline", "backend", "frontend", "react", "angular", "vue", "python", "fastapi",
+        "django", "flask", "node", "java", "c++", "arquitectura", "microservicio", "monolito",
+        "autenticacion", "oauth", "jwt", "seguridad", "endpoint", "bug", "error", "debug", "logs",
+        "memoria", "ram", "cpu", "algoritmo", "complejidad", "asincrono", "concurrencia", "hilo",
+        "esquema", "migracion", "css", "html", "javascript", "typescript", "servidor", "nube", "aws",
     ],
     "ISD": [
-        "dataset", "modelo", "entrenamiento", "validación", "overfitting", "regularización",
-        "f1", "auc", "roc", "precisión", "recall", "rmse", "mae", "mape", "regresión",
-        "clasificación", "clustering", "feature", "variable", "pipeline", "sql", "python",
-        "pandas", "llm", "prompt", "json", "sesgo", "anonimización", "correlación", "hipótesis",
-        "series de tiempo", "estacionalidad", "drift", "baseline", "smote", "cross-validation",
+        "dataset", "datos", "modelo", "entrenamiento", "validacion", "overfitting", "sobreajuste",
+        "regularizacion", "f1", "auc", "roc", "precision", "recall", "exactitud", "rmse", "mae",
+        "mape", "regresion", "clasificacion", "clustering", "segmentacion", "feature", "variable",
+        "pipeline", "etl", "sql", "python", "pandas", "numpy", "scikit", "pytorch", "tensorflow",
+        "llm", "prompt", "agente", "langgraph", "json", "sesgo", "anonimizacion", "correlacion",
+        "hipotesis", "estadistica", "series de tiempo", "estacionalidad", "drift", "baseline",
+        "smote", "desbalance", "tablero", "dashboard", "kpi", "distribucion", "outliers", "nulos",
     ],
     "IIS": [
-        "vsm", "tiempo de ciclo", "takt", "cuello de botella", "balanceo", "línea", "5s",
-        "kaizen", "lean", "six sigma", "ishikawa", "pareto", "causa raíz", "merma", "defecto",
-        "oee", "smed", "tpm", "inventario", "abc", "eoq", "reorden", "stock", "otif", "sla",
-        "layout", "almacén", "picking", "ergonomía", "sop", "estándar", "simulación", "roi", "cpk",
+        "vsm", "mapa de valor", "tiempo de ciclo", "takt", "cuello de botella", "balanceo", "linea",
+        "5s", "kaizen", "lean", "six sigma", "ishikawa", "pareto", "causa raiz", "merma", "defecto",
+        "retrabajo", "calidad", "oee", "smed", "tpm", "mantenimiento", "inventario", "abc", "eoq",
+        "reorden", "stock", "almacen", "picking", "packing", "otif", "sla", "logistica", "ruta",
+        "transporte", "layout", "planta", "estacion", "ergonomia", "seguridad", "sop", "estandar",
+        "simulacion", "capacidad", "productividad", "eficiencia", "roi", "costo", "cpk", "control",
     ],
     "IMT": [
-        "plc", "microcontrolador", "sensor", "actuador", "pid", "lazo cerrado", "sobreimpulso",
-        "pwm", "adc", "ruido", "filtro", "osciloscopio", "multímetro", "cad", "solidworks",
-        "cnc", "impresión 3d", "tolerancia", "pcb", "potencia", "interrupción", "isr", "rtos",
-        "i2c", "spi", "uart", "can", "modbus", "mqtt", "visión", "cinemática", "torque", "neumático",
+        "plc", "ladder", "microcontrolador", "arduino", "esp32", "stm32", "raspberry", "sensor",
+        "actuador", "motor", "servomotor", "paso a paso", "pid", "lazo cerrado", "control",
+        "sobreimpulso", "pwm", "adc", "ruido", "filtro", "osciloscopio", "multimetro", "senal",
+        "cad", "solidworks", "inventor", "cnc", "impresion 3d", "tolerancia", "mecanismo", "pcb",
+        "circuito", "potencia", "rele", "transistor", "interrupcion", "isr", "rtos", "firmware",
+        "i2c", "spi", "uart", "can", "modbus", "mqtt", "vision", "camara", "cinematica", "robot",
+        "torque", "neumatico", "hidraulico", "valvula", "hmi", "scada",
     ],
     "LAF": [
         "dcf", "flujo de caja", "flujo de efectivo", "wacc", "tasa de descuento", "vpn", "van",
-        "tir", "ebitda", "margen", "presupuesto", "variación", "opex", "capex", "liquidez",
-        "solvencia", "riesgo", "var", "beta", "portafolio", "mece", "capital de trabajo",
-        "punto de equilibrio", "precio", "elasticidad", "múltiplos", "valuación", "cobertura", "roi",
+        "tir", "retorno", "ebitda", "margen", "utilidad", "rentabilidad", "presupuesto", "variacion",
+        "opex", "capex", "costo", "gasto", "liquidez", "solvencia", "apalancamiento", "deuda",
+        "riesgo", "var", "beta", "portafolio", "cartera", "credito", "mece", "consultoria",
+        "capital de trabajo", "cuentas por cobrar", "cuentas por pagar", "punto de equilibrio",
+        "precio", "pricing", "elasticidad", "multiplos", "valuacion", "cobertura", "hedging",
+        "tipo de cambio", "inflacion", "tasa de interes", "estado financiero", "balance", "roi",
     ],
     "LMC": [
-        "embudo", "funnel", "conversión", "cac", "ltv", "roas", "ctr", "retención", "churn",
-        "cohorte", "a/b", "experimento", "roadmap", "rice", "moscow", "usuario", "entrevista",
-        "icp", "go-to-market", "seo", "sem", "orgánico", "crm", "onboarding", "activación",
-        "nps", "csat", "posicionamiento", "benchmarking", "b2b", "leads", "arpu", "monetización",
+        "embudo", "funnel", "conversion", "cac", "ltv", "roas", "roi", "ctr", "cpc", "retencion",
+        "churn", "abandono", "cohorte", "a/b", "experimento", "hipotesis", "roadmap", "priorizacion",
+        "rice", "moscow", "producto", "mvp", "usuario", "cliente", "entrevista", "encuesta",
+        "insight", "icp", "segmentacion", "target", "go-to-market", "lanzamiento", "campaña",
+        "seo", "sem", "organico", "pauta", "contenido", "crm", "email", "onboarding", "activacion",
+        "nps", "csat", "posicionamiento", "benchmarking", "competencia", "b2b", "leads", "ventas",
+        "arpu", "monetizacion", "suscripcion", "landing",
     ],
     "IBT": [
-        "protocolo", "ensayo", "control", "reproducibilidad", "desviación", "calibración",
-        "señal", "ecg", "emg", "ruido", "filtrado", "iso 13485", "iso 14971", "amef", "riesgo",
-        "cofepris", "fda", "anova", "p-valor", "clínico", "bioproceso", "fermentación", "cultivo",
-        "ph", "mantenimiento", "bioética", "anonimización", "sensibilidad", "especificidad", "pcr",
+        "protocolo", "ensayo", "experimento", "laboratorio", "control", "reproducibilidad",
+        "desviacion", "variabilidad", "calibracion", "sensor", "senal", "ecg", "emg", "oximetria",
+        "ruido", "filtrado", "iso 13485", "iso 14971", "iec 60601", "amef", "riesgo", "regulatorio",
+        "cofepris", "fda", "norma", "anova", "t-student", "p-valor", "estadistica", "clinico",
+        "paciente", "medico", "hospital", "bioproceso", "fermentacion", "cultivo", "biorreactor",
+        "enzima", "ph", "temperatura", "mantenimiento", "bioetica", "anonimizacion", "biomaterial",
+        "sensibilidad", "especificidad", "imagen medica", "pcr", "molecular", "cadena de frio",
     ],
     "ARQ": [
-        "usabilidad", "usuario", "prototipo", "wireframe", "iteración", "presupuesto",
-        "material", "constructivo", "bim", "revit", "autocad", "figma", "sistema de diseño",
-        "componente", "bioclimático", "ventilación", "asoleamiento", "sustentable", "estructural",
-        "instalaciones", "mep", "accesibilidad", "ergonomía", "plano", "detalle", "zonificación",
+        "usabilidad", "usuario", "ux", "ui", "interfaz", "prototipo", "wireframe", "maqueta",
+        "iteracion", "prueba", "presupuesto", "costo", "material", "constructivo", "manufactura",
+        "bim", "revit", "autocad", "rhino", "sketchup", "figma", "sistema de diseño", "componente",
+        "libreria", "bioclimatico", "ventilacion", "asoleamiento", "iluminacion", "termico",
+        "sustentable", "energia", "estructural", "instalaciones", "mep", "cruce", "accesibilidad",
+        "ergonomia", "antropometria", "normativa", "plano", "ejecutivo", "detalle", "especificacion",
+        "espacio", "circulacion", "zonificacion", "flujo", "jerarquia", "taller", "obra",
     ],
 }
 
 
-def _extract_question_keywords(question_text: str) -> List[str]:
-    words = re.findall(r"[a-záéíóúñü]{4,}", question_text.lower())
+def _normalize(text: str) -> str:
+    import unicodedata
+    s = (text or "").lower()
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
+    )
+
+
+def _extract_keywords(text: str) -> List[str]:
+    norm = _normalize(text)
+    words = re.findall(r"[a-z0-9]{4,}", norm)
     return [w for w in words if w not in STOPWORDS_ES]
 
 
-def _deep_star_analyzer(
+def _critical_star_analyzer(
     question_text: str,
+    vacancy_context: str,
     response_text: str,
     career_code: str,
     target_role: str,
     aux: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
-    Analizador semántico y léxico determinista de alta sensibilidad que evalúa:
-    1) Detección de respuestas vacías, evasivas o demasiado cortas.
-    2) Pertinencia real respecto a los conceptos de la pregunta planteada.
-    3) Marcadores lingüísticos independientes para Situación, Tarea, Acción (1ra persona) y Resultado.
-    4) Densidad de vocabulario técnico propio de la carrera seleccionada.
+    Evaluador determinista crítico (escala 0 a 5):
+    - Otorga 0/5 si la respuesta es incoherente, evasiva, broma o carece por completo de la habilidad.
+    - Reconoce un amplio espectro de vocabulario profesional y técnico para premiar con 4/5 y 5/5
+      las respuestas bien estructuradas sin castigar injustamente por sinónimos.
     """
     clean = (response_text or "").strip()
-    lower = clean.lower()
-    words = re.findall(r"[a-záéíóúñü0-9]+", lower)
+    norm = _normalize(clean)
+    words = re.findall(r"[a-z0-9]+", norm)
     word_count = len(words)
     unique_words = len(set(words))
     metrics_list: List[str] = list(aux.get("detected_metrics_list", []))
     metrics_count = len(metrics_list)
 
-    evasive_patterns = re.compile(
-        r"^(no\s+s[eé]|ningun[oa]|nada|paso|hola|test|prueba|asdf|qwerty|sin\s+respuesta|ok|bien|x+)$"
+    # 1. Filtro implacable contra respuestas sin sentido, evasivas o ruido (Calificación = 0)
+    nonsense_regex = re.compile(
+        r"^(no\s*se|ningun[oa]?|nada|paso|hola|test|prueba|asdf\w*|qwerty\w*|ok|bien|si|no|x+|jaja\w*|lol|wtf|cualquier\s*cosa|sin\s*comentarios|todo\s*bien|nose)$"
     )
-    if word_count < 8 or unique_words < 6 or evasive_patterns.match(lower):
+    # Detectar repetición artificial de las mismas palabras o teclas
+    lexical_diversity = unique_words / max(1, word_count)
+    if (
+        word_count < 6
+        or unique_words < 5
+        or nonsense_regex.match(norm)
+        or (word_count >= 10 and lexical_diversity < 0.30)
+    ):
         return {
-            "star_situation": 1,
-            "star_task": 1,
-            "star_action": 1,
-            "star_result": 1,
-            "technical_clarity": 1,
-            "relevance": 1,
-            "strengths": "Respuesta registrada, pero su extensión o contenido es insuficiente para evaluar competencias.",
-            "improvement_areas": "Desarrolla un caso completo de al menos 45 a 80 palabras describiendo el contexto (Situación), tu objetivo (Tarea), qué hiciste paso a paso (Acción) y el impacto medible (Resultado).",
+            "star_situation": 0,
+            "star_task": 0,
+            "star_action": 0,
+            "star_result": 0,
+            "technical_clarity": 0,
+            "relevance": 0,
+            "strengths": "Ninguna fortaleza identificada. La respuesta entregada es nula, evasiva o carece de sentido profesional.",
+            "improvement_areas": "Crítica directa: En una entrevista real esta respuesta descarta automáticamente al candidato. Debes estructurar un caso real especificando el contexto del problema (Situación), tu responsabilidad concreta (Tarea), las acciones técnicas que ejecutaste (Acción) y el resultado medible (Resultado).",
         }
 
-    # 1. Pertinencia respecto a la pregunta actual
-    q_keywords = _extract_question_keywords(question_text)
-    matched_q_words = [kw for kw in q_keywords if kw[:5] in lower]
-    q_overlap_ratio = len(set(matched_q_words)) / max(1, len(set(q_keywords)))
-
-    # 2. Claridad técnica según el léxico de la carrera
-    lexicon = CAREER_LEXICONS.get(career_code, CAREER_LEXICONS["ITC"])
-    matched_tech_terms = [term for term in lexicon if term in lower]
-
-    # 3. Marcadores independientes por dimensión STAR
-    sit_markers = [
-        "en el proyecto", "durante", "cuando", "en mi", "trabajando en", "en la materia",
-        "en mis prácticas", "en el laboratorio", "en una ocasión", "el contexto", "ocurrió",
-        "enfrentamos", "existía", "teníamos un problema", "la situación", "anteriormente",
+    # 2. Pertinencia con la pregunta actual y el contexto de la vacante
+    q_keywords = _extract_keywords(f"{question_text} {vacancy_context}")
+    matched_q = [
+        kw for kw in set(q_keywords) if kw[:4] in norm
     ]
-    task_markers = [
-        "mi objetivo", "mi tarea", "mi responsabilidad", "debía", "tenía que", "me encargué",
-        "el reto era", "la meta", "se requería", "necesitábamos lograr", "mi rol consistía",
-        "para cumplir", "el propósito", "me asignaron",
+    overlap_ratio = len(matched_q) / max(1, min(10, len(set(q_keywords))))
+
+    # 3. Léxico técnico de la carrera + palabras técnicas del contexto de la vacante
+    base_lexicon = CAREER_LEXICONS.get(career_code, CAREER_LEXICONS["ITC"])
+    vacancy_terms = [w for w in _extract_keywords(vacancy_context) if len(w) >= 5]
+    combined_lexicon = list(set(base_lexicon + vacancy_terms))
+    matched_tech = [term for term in combined_lexicon if _normalize(term) in norm]
+
+    # 4. Amplio espectro de marcadores semánticos para Situación, Tarea, Acción y Resultado
+    sit_stems = [
+        "proyect", "durante", "cuando", "trabaj", "materia", "practic", "laboratori",
+        "ocasion", "context", "ocurri", "enfrent", "exist", "teniam", "situacion",
+        "anterior", "semestr", "empres", "client", "equi", "area", "sistem", "proces",
+        "plataform", "aplicacion", "servicio", "etapa", "inicio", "detect", "identific",
     ]
-    action_verbs_1p = [
-        "implementé", "diseñé", "programé", "desarrollé", "analicé", "construí", "optimicé",
-        "configuré", "propuse", "realicé", "ejecuté", "apliqué", "automaticé", "estructuré",
-        "revisé", "calibré", "modelé", "negocié", "coordiné", "investigué", "migré", "validé",
-        "estandaricé", "documenté", "medí", "calculé", "entrené", "limpié", "reorganicé", "hice",
+    task_stems = [
+        "objetiv", "tare", "responsab", "debi", "teni", "encarg", "reto", "meta",
+        "requer", "necesit", "rol", "cumpl", "proposit", "asign", "resolv", "problem",
+        "urgenc", "prioridad", "solicitud", "alcanc", "compromis", "garantiz", "asegur",
+        "reducir", "mejorar", "optimizar", "evitar", "lograr",
     ]
-    result_markers = [
-        "como resultado", "logré", "logramos", "se redujo", "redujimos", "incrementó",
-        "aumentó", "mejoró", "ahorramos", "permitió", "al final", "conseguimos", "impactó",
-        "pasó de", "bajó a", "subió a", "cumplimos", "obtuvimos", "se logró",
+    action_stems = [
+        "implement", "disen", "program", "desarroll", "analic", "analiz", "constru",
+        "optimic", "optimiz", "configur", "propus", "realic", "realiz", "ejecut",
+        "apliqu", "automat", "estructur", "revis", "calibr", "model", "negoci",
+        "coordin", "investig", "migr", "valid", "estandar", "document", "medi",
+        "calcul", "entren", "limpi", "reorganic", "utilic", "utiliz", "cree", "crea",
+        "levant", "diagnostic", "correg", "modific", "integr", "despleg", "prob",
+        "reemplac", "sustitu", "divid", "prioric", "lider", "establec", "defini",
+    ]
+    result_stems = [
+        "resultad", "logr", "reduj", "reduci", "increment", "aument", "mejor",
+        "ahorr", "permit", "final", "consegu", "impact", "paso de", "bajo a",
+        "subio a", "cumplim", "obtuv", "disminuy", "elimina", "estabiliz",
+        "entreg", "aprob", "satisfaccion", "exito", "gracias a", "con esto",
     ]
 
-    sit_hits = sum(1 for m in sit_markers if m in lower)
-    task_hits = sum(1 for m in task_markers if m in lower)
-    action_hits = sum(1 for m in action_verbs_1p if m in lower)
-    result_hits = sum(1 for m in result_markers if m in lower)
+    sit_hits = sum(1 for s in sit_stems if s in norm)
+    task_hits = sum(1 for s in task_stems if s in norm)
+    act_hits = sum(1 for s in action_stems if s in norm)
+    res_hits = sum(1 for s in result_stems if s in norm)
 
-    # Cálculo sensible de Situación (1 a 5)
-    s_score = 1
-    if sit_hits >= 1 or word_count >= 20:
-        s_score = 2
-    if sit_hits >= 1 and word_count >= 28:
+    # Si no tiene relación alguna con la pregunta ni léxico técnico ni estructura, cae a 0-1
+    if overlap_ratio == 0 and len(matched_tech) == 0 and act_hits == 0:
+        return {
+            "star_situation": 1 if sit_hits > 0 else 0,
+            "star_task": 0,
+            "star_action": 0,
+            "star_result": 0,
+            "technical_clarity": 0,
+            "relevance": 0,
+            "strengths": "No se identifican argumentos técnicos ni relación con la pregunta planteada.",
+            "improvement_areas": "Tu respuesta no aborda el problema de la pregunta ni demuestra competencias técnicas del puesto. Estructura qué ocurrió, qué debías resolver, qué método técnico aplicaste y qué métrica obtuviste.",
+        }
+
+    # --- SITUACIÓN (0 a 5) ---
+    if sit_hits == 0 and word_count < 15:
+        s_score = 0
+    elif sit_hits == 1 or word_count < 22:
+        s_score = 2 if sit_hits >= 1 else 1
+    elif sit_hits == 2 and word_count >= 22:
         s_score = 3
-    if sit_hits >= 2 and word_count >= 45:
+    elif sit_hits >= 3 and word_count >= 32:
         s_score = 4
-    if sit_hits >= 2 and word_count >= 65 and q_overlap_ratio >= 0.2:
+    else:
+        s_score = 3
+    if sit_hits >= 4 and word_count >= 45 and overlap_ratio >= 0.25:
         s_score = 5
 
-    # Cálculo sensible de Tarea (1 a 5)
-    t_score = 1
-    if task_hits >= 1 or (sit_hits >= 1 and word_count >= 25):
-        t_score = 2
-    if task_hits >= 1 and word_count >= 30:
-        t_score = 3
-    if task_hits >= 2 or (task_hits >= 1 and word_count >= 50):
-        t_score = 4
-    if task_hits >= 2 and word_count >= 65:
-        t_score = 5
+    # --- TAREA (0 a 5) ---
+    if task_hits == 0:
+        t_score = 1 if word_count >= 30 else 0
+    elif task_hits == 1:
+        t_score = 3 if word_count >= 28 else 2
+    elif task_hits == 2:
+        t_score = 4 if word_count >= 35 else 3
+    else:
+        t_score = 5 if word_count >= 42 else 4
 
-    # Cálculo sensible de Acción (1 a 5)
-    a_score = 1
-    if action_hits >= 1:
-        a_score = 2
-    if action_hits >= 2 or (action_hits >= 1 and len(matched_tech_terms) >= 1):
-        a_score = 3
-    if action_hits >= 2 and len(matched_tech_terms) >= 2 and word_count >= 40:
-        a_score = 4
-    if action_hits >= 3 and len(matched_tech_terms) >= 3 and word_count >= 60:
-        a_score = 5
+    # --- ACCIÓN (0 a 5) ---
+    if act_hits == 0:
+        a_score = 0
+    elif act_hits == 1:
+        a_score = 3 if len(matched_tech) >= 1 else 2
+    elif act_hits == 2:
+        a_score = 4 if len(matched_tech) >= 1 else 3
+    else:
+        a_score = 5 if (len(matched_tech) >= 2 and word_count >= 40) else 4
 
-    # Cálculo sensible de Resultado (1 a 5)
-    r_score = 1
-    if result_hits >= 1:
-        r_score = 2
-    if metrics_count >= 1 or (result_hits >= 2 and word_count >= 40):
-        r_score = 3
-    if metrics_count >= 1 and result_hits >= 1:
-        r_score = 4
-    if metrics_count >= 2 and result_hits >= 1 and word_count >= 50:
-        r_score = 5
+    # --- RESULTADO (0 a 5) ---
+    if res_hits == 0 and metrics_count == 0:
+        r_score = 0
+    elif res_hits >= 1 and metrics_count == 0:
+        r_score = 3 if word_count >= 40 else 2
+    elif metrics_count == 1:
+        r_score = 4 if res_hits >= 1 else 3
+    else:
+        r_score = 5 if res_hits >= 1 else 4
 
-    # Cálculo de Claridad Técnica (1 a 5)
-    tech_score = 1
-    if len(matched_tech_terms) >= 1 or word_count >= 25:
-        tech_score = 2
-    if len(matched_tech_terms) >= 2:
+    # --- CLARIDAD TÉCNICA (0 a 5) ---
+    if len(matched_tech) == 0 and act_hits == 0:
+        tech_score = 0
+    elif len(matched_tech) == 0:
+        tech_score = 2 if word_count >= 35 else 1
+    elif len(matched_tech) == 1:
         tech_score = 3
-    if len(matched_tech_terms) >= 3 and action_hits >= 1:
+    elif len(matched_tech) == 2:
         tech_score = 4
-    if len(matched_tech_terms) >= 4 and action_hits >= 2 and word_count >= 55:
-        tech_score = 5
+    else:
+        tech_score = 5 if (act_hits >= 2 and word_count >= 40) else 4
 
-    # Cálculo de Pertinencia a la pregunta (1 a 5)
-    rel_score = 1
-    if q_overlap_ratio >= 0.08 or len(matched_tech_terms) >= 1:
-        rel_score = 2
-    if q_overlap_ratio >= 0.16:
+    # --- PERTINENCIA (0 a 5) ---
+    if overlap_ratio == 0 and len(matched_tech) == 0:
+        rel_score = 0
+    elif overlap_ratio < 0.15:
+        rel_score = 2 if len(matched_tech) >= 1 else 1
+    elif overlap_ratio < 0.30:
         rel_score = 3
-    if q_overlap_ratio >= 0.28 and word_count >= 35:
+    elif overlap_ratio < 0.45:
         rel_score = 4
-    if q_overlap_ratio >= 0.40 and word_count >= 50:
-        rel_score = 5
+    else:
+        rel_score = 5 if word_count >= 35 else 4
 
-    # Construir retroalimentación personalizada según las fortalezas y debilidades reales
-    strengths_parts = []
+    # Retroalimentación crítica, directa y sin adulación
+    good_points = []
     if s_score >= 4:
-        strengths_parts.append("contextualizaste muy bien la situación inicial")
+        good_points.append("planteaste un contexto de problema claro (Situación)")
+    if t_score >= 4:
+        good_points.append("definiste con precisión el objetivo o restricción a resolver (Tarea)")
     if a_score >= 4:
-        strengths_parts.append("detallaste tus acciones individuales en primera persona")
+        good_points.append("detallaste acciones técnicas concretas ejecutadas por ti (Acción)")
     if r_score >= 4 and metrics_list:
-        strengths_parts.append(f"respaldaste el resultado con métricas concretas ({', '.join(metrics_list[:3])})")
-    if tech_score >= 4 and matched_tech_terms:
-        strengths_parts.append(f"empleaste terminología técnica precisa ({', '.join(matched_tech_terms[:3])})")
+        good_points.append(f"sustentaste el desenlace con datos cuantitativos ({', '.join(metrics_list[:3])})")
+    if tech_score >= 4 and matched_tech:
+        good_points.append(f"integraste terminología técnica pertinente ({', '.join(matched_tech[:4])})")
 
-    if strengths_parts:
-        strengths = "Puntos fuertes: " + ", ".join(strengths_parts) + "."
-    elif rel_score >= 3:
-        strengths = "Tu respuesta aborda el tema de la pregunta, aunque de forma todavía general."
+    if good_points:
+        strengths = "Aspectos bien logrados: " + "; ".join(good_points) + "."
+    elif max(s_score, t_score, a_score, r_score) >= 3:
+        strengths = "La respuesta tiene una idea base comprensible, pero su desarrollo técnico y metodológico es aún parcial."
     else:
-        strengths = "Intentaste dar una respuesta inicial, pero aún no se conecta directamente con el caso solicitado en la pregunta."
+        strengths = "La respuesta es superficial y no aporta evidencia suficiente de dominio de la competencia."
 
-    missing_parts = []
+    critiques = []
     if rel_score <= 2:
-        missing_parts.append("enfocarte directamente en lo que pide la pregunta")
+        critiques.append("te desviaste del núcleo de la pregunta o no conectaste con el contexto de la vacante")
     if s_score <= 2:
-        missing_parts.append("especificar el proyecto o contexto inicial (Situación)")
+        critiques.append("omitiste explicar el escenario técnico inicial o la magnitud del problema (Situación)")
     if t_score <= 2:
-        missing_parts.append("aclarar cuál era tu meta o responsabilidad específica (Tarea)")
+        critiques.append("no especificaste qué meta, requerimiento o responsabilidad puntual tenías a tu cargo (Tarea)")
     if a_score <= 2:
-        missing_parts.append("usar verbos en primera persona explicando qué hiciste tú exactamente (Acción)")
-    if r_score <= 2:
-        missing_parts.append("cerrar con el impacto cuantitativo logrado en porcentaje, tiempo o indicadores (Resultado)")
+        critiques.append("hablaste de forma ambigua sin detallar qué pasos técnicos, herramientas o decisiones ejecutaste tú (Acción)")
+    if r_score == 0:
+        critiques.append("no mencionaste ningún resultado ni desenlace de tus acciones (Resultado = 0/5)")
+    elif r_score <= 3 and metrics_count == 0:
+        critiques.append("declaraste un resultado subjetivo sin respaldarlo con métricas numéricas (%, tiempos, costos o indicadores)")
     if tech_score <= 2:
-        missing_parts.append(f"mencionar las herramientas o métodos técnicos de {career_code} que utilizaste")
+        critiques.append(f"faltó rigor técnico y uso de conceptos propios de {career_code}")
 
-    if missing_parts:
-        improvements = "Para subir de nivel en esta pregunta necesitas: " + "; ".join(missing_parts) + "."
+    if critiques:
+        improvements = "Crítica objetiva: " + "; ".join(critiques) + "."
     else:
-        improvements = "Excelente estructura STAR; podrías contrastar brevemente qué alternativa descartaste y por qué."
+        improvements = "Respuesta sólida y bien estructurada en las cuatro dimensiones STAR. Para nivel senior, contrasta brevemente el trade-off técnico frente a otras alternativas."
 
     return {
         "star_situation": s_score,
@@ -286,69 +367,86 @@ def _deep_star_analyzer(
     }
 
 
-def _call_external_or_ollama_llm(
-    provider: str,
-    api_key: Optional[str],
-    model_name: Optional[str],
-    user_prompt: str,
-) -> Optional[Dict[str, Any]]:
+def _call_configured_llm_agent(user_prompt: str) -> Optional[Dict[str, Any]]:
     """
-    Permite evaluar con las llaves API que tenga el usuario (Gemini, OpenAI/Groq) o con Ollama local.
+    Invoca al Agente Evaluador usando las llaves API configuradas en `.env`:
+    - Si EVALUATOR_PROVIDER="gemini" y GEMINI_API_KEY está configurada -> Usa `gemini-3.8-flash`
+      (con fallback automático a `gemini-2.5-flash` si el endpoint regional lo requiere).
+    - Si EVALUATOR_PROVIDER="openai" y OPENAI_API_KEY está configurada -> Usa `gpt-4o-mini`.
+    - En caso contrario -> Intenta con Ollama local.
     """
-    prov = (provider or "ollama").lower()
+    provider = (settings.EVALUATOR_PROVIDER or "gemini").lower()
 
-    if prov == "gemini" and api_key:
-        mdl = model_name or "gemini-2.5-flash"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{mdl}:generateContent?key={api_key}"
-        with httpx.Client(timeout=6.0) as client:
-            resp = client.post(
-                url,
-                json={
-                    "systemInstruction": {"parts": [{"text": EVALUATOR_SYSTEM_PROMPT}]},
-                    "contents": [{"parts": [{"text": user_prompt}]}],
-                    "generationConfig": {
+    # =========================================================================
+    # >>> OPCIÓN 1: AGENTE EVALUADOR CON GEMINI 3.8 FLASH (GEMINI_API_KEY EN .env) <<<
+    # =========================================================================
+    if (
+        provider == "gemini"
+        and settings.GEMINI_API_KEY
+        and not settings.GEMINI_API_KEY.startswith("PON_AQUI")
+    ):
+        models_to_try = [settings.GEMINI_MODEL or "gemini-3.8-flash", "gemini-2.5-flash"]
+        for mdl in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{mdl}:generateContent?key={settings.GEMINI_API_KEY}"
+            try:
+                with httpx.Client(timeout=6.0) as client:
+                    resp = client.post(
+                        url,
+                        json={
+                            "systemInstruction": {"parts": [{"text": EVALUATOR_SYSTEM_PROMPT}]},
+                            "contents": [{"parts": [{"text": user_prompt}]}],
+                            "generationConfig": {
+                                "temperature": 0.1,
+                                "responseMimeType": "application/json",
+                            },
+                        },
+                    )
+                    if resp.status_code == 200:
+                        candidates = resp.json().get("candidates", [])
+                        if candidates:
+                            raw = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "{}")
+                            return json.loads(raw)
+            except Exception:
+                continue
+
+    # =========================================================================
+    # >>> OPCIÓN 2: AGENTE EVALUADOR CON GPT-4o MINI (OPENAI_API_KEY EN .env) <<<
+    # =========================================================================
+    if (
+        (provider == "openai" or settings.OPENAI_API_KEY)
+        and settings.OPENAI_API_KEY
+        and not settings.OPENAI_API_KEY.startswith("PON_AQUI")
+    ):
+        try:
+            with httpx.Client(timeout=6.0) as client:
+                resp = client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}"},
+                    json={
+                        "model": settings.OPENAI_CHAT_MODEL or "gpt-4o-mini",
+                        "messages": [
+                            {"role": "system", "content": EVALUATOR_SYSTEM_PROMPT},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        "response_format": {"type": "json_object"},
                         "temperature": 0.1,
-                        "responseMimeType": "application/json",
                     },
-                },
-            )
-            if resp.status_code == 200:
-                candidates = resp.json().get("candidates", [])
-                if candidates:
-                    raw = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "{}")
+                )
+                if resp.status_code == 200:
+                    raw = resp.json()["choices"][0]["message"]["content"]
                     return json.loads(raw)
+        except Exception:
+            pass
 
-    elif prov in ("openai", "groq") and api_key:
-        base_url = (
-            "https://api.groq.com/openai/v1/chat/completions"
-            if prov == "groq"
-            else "https://api.openai.com/v1/chat/completions"
-        )
-        mdl = model_name or ("llama-3.3-70b-versatile" if prov == "groq" else "gpt-4o-mini")
-        with httpx.Client(timeout=6.0) as client:
-            resp = client.post(
-                base_url,
-                headers={"Authorization": f"Bearer {api_key}"},
-                json={
-                    "model": mdl,
-                    "messages": [
-                        {"role": "system", "content": EVALUATOR_SYSTEM_PROMPT},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "response_format": {"type": "json_object"},
-                    "temperature": 0.1,
-                },
-            )
-            if resp.status_code == 200:
-                raw = resp.json()["choices"][0]["message"]["content"]
-                return json.loads(raw)
-
-    else:
+    # =========================================================================
+    # >>> OPCIÓN 3: RESPALDO CON OLLAMA LOCAL <<<
+    # =========================================================================
+    try:
         with httpx.Client(timeout=2.5) as client:
             resp = client.post(
                 f"{settings.OLLAMA_BASE_URL}/api/chat",
                 json={
-                    "model": model_name or settings.OLLAMA_MODEL,
+                    "model": settings.OLLAMA_MODEL,
                     "messages": [
                         {"role": "system", "content": EVALUATOR_SYSTEM_PROMPT},
                         {"role": "user", "content": user_prompt},
@@ -361,13 +459,15 @@ def _call_external_or_ollama_llm(
             if resp.status_code == 200:
                 raw = resp.json().get("message", {}).get("content", "{}")
                 return json.loads(raw)
+    except Exception:
+        pass
 
     return None
 
 
 def evaluate_candidate_turn_node(state: InterviewGraphState) -> Dict[str, Any]:
     """
-    Nodo del Agente Evaluador en LangGraph.
+    Nodo del Agente Evaluador en LangGraph (Escala 0 a 5).
     """
     start_ts = time.perf_counter()
     aux = state.get("auxiliary_features", {})
@@ -375,11 +475,12 @@ def evaluate_candidate_turn_node(state: InterviewGraphState) -> Dict[str, Any]:
     candidate_response = state.get("candidate_response", "")
     career_code = state.get("career_code", "ITC")
     target_role = state.get("target_role", "Practicante")
+    vacancy_context = state.get("job_description_text", "")
 
     user_prompt = (
         f"Carrera: {career_code}\n"
         f"Puesto Objetivo: {target_role} ({state.get('seniority_level')})\n"
-        f"Contexto de la Vacante: {state.get('job_description_text', '')[:300]}\n"
+        f"Contexto de la Vacante: {vacancy_context[:400]}\n"
         f"Pregunta Actual: {question_text}\n"
         f"Respuesta del Candidato: {candidate_response}\n"
         f"Metadatos Auxiliares Regex: {json.dumps(aux, ensure_ascii=False)}\n"
@@ -390,12 +491,7 @@ def evaluate_candidate_turn_node(state: InterviewGraphState) -> Dict[str, Any]:
 
     for attempt in range(2):
         try:
-            parsed = _call_external_or_ollama_llm(
-                provider=state.get("llm_provider") or "ollama",
-                api_key=state.get("llm_api_key"),
-                model_name=state.get("llm_model"),
-                user_prompt=user_prompt,
-            )
+            parsed = _call_configured_llm_agent(user_prompt=user_prompt)
             if parsed:
                 required = {
                     "star_situation",
@@ -409,12 +505,12 @@ def evaluate_candidate_turn_node(state: InterviewGraphState) -> Dict[str, Any]:
                 }
                 if required.issubset(parsed.keys()):
                     eval_data = {
-                        "star_situation": max(1, min(5, int(parsed["star_situation"]))),
-                        "star_task": max(1, min(5, int(parsed["star_task"]))),
-                        "star_action": max(1, min(5, int(parsed["star_action"]))),
-                        "star_result": max(1, min(5, int(parsed["star_result"]))),
-                        "technical_clarity": max(1, min(5, int(parsed["technical_clarity"]))),
-                        "relevance": max(1, min(5, int(parsed["relevance"]))),
+                        "star_situation": max(0, min(5, int(parsed["star_situation"]))),
+                        "star_task": max(0, min(5, int(parsed["star_task"]))),
+                        "star_action": max(0, min(5, int(parsed["star_action"]))),
+                        "star_result": max(0, min(5, int(parsed["star_result"]))),
+                        "technical_clarity": max(0, min(5, int(parsed["technical_clarity"]))),
+                        "relevance": max(0, min(5, int(parsed["relevance"]))),
                         "strengths": str(parsed["strengths"]),
                         "improvement_areas": str(parsed["improvement_areas"]),
                     }
@@ -424,8 +520,9 @@ def evaluate_candidate_turn_node(state: InterviewGraphState) -> Dict[str, Any]:
             continue
 
     if eval_data is None:
-        eval_data = _deep_star_analyzer(
+        eval_data = _critical_star_analyzer(
             question_text=question_text,
+            vacancy_context=vacancy_context,
             response_text=candidate_response,
             career_code=career_code,
             target_role=target_role,

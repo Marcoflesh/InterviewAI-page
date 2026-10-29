@@ -1,57 +1,49 @@
-# Documento de Handoff y Continuidad Técnica — InterviewAI (`v0.2.0`)
+# Documento de Handoff y Continuidad Técnica — InterviewAI (`v0.3.0`)
 
 **Fecha de actualización:** 29 de octubre de 2026  
 **Repositorio objetivo:** `https://github.com/Marcoflesh/InterviewAI-page.git`  
-**Propósito:** Garantizar la continuidad inmediata del desarrollo en caso de agotamiento de tokens o cambio de sesión, documentando todos los ajustes de la iteración `v0.2.0`, las decisiones tomadas y los siguientes pasos.
+**Propósito:** Garantizar la continuidad inmediata del desarrollo en caso de agotamiento de tokens o cambio de sesión, documentando la arquitectura y todas las decisiones de la iteración `v0.3.0`.
 
 ---
 
-## 1. Cambios Implementados en la Iteración `v0.2.0`
+## 1. Cambios Implementados en la Iteración `v0.3.0`
 
-En respuesta a la revisión funcional del usuario se corrigieron y evolucionaron 5 áreas críticas tanto en el backend (`backend/app/`) como en el frontend (`frontend/`) y en la aplicación interactiva (`interviewai.html`):
-
-1. **Botón "Descargar PDF" 100% Funcional (`frontend/js/app.js`, `frontend/index.html`)**:
-   - **Problema previo**: `window.print()` es bloqueado por los iframes con sandbox (como Canvas) y no descargaba un archivo directo.
-   - **Solución implementada**: Se integró `jsPDF` (`2.5.1`) junto con un generador binario nativo PDF 1.4 de respaldo (`buildMinimalPdfBinary`). Al hacer clic en **Descargar PDF**, se construye y descarga directamente el archivo `Reporte_InterviewAI_<Nombre>.pdf` con el puntaje global, evolución, desglose de las 2 respuestas más débiles, ejemplos STAR recomendados y el Plan de Acción.
-2. **Sistema de Evaluación STAR Sensible, Diferenciado y Conectado a Llaves API (`backend/app/agents/evaluator.py`, `frontend/js/app.js`)**:
-   - **Problema previo**: El evaluador heurístico de respaldo otorgaba calificaciones muy similares (`3/5` o `4/5`) basándose casi únicamente en el conteo de palabras.
-   - **Solución implementada**:
-     - Se programó un motor de análisis semántico y léxico (`_deep_star_analyzer` / `evaluateResponseLocal`) con diccionarios técnicos específicos por carrera (`ITC`, `ISD`, `IIS`, `IMT`, `LAF`, `LMC`, `IBT`, `ARQ` — más de 30 términos por carrera), cruce de palabras clave contra la pregunta específica y el **Contexto de la vacante**, detección de verbos de acción en primera persona y extracción Regex de métricas cuantitativas.
-     - Si el usuario escribe una respuesta corta (`< 8` palabras), evasiva (`"no sé"`, `"hola"`) o ajena a la pregunta, recibe `1/5` y retroalimentación específica sobre qué le faltó.
-     - El panel lateral ahora muestra en vivo las **Métricas detectadas** y los **Conceptos clave** identificados en ese turno, además de ejemplos de mejora redactados específicamente para la pregunta evaluada.
-     - Se añadió el botón y modal **"Configurar API / IA"** en la barra superior (y soporte en `POST /api/sessions/turn`) para usar llaves API de **Google Gemini**, **OpenAI**, **Groq** o **Ollama**.
-3. **Autenticación Completa en 3 Modalidades (`Iniciar sesión`, `Registrar` e `Iniciar sesión con Google`)**:
-   - **Iniciar sesión (`POST /api/auth/login`)**: Para cuentas ya existentes; valida formato de correo, verifica que el correo exista en la base de datos de usuarios registrados y comprueba la contraseña (hash PBKDF2-SHA256 en backend). Incluye cuenta demo verificada (`a01709802@tec.mx` / `Interview2026!`) para pruebas inmediatas.
-   - **Registrar (`POST /api/auth/register`)**: Para cuentas nuevas; valida nombre completo, formato real de correo electrónico, universidad y contraseña de al menos 6 caracteres, impidiendo correos duplicados.
-   - **Continuar con Google (`POST /api/auth/google`)**: Abre el selector y verificador de cuentas de Google que valida el correo (`@gmail.com` / cuenta institucional) y carga los datos reales del usuario (nombre completo, correo e iniciales/avatar) en la sesión activa.
-4. **Cambio de Etiqueta a "Contexto de la vacante"**:
-   - En la vista de configuración (`view-setup`) y en los esquemas del backend (`schemas.py`, `evaluator.py`), se reemplazó `"Descripción de la vacante"` por **"Contexto de la vacante"**.
-5. **Cantidad Aleatoria Realista de 15 a 20 Preguntas por Sesión**:
-   - Se eliminó el selector fijo de 5–10 preguntas. Ahora cada entrevista genera automáticamente un valor aleatorio entre **15 y 20 preguntas** (`random.randint(15, 20)` en Python y `Math.floor(Math.random() * 6) + 15` en JS).
-   - Se amplió el banco de preguntas en `database/init.sql` y `frontend/js/app.js` de 120 a **176 preguntas únicas (22 por cada una de las 8 carreras)** para garantizar que ninguna sesión de 15 a 20 preguntas repita temas.
-   - Se añadió el botón **"Finalizar y ver reporte"** en el encabezado del chat para permitir evaluar y descargar el reporte en cualquier momento después de responder al menos 1 pregunta.
+1. **Agentes Configurados para `gpt-4o-mini` y `gemini-3.8-flash` por `.env` (`GUIA_CONFIGURACION_APIS.md`)**:
+   - Se eliminó de la interfaz web el botón/modal de configuración de API para que toda la configuración resida limpiamente en `.env`.
+   - Se configuró `gpt-4o-mini` (`OPENAI_API_KEY`, `OPENAI_CHAT_MODEL`) como modelo principal del **Agente Entrevistador** y `gemini-3.8-flash` (`GEMINI_API_KEY`, `GEMINI_MODEL`) como modelo principal del **Agente Evaluador Crítico**.
+   - Se agregaron comentarios explícitos en `.env.example`, `docker-compose.yml`, `backend/app/config.py`, `evaluator.py`, `interviewer.py`, `synthesizer.py`, `auth.py` y `frontend/js/app.js`, además del documento dedicado **`GUIA_CONFIGURACION_APIS.md`**.
+2. **Evaluación Crítica en Escala `0 a 5` (`[0, 5]`) con Espectro Amplio y Cero Complacencia**:
+   - Se modificaron las restricciones `CHECK` en PostgreSQL (`database/init.sql`), los esquemas Pydantic (`schemas.py`) y la lógica de evaluación (`evaluator.py` y `frontend/js/app.js`) para permitir calificaciones desde **`0`** hasta **`5`**.
+   - Si el usuario escribe respuestas sin sentido, bromas, texto repetitivo, respuestas evasivas (`"no sé"`, `"nada"`) o no demuestra una dimensión STAR en absoluto, la calificación baja a **`0/5`**.
+   - Al mismo tiempo, se amplió el diccionario de raíces verbales y sustantivas en español + extracción dinámica de palabras clave del **Contexto de la vacante** y del **CV** para que las respuestas bien elaboradas obtengan entre `4/5` y `5/5` sin sufrir bajas de puntos injustificadas por usar sinónimos.
+3. **Validador de Correos Reales en Registro (`validate_real_email` / `validateRealEmailAccount`)**:
+   - Verifica sintaxis estricta RFC 5322, bloquea usuarios de prueba y dominios ficticios o desechables (`ejemplo.com`, `test.com`, `tempmail.com`, `mailinator.com`, etc.) y consulta en tiempo real los registros `MX` del dominio mediante Google DNS-over-HTTPS (`https://dns.google/resolve?name=<dominio>&type=MX`).
+4. **Verificador Oficial de Google Identity Services (`accounts.google.com/gsi/client`)**:
+   - Se eliminó el modal personalizado de selección de cuentas y se integró el SDK oficial de Google Identity Services en `frontend/index.html` y `frontend/js/app.js` junto con el endpoint `/api/auth/google-config` y la verificación criptográfica JWT en `backend/app/auth.py`.
+5. **Adaptación de Preguntas al "Contexto de la vacante" y Limpieza de Campos**:
+   - Se eliminó la ventana de conteo de preguntas en la vista de configuración (las preguntas se muestran directamente en el chat).
+   - Se vaciaron todos los campos de entrada (`value=""`) en Login, Registro y Configuración para que ningún campo aparezca autorrellenado.
+   - Se quitó el subtítulo en la pantalla de Login y se dejó únicamente `"Escribe tu respuesta"` como placeholder del cuadro del chatbot.
+   - El selector de preguntas (`question_selector.py` y `buildVacancyTailoredQuestions`) ordena y adapta las preguntas de la carrera según su afinidad semántica con el **Contexto de la vacante** y el **Puesto objetivo**.
+6. **Aislamiento Total entre Usuarios (Historial y Nueva Práctica)**:
+   - El historial de sesiones se almacena indexado exclusivamente por el correo electrónico de cada cuenta (`historiesByUser[email]`).
+   - Cada vez que un usuario cierra sesión o inicia sesión con otra cuenta (`resetPracticeFormAndSession`), se limpian por completo los campos de **Nueva práctica**, el chat y las barras de evaluación.
 
 ---
 
-## 2. Cómo Subir los Cambios a GitHub y Ejecutar con Docker
+## 2. Cómo Subir a GitHub y Desplegar
 
-### 2.1 Subir a `https://github.com/Marcoflesh/InterviewAI-page.git`
 ```bash
 cd InterviewAI-page
-./push_to_github.sh
-```
-
-### 2.2 Levantar el Stack Docker
-```bash
 cp .env.example .env
+# Coloca tus llaves OPENAI_API_KEY, GEMINI_API_KEY y GOOGLE_CLIENT_ID en .env (ver GUIA_CONFIGURACION_APIS.md)
+./push_to_github.sh
 docker compose up --build -d
-docker exec -it interviewai-ollama ollama pull llama3.2:3b
 ```
 
 ---
 
 ## 3. Próximos Pasos (Next Steps)
 
-1. **Configuración de Llaves API de los Agentes**: Probar las llaves API disponibles del usuario (Gemini, OpenAI, Groq u Ollama) desde el botón **"Configurar API / IA"** en la barra superior o inyectándolas en `.env`.
-2. **Carga de Archivo PDF en CV**: Añadir extracción automática de texto desde archivos `.pdf` en el formulario de configuración.
-3. **Vistas de Product Owner y MLOps**: Conectar las tablas `golden_dataset` y `study_resources` a una ruta `/admin` separada.
+1. Colocar tus llaves `OPENAI_API_KEY`, `GEMINI_API_KEY` y `GOOGLE_CLIENT_ID` siguiendo **`GUIA_CONFIGURACION_APIS.md`**.
+2. Probar el flujo completo en `http://localhost:3000` con tus modelos `gpt-4o-mini` y `gemini-3.8-flash`.

@@ -42,9 +42,18 @@ services:
         condition: service_started
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-interviewai}:${POSTGRES_PASSWORD:-interviewai_secret}@db:5432/${POSTGRES_DB:-interviewai}
+      # =======================================================================
+      # >>> VARIABLES DE ENTORNO QUE INYECTAN TUS API KEYS DESDE EL ARCHIVO .env <<<
+      # =======================================================================
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-4o-mini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
+      EVALUATOR_PROVIDER: ${EVALUATOR_PROVIDER:-gemini}
+      INTERVIEWER_PROVIDER: ${INTERVIEWER_PROVIDER:-openai}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       ENABLE_FOLLOWUP_QUESTIONS: ${ENABLE_FOLLOWUP_QUESTIONS:-false}
       FOLLOWUP_STAR_THRESHOLD: ${FOLLOWUP_STAR_THRESHOLD:-3}
     ports:

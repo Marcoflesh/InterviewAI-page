@@ -1,8 +1,32 @@
 // =============================================================================
-// InterviewAI v0.2.0 - Autenticación Triple (Login, Registro y Google OAuth),
-// Generador Aleatorio de 15 a 20 Preguntas por Carrera (176 preguntas base),
-// Evaluador Semántico STAR + Llaves API (Gemini/OpenAI/Groq/Ollama) y Descarga PDF
+// InterviewAI v0.3.0
+// - Agentes de IA: GPT-4o mini (Chat/Entrevistador) y Gemini 3.8 Flash (Evaluador)
+// - Escala Crítica de Evaluación: 0 a 5 (0 = sin habilidad / respuesta sin sentido)
+// - Validador de Correos Reales con verificación DNS MX en vivo
+// - Verificador Oficial de Google Identity Services (accounts.google.com/gsi/client)
+// - Aislamiento estricto de historial y reinicio de formulario por cada usuario
 // =============================================================================
+
+// =============================================================================
+// >>> CONFIGURACIÓN DE CREDENCIALES Y MODELOS EN EL FRONTEND (OPCIONAL) <<<
+// Por arquitectura de producción, las API Keys se configuran en el archivo `.env`
+// para que el contenedor backend (FastAPI + LangGraph) las consuma de forma segura.
+// Si deseas probar directamente desde el navegador sin levantar el backend, puedes
+// colocar tus llaves aquí abajo:
+// =============================================================================
+const AGENT_CONFIG = {
+  // 1) Client ID oficial de Google Cloud Console (OAuth 2.0 Web Client ID):
+  // También se carga automáticamente desde `/api/auth/google-config` (archivo .env)
+  GOOGLE_CLIENT_ID: "", // <-- PON AQUÍ TU GOOGLE_CLIENT_ID.apps.googleusercontent.com (o en .env)
+
+  // 2) Agente de Chat / Entrevistador (OpenAI GPT-4o mini):
+  OPENAI_API_KEY: "",   // <-- PON AQUÍ TU OPENAI_API_KEY EN .env (o aquí para modo navegador)
+  OPENAI_CHAT_MODEL: "gpt-4o-mini",
+
+  // 3) Agente Evaluador Crítico (Google Gemini 3.8 Flash):
+  GEMINI_API_KEY: "",   // <-- PON AQUÍ TU GEMINI_API_KEY EN .env (o aquí para modo navegador)
+  GEMINI_MODEL: "gemini-3.8-flash"
+};
 
 const CAREER_CATALOG = [
   {
@@ -10,11 +34,14 @@ const CAREER_CATALOG = [
     name: "Ingeniería en Tecnologías Computacionales (Software)",
     roles: ["Software Engineer Intern", "Junior Full-Stack Developer", "Backend Developer"],
     lexicon: [
-      "api", "rest", "sql", "base de datos", "índice", "query", "latencia", "caché", "redis",
-      "docker", "contenedor", "git", "rama", "merge", "pr", "test", "unitario", "integración",
-      "ci/cd", "backend", "frontend", "react", "python", "fastapi", "node", "arquitectura",
-      "microservicio", "autenticación", "oauth", "jwt", "endpoint", "bug", "logs", "memoria",
-      "algoritmo", "complejidad", "asíncrono", "concurrencia", "esquema", "migración", "css"
+      "api", "rest", "graphql", "sql", "postgres", "mysql", "mongo", "base de datos", "indice",
+      "query", "consulta", "latencia", "cache", "redis", "docker", "contenedor", "kubernetes",
+      "git", "rama", "merge", "pull request", "test", "prueba", "unitario", "integracion",
+      "ci/cd", "pipeline", "backend", "frontend", "react", "angular", "vue", "python", "fastapi",
+      "django", "flask", "node", "java", "c++", "arquitectura", "microservicio", "monolito",
+      "autenticacion", "oauth", "jwt", "seguridad", "endpoint", "bug", "error", "debug", "logs",
+      "memoria", "ram", "cpu", "algoritmo", "complejidad", "asincrono", "concurrencia", "hilo",
+      "esquema", "migracion", "css", "html", "javascript", "typescript", "servidor", "nube", "aws"
     ],
     resources: [
       { title: "Cómo cuantificar impacto de ingeniería en entrevistas", provider: "Tech Interview Handbook", url: "https://www.techinterviewhandbook.org/behavioral-interview/" },
@@ -50,11 +77,13 @@ const CAREER_CATALOG = [
     name: "Ciencia de Datos e Inteligencia Artificial",
     roles: ["Data Scientist Jr", "Machine Learning Engineer Intern", "Data Analyst"],
     lexicon: [
-      "dataset", "modelo", "entrenamiento", "validación", "overfitting", "regularización",
-      "f1", "auc", "roc", "precisión", "recall", "rmse", "mae", "mape", "regresión",
-      "clasificación", "clustering", "feature", "variable", "pipeline", "sql", "python",
-      "pandas", "llm", "prompt", "json", "sesgo", "anonimización", "correlación", "hipótesis",
-      "series de tiempo", "estacionalidad", "drift", "baseline", "smote", "cross-validation"
+      "dataset", "datos", "modelo", "entrenamiento", "validacion", "overfitting", "sobreajuste",
+      "regularizacion", "f1", "auc", "roc", "precision", "recall", "exactitud", "rmse", "mae",
+      "mape", "regresion", "clasificacion", "clustering", "segmentacion", "feature", "variable",
+      "pipeline", "etl", "sql", "python", "pandas", "numpy", "scikit", "pytorch", "tensorflow",
+      "llm", "prompt", "agente", "langgraph", "json", "sesgo", "anonimizacion", "correlacion",
+      "hipotesis", "estadistica", "series de tiempo", "estacionalidad", "drift", "baseline",
+      "smote", "desbalance", "tablero", "dashboard", "kpi", "distribucion", "outliers", "nulos"
     ],
     resources: [
       { title: "Traducción de Métricas ML (F1, AUC, RMSE) a KPIs de Negocio", provider: "Google Developers ML", url: "https://developers.google.com/machine-learning/crash-course" },
@@ -90,10 +119,12 @@ const CAREER_CATALOG = [
     name: "Ingeniería Industrial y de Sistemas",
     roles: ["Supply Chain Analyst", "Continuous Improvement Intern", "Operations Coordinator"],
     lexicon: [
-      "vsm", "tiempo de ciclo", "takt", "cuello de botella", "balanceo", "línea", "5s",
-      "kaizen", "lean", "six sigma", "ishikawa", "pareto", "causa raíz", "merma", "defecto",
-      "oee", "smed", "tpm", "inventario", "abc", "eoq", "reorden", "stock", "otif", "sla",
-      "layout", "almacén", "picking", "ergonomía", "sop", "estándar", "simulación", "roi", "cpk"
+      "vsm", "mapa de valor", "tiempo de ciclo", "takt", "cuello de botella", "balanceo", "linea",
+      "5s", "kaizen", "lean", "six sigma", "ishikawa", "pareto", "causa raiz", "merma", "defecto",
+      "retrabajo", "calidad", "oee", "smed", "tpm", "mantenimiento", "inventario", "abc", "eoq",
+      "reorden", "stock", "almacen", "picking", "packing", "otif", "sla", "logistica", "ruta",
+      "transporte", "layout", "planta", "estacion", "ergonomia", "seguridad", "sop", "estandar",
+      "simulacion", "capacidad", "productividad", "eficiencia", "roi", "costo", "cpk", "control"
     ],
     resources: [
       { title: "Cuantificación de Proyectos Lean Six Sigma (OEE y Tiempo de Ciclo)", provider: "ASQ Six Sigma", url: "https://asq.org/quality-resources/six-sigma" }
@@ -128,10 +159,13 @@ const CAREER_CATALOG = [
     name: "Ingeniería Mecatrónica y Automatización",
     roles: ["Automation Engineer Jr", "Embedded Systems Intern", "Robotics Engineer"],
     lexicon: [
-      "plc", "microcontrolador", "sensor", "actuador", "pid", "lazo cerrado", "sobreimpulso",
-      "pwm", "adc", "ruido", "filtro", "osciloscopio", "multímetro", "cad", "solidworks",
-      "cnc", "impresión 3d", "tolerancia", "pcb", "potencia", "interrupción", "isr", "rtos",
-      "i2c", "spi", "uart", "can", "modbus", "mqtt", "visión", "cinemática", "torque", "neumático"
+      "plc", "ladder", "microcontrolador", "arduino", "esp32", "stm32", "raspberry", "sensor",
+      "actuador", "motor", "servomotor", "paso a paso", "pid", "lazo cerrado", "control",
+      "sobreimpulso", "pwm", "adc", "ruido", "filtro", "osciloscopio", "multimetro", "senal",
+      "cad", "solidworks", "inventor", "cnc", "impresion 3d", "tolerancia", "mecanismo", "pcb",
+      "circuito", "potencia", "rele", "transistor", "interrupcion", "isr", "rtos", "firmware",
+      "i2c", "spi", "uart", "can", "modbus", "mqtt", "vision", "camara", "cinematica", "robot",
+      "torque", "neumatico", "hidraulico", "valvula", "hmi", "scada"
     ],
     resources: [
       { title: "Diagnóstico Electromecánico y Sistemas de Control", provider: "IEEE Robotics & Automation", url: "https://www.ieee-ras.org/" }
@@ -167,9 +201,12 @@ const CAREER_CATALOG = [
     roles: ["Financial Analyst Jr", "Business Consultant Intern", "Corporate Finance Associate"],
     lexicon: [
       "dcf", "flujo de caja", "flujo de efectivo", "wacc", "tasa de descuento", "vpn", "van",
-      "tir", "ebitda", "margen", "presupuesto", "variación", "opex", "capex", "liquidez",
-      "solvencia", "riesgo", "var", "beta", "portafolio", "mece", "capital de trabajo",
-      "punto de equilibrio", "precio", "elasticidad", "múltiplos", "valuación", "cobertura", "roi"
+      "tir", "retorno", "ebitda", "margen", "utilidad", "rentabilidad", "presupuesto", "variacion",
+      "opex", "capex", "costo", "gasto", "liquidez", "solvencia", "apalancamiento", "deuda",
+      "riesgo", "var", "beta", "portafolio", "cartera", "credito", "mece", "consultoria",
+      "capital de trabajo", "cuentas por cobrar", "cuentas por pagar", "punto de equilibrio",
+      "precio", "pricing", "elasticidad", "multiplos", "valuacion", "cobertura", "hedging",
+      "tipo de cambio", "inflacion", "tasa de interes", "estado financiero", "balance", "roi"
     ],
     resources: [
       { title: "Valuación Financiera y Presentación de Impacto en EBITDA", provider: "Corporate Finance Institute", url: "https://corporatefinanceinstitute.com/resources/valuation/" }
@@ -204,10 +241,13 @@ const CAREER_CATALOG = [
     name: "Marketing Digital, Producto y Desarrollo de Negocios",
     roles: ["Associate Product Manager", "Growth Marketing Analyst", "Business Development Rep"],
     lexicon: [
-      "embudo", "funnel", "conversión", "cac", "ltv", "roas", "ctr", "retención", "churn",
-      "cohorte", "a/b", "experimento", "roadmap", "rice", "moscow", "usuario", "entrevista",
-      "icp", "go-to-market", "seo", "sem", "orgánico", "crm", "onboarding", "activación",
-      "nps", "csat", "posicionamiento", "benchmarking", "b2b", "leads", "arpu", "monetización"
+      "embudo", "funnel", "conversion", "cac", "ltv", "roas", "roi", "ctr", "cpc", "retencion",
+      "churn", "abandono", "cohorte", "a/b", "experimento", "hipotesis", "roadmap", "priorizacion",
+      "rice", "moscow", "producto", "mvp", "usuario", "cliente", "entrevista", "encuesta",
+      "insight", "icp", "segmentacion", "target", "go-to-market", "lanzamiento", "campaña",
+      "seo", "sem", "organico", "pauta", "contenido", "crm", "email", "onboarding", "activacion",
+      "nps", "csat", "posicionamiento", "benchmarking", "competencia", "b2b", "leads", "ventas",
+      "arpu", "monetizacion", "suscripcion", "landing"
     ],
     resources: [
       { title: "Métricas de Producto y Growth (CAC, LTV, Conversión)", provider: "Product School", url: "https://productschool.com/blog/product-fundamentals" }
@@ -242,10 +282,13 @@ const CAREER_CATALOG = [
     name: "Ingeniería Biomédica y Biotecnología",
     roles: ["Clinical Engineering Intern", "R&D Biotech Associate", "Quality & Regulatory Affairs Jr"],
     lexicon: [
-      "protocolo", "ensayo", "control", "reproducibilidad", "desviación", "calibración",
-      "señal", "ecg", "emg", "ruido", "filtrado", "iso 13485", "iso 14971", "amef", "riesgo",
-      "cofepris", "fda", "anova", "p-valor", "clínico", "bioproceso", "fermentación", "cultivo",
-      "ph", "mantenimiento", "bioética", "anonimización", "sensibilidad", "especificidad", "pcr"
+      "protocolo", "ensayo", "experimento", "laboratorio", "control", "reproducibilidad",
+      "desviacion", "variabilidad", "calibracion", "sensor", "senal", "ecg", "emg", "oximetria",
+      "ruido", "filtrado", "iso 13485", "iso 14971", "iec 60601", "amef", "riesgo", "regulatorio",
+      "cofepris", "fda", "norma", "anova", "t-student", "p-valor", "estadistica", "clinico",
+      "paciente", "medico", "hospital", "bioproceso", "fermentacion", "cultivo", "biorreactor",
+      "enzima", "ph", "temperatura", "mantenimiento", "bioetica", "anonimizacion", "biomaterial",
+      "sensibilidad", "especificidad", "imagen medica", "pcr", "molecular", "cadena de frio"
     ],
     resources: [
       { title: "Validación de Dispositivos Médicos y Normativa Clínica", provider: "WHO Medical Devices", url: "https://www.who.int/health-topics/medical-devices" }
@@ -280,10 +323,13 @@ const CAREER_CATALOG = [
     name: "Arquitectura, Diseño Industrial y UX",
     roles: ["UX/UI Product Designer", "Architectural Project Jr", "Industrial Design Intern"],
     lexicon: [
-      "usabilidad", "usuario", "prototipo", "wireframe", "iteración", "presupuesto",
-      "material", "constructivo", "bim", "revit", "autocad", "figma", "sistema de diseño",
-      "componente", "bioclimático", "ventilación", "asoleamiento", "sustentable", "estructural",
-      "instalaciones", "mep", "accesibilidad", "ergonomía", "plano", "detalle", "zonificación"
+      "usabilidad", "usuario", "ux", "ui", "interfaz", "prototipo", "wireframe", "maqueta",
+      "iteracion", "prueba", "presupuesto", "costo", "material", "constructivo", "manufactura",
+      "bim", "revit", "autocad", "rhino", "sketchup", "figma", "sistema de diseño", "componente",
+      "libreria", "bioclimatico", "ventilacion", "asoleamiento", "iluminacion", "termico",
+      "sustentable", "energia", "estructural", "instalaciones", "mep", "cruce", "accesibilidad",
+      "ergonomia", "antropometria", "normativa", "plano", "ejecutivo", "detalle", "especificacion",
+      "espacio", "circulacion", "zonificacion", "flujo", "jerarquia", "taller", "obra"
     ],
     resources: [
       { title: "Presentación de Proyectos UX y Diseño con Métricas de Usabilidad", provider: "Nielsen Norman Group", url: "https://www.nngroup.com/articles/ux-research-cheat-sheet/" }
@@ -324,23 +370,23 @@ const STOPWORDS_ES = new Set([
   "mas", "menos", "muy", "todo", "toda", "todos", "todas", "otro", "otra"
 ]);
 
-const DEFAULT_REGISTERED_USERS = [
-  {
-    user_id: "usr-demo-marco",
-    full_name: "Marco Antonio Hernández Roque",
-    email: "a01709802@tec.mx",
-    password: "Interview2026!",
-    university: "Tecnológico de Monterrey",
-    auth_provider: "local"
-  }
-];
+// Dominios falsos, temporales o de prueba bloqueados por el validador de correos reales
+const BLOCKED_FAKE_EMAIL_DOMAINS = new Set([
+  "ejemplo.com", "example.com", "test.com", "prueba.com", "correo.com",
+  "dominio.com", "usuario.com", "mailinator.com", "tempmail.com",
+  "10minutemail.com", "guerrillamail.com", "yopmail.com", "trashmail.com",
+  "sharklasers.com", "fakeinbox.com", "getnada.com", "maildrop.cc",
+  "dispostable.com", "fake.com", "asdf.com", "qwerty.com", "none.com",
+  "xyz.com", "abc.com", "hola.com", "email.com", "nada.com", "patito.com"
+]);
 
 const appState = {
   user: null,
-  registeredUsers: [...DEFAULT_REGISTERED_USERS],
+  registeredUsers: [],
+  historiesByUser: {}, // Diccionario aislado por email: { "correo@dominio.com": [ ...sesiones ] }
   sessionId: null,
   careerCode: "ITC",
-  targetRole: "Software Engineer Intern",
+  targetRole: "",
   seniority: "Junior / Intern",
   vacancyContext: "",
   cvSummary: "",
@@ -348,42 +394,92 @@ const appState = {
   questionsPool: [],
   currentIndex: 0,
   turns: [],
-  lastEvaluation: null,
-  history: [],
   turnStartTime: Date.now(),
-  aiSettings: {
-    provider: "local",
-    apiKey: "",
-    model: ""
-  }
+  googleClientId: AGENT_CONFIG.GOOGLE_CLIENT_ID
 };
 
 function loadSavedState() {
   try {
-    const savedUsers = localStorage.getItem("interviewai_users_v2");
+    const savedUsers = localStorage.getItem("interviewai_users_v3");
     if (savedUsers) {
       const parsed = JSON.parse(savedUsers);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         appState.registeredUsers = parsed;
       }
     }
-    const savedAi = localStorage.getItem("interviewai_ai_settings_v2");
-    if (savedAi) {
-      appState.aiSettings = { ...appState.aiSettings, ...JSON.parse(savedAi) };
+    const savedHistories = localStorage.getItem("interviewai_histories_by_user_v3");
+    if (savedHistories) {
+      const parsedH = JSON.parse(savedHistories);
+      if (parsedH && typeof parsedH === "object") {
+        appState.historiesByUser = parsedH;
+      }
     }
-  } catch (_) {
-    // Continúa en memoria si localStorage está restringido
-  }
+  } catch (_) {}
 }
 
 function saveRegisteredUsers() {
   try {
-    localStorage.setItem("interviewai_users_v2", JSON.stringify(appState.registeredUsers));
+    localStorage.setItem("interviewai_users_v3", JSON.stringify(appState.registeredUsers));
   } catch (_) {}
 }
 
-function isValidEmailFormat(email) {
-  return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test((email || "").trim());
+function saveHistoriesByUser() {
+  try {
+    localStorage.setItem("interviewai_histories_by_user_v3", JSON.stringify(appState.historiesByUser));
+  } catch (_) {}
+}
+
+function getCurrentUserHistoryList() {
+  if (!appState.user || !appState.user.email) return [];
+  const key = appState.user.email.toLowerCase();
+  if (!Array.isArray(appState.historiesByUser[key])) {
+    appState.historiesByUser[key] = [];
+  }
+  return appState.historiesByUser[key];
+}
+
+// =============================================================================
+// VALIDADOR DE CORREOS REALES (Sintaxis RFC 5322 + Bloqueo de Dominios Falsos
+// + Verificación en vivo de Registros MX en servidores DNS de Google)
+// =============================================================================
+async function validateRealEmailAccount(email) {
+  const clean = (email || "").trim().toLowerCase();
+  const rfcRegex = /^[A-Za-z0-9](?:[A-Za-z0-9._%+-]{0,62}[A-Za-z0-9])?@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z]{2,})+$/;
+
+  if (!rfcRegex.test(clean) || clean.includes("..")) {
+    return { valid: false, reason: "El formato del correo electrónico es inválido." };
+  }
+
+  const [localPart, domain] = clean.split("@");
+  if (localPart.length < 2) {
+    return { valid: false, reason: "El nombre de usuario antes de '@' es demasiado corto." };
+  }
+
+  if (/^(\d+|test|prueba|asdf|qwerty|admin|user|usuario|correo|ejemplo|fake)$/.test(localPart)) {
+    return { valid: false, reason: `El usuario '${localPart}@...' parece ser un correo de prueba. Ingresa tu correo personal o institucional real.` };
+  }
+
+  if (BLOCKED_FAKE_EMAIL_DOMAINS.has(domain)) {
+    return { valid: false, reason: `El dominio '@${domain}' es un dominio ficticio o temporal no permitido. Usa un proveedor de correo real.` };
+  }
+
+  // Verificar en vivo mediante Google Public DNS-over-HTTPS que el dominio exista y tenga servidores de correo (MX)
+  try {
+    const dnsResp = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=MX`);
+    if (dnsResp.ok) {
+      const dnsData = await dnsResp.json();
+      if (dnsData.Status === 3 || !Array.isArray(dnsData.Answer) || dnsData.Answer.length === 0) {
+        return {
+          valid: false,
+          reason: `El dominio '@${domain}' no existe o no cuenta con servidores de correo electrónico reales (registros MX).`
+        };
+      }
+    }
+  } catch (_) {
+    // Si el navegador bloquea la consulta externa por red local, verifica que el TLD sea válido
+  }
+
+  return { valid: true, email: clean };
 }
 
 function anonymizeText(text) {
@@ -396,7 +492,7 @@ function anonymizeText(text) {
 
 function extractMetrics(text) {
   if (!text) return [];
-  const regex = /\b\d+(?:[.,]\d+)?\s*(?:%|por\s*ciento|ms|milisegundos|segundos|s|minutos|min|horas|h|días|semanas|meses|x|veces|usuarios|clientes|solicitudes|req\/s|mb|gb|tb|usd|mxn|\$|pesos|dólares|puntos|ppm|oee|cpk|f1|auc)\b|\$\s*\d+(?:[.,]\d+)?|\b(?:reduj\w+|increment\w+|aument\w+|mejor\w+|ahorr\w+|baj\w+|sub\w+)\s+(?:en\s+)?(?:un\s+)?\d+(?:[.,]\d+)?\s*%?/gi;
+  const regex = /\b\d+(?:[.,]\d+)?\s*(?:%|por\s*ciento|ms|milisegundos|segundos|s|minutos|min|horas|h|días|semanas|meses|x|veces|usuarios|clientes|solicitudes|req\/s|mb|gb|tb|usd|mxn|\$|pesos|dólares|puntos|ppm|oee|cpk|f1|auc)\b|\$\s*\d+(?:[.,]\d+)?|\b(?:reduj\w+|increment\w+|aument\w+|mejor\w+|ahorr\w+|baj\w+|sub\w+|optimiz\w+|disminuy\w+|pas\w+\s+de)\s+(?:en\s+)?(?:un\s+)?\d+(?:[.,]\d+)?\s*%?/gi;
   return text.match(regex) || [];
 }
 
@@ -407,146 +503,226 @@ function normalizeStr(str) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function extractQuestionKeywords(questionText, vacancyContext) {
-  const combined = normalizeStr(`${questionText} ${vacancyContext || ""}`);
-  const words = combined.match(/[a-z0-9]{4,}/g) || [];
+function extractKeywords(text) {
+  const norm = normalizeStr(text);
+  const words = norm.match(/[a-z0-9]{4,}/g) || [];
   return Array.from(new Set(words.filter((w) => !STOPWORDS_ES.has(w))));
 }
 
-function evaluateResponseLocal(questionText, responseText, careerCode, role) {
+// =============================================================================
+// GENERADOR DE PREGUNTAS ADAPTADAS AL CONTEXTO DE LA VACANTE Y CV DEL USUARIO
+// =============================================================================
+function buildVacancyTailoredQuestions(careerObj, targetRole, cvText, vacancyContext, totalCount) {
+  const contextTokens = extractKeywords(`${targetRole} ${vacancyContext} ${cvText}`);
+  const cleanVacancySnippet = (vacancyContext || "").trim().split(/[.\n]/)[0].trim().substring(0, 95);
+
+  // Calificar cada pregunta del banco según su afinidad con el contexto de la vacante + factor aleatorio
+  const scoredQuestions = careerObj.questions.map((qText) => {
+    const qTokens = extractKeywords(qText);
+    let overlap = 0;
+    contextTokens.forEach((ct) => {
+      if (qTokens.some((qt) => qt.includes(ct.slice(0, 4)) || ct.includes(qt.slice(0, 4)))) {
+        overlap += 1;
+      }
+    });
+    return {
+      qText,
+      score: overlap * 2.0 + Math.random() * 1.5
+    };
+  });
+
+  scoredQuestions.sort((a, b) => b.score - a.score);
+  const selectedRaw = scoredQuestions.slice(0, totalCount).map((item) => item.qText);
+
+  // Contextualizar las preguntas seleccionadas con el puesto objetivo y el contexto de la vacante
+  return selectedRaw.map((baseQ, idx) => {
+    if (idx === 0 && cleanVacancySnippet.length > 12) {
+      return `Para la vacante de ${targetRole} (enfocada en "${cleanVacancySnippet}"): ${baseQ}`;
+    }
+    if (idx % 3 === 1 && targetRole) {
+      return `En relación con las responsabilidades del puesto de ${targetRole}: ${baseQ}`;
+    }
+    if (idx % 4 === 2 && cleanVacancySnippet.length > 12) {
+      return `Tomando en cuenta los retos descritos en el contexto de la vacante: ${baseQ}`;
+    }
+    return baseQ;
+  });
+}
+
+// =============================================================================
+// EVALUADOR CRÍTICO STAR (ESCALA 0 A 5 — CERO COMPLACENCIA, ESPECTRO AMPLIO)
+// =============================================================================
+function evaluateResponseCritical(questionText, responseText, careerCode, role) {
   const clean = (responseText || "").trim();
   const norm = normalizeStr(clean);
   const words = norm.match(/[a-z0-9]+/g) || [];
   const wordCount = words.length;
   const uniqueWords = new Set(words).size;
+  const lexicalDiversity = uniqueWords / Math.max(1, wordCount);
   const metrics = extractMetrics(clean);
   const careerObj = CAREER_CATALOG.find((c) => c.code === careerCode) || CAREER_CATALOG[0];
 
-  // 1. Detección estricta de respuestas evasivas, vacías o sin contenido real
-  const evasiveRegex = /^(no\s+se|ninguno|ninguna|nada|paso|hola|test|prueba|asdf|qwerty|ok|bien|si|no|x+|todo\s+bien)$/;
-  if (wordCount < 8 || uniqueWords < 6 || evasiveRegex.test(norm)) {
+  // 1. FILTRO ESTRICTO DE TONTERÍAS / EVASIVAS / SIN SENTIDO -> CALIFICACIÓN 0/5
+  const nonsenseRegex = /^(no\s*se|ningun[oa]?|nada|paso|hola|test|prueba|asdf\w*|qwerty\w*|ok|bien|si|no|x+|jaja\w*|lol|wtf|cualquier\s*cosa|sin\s*comentarios|todo\s*bien|nose)$/;
+  if (
+    wordCount < 6 ||
+    uniqueWords < 5 ||
+    nonsenseRegex.test(norm) ||
+    (wordCount >= 10 && lexicalDiversity < 0.30)
+  ) {
     return {
-      star_situation: 1,
-      star_task: 1,
-      star_action: 1,
-      star_result: 1,
-      technical_clarity: 1,
-      relevance: 1,
-      turn_average_score: 1.0,
+      star_situation: 0,
+      star_task: 0,
+      star_action: 0,
+      star_result: 0,
+      technical_clarity: 0,
+      relevance: 0,
+      turn_average_score: 0.0,
       metrics_detected: [],
       tech_terms_detected: [],
-      strengths: "Respuesta demasiado breve o evasiva; no permite validar competencias para el puesto.",
-      improvement_areas: "Desarrolla un caso real de al menos 45 a 80 palabras explicando el contexto (Situación), el reto asignado (Tarea), las acciones en primera persona (Acción) y las métricas logradas (Resultado).",
+      strengths: "Ninguna fortaleza identificada (0/5). La respuesta entregada carece de contenido profesional, es evasiva o no tiene sentido.",
+      improvement_areas: "Crítica directa: Una respuesta vacía o incoherente recibe 0/5 porque no demuestra ninguna competencia. Debes describir un caso real detallando el problema inicial (Situación), tu responsabilidad concreta (Tarea), las acciones técnicas que ejecutaste (Acción) y el resultado medible (Resultado).",
       improved_example_star: buildQuestionSpecificStarExample(questionText, careerCode, role)
     };
   }
 
-  // 2. Pertinencia real respecto a la pregunta actual y al contexto de la vacante
-  const qKeywords = extractQuestionKeywords(questionText, appState.vacancyContext);
-  const matchedKeywords = qKeywords.filter((kw) => norm.includes(kw.slice(0, 5)));
-  const overlapRatio = matchedKeywords.length / Math.max(1, Math.min(12, qKeywords.length));
+  // 2. PERTINENCIA CON LA PREGUNTA Y EL CONTEXTO DE LA VACANTE
+  const qKeywords = extractKeywords(`${questionText} ${appState.vacancyContext}`);
+  const matchedKeywords = qKeywords.filter((kw) => norm.includes(kw.slice(0, 4)));
+  const overlapRatio = matchedKeywords.length / Math.max(1, Math.min(10, qKeywords.length));
 
-  // 3. Términos técnicos de la carrera detectados en la respuesta
-  const matchedTech = careerObj.lexicon.filter((term) => norm.includes(normalizeStr(term)));
+  // 3. EVIDENCIA TÉCNICA (Léxico de la carrera + términos del contexto de la vacante y CV)
+  const vacancyTechWords = extractKeywords(`${appState.vacancyContext} ${appState.cvSummary}`).filter((w) => w.length >= 5);
+  const combinedLexicon = Array.from(new Set([...careerObj.lexicon, ...vacancyTechWords]));
+  const matchedTech = combinedLexicon.filter((term) => norm.includes(normalizeStr(term)));
 
-  // 4. Marcadores lingüísticos independientes para S, T, A y R
-  const sitMarkers = [
-    "proyecto", "durante", "cuando", "en mi", "trabajando", "materia", "practicas",
-    "laboratorio", "ocasion", "contexto", "ocurrio", "enfrentamos", "existia",
-    "teniamos", "situacion", "anteriormente", "semestre", "empresa", "cliente"
+  // 4. RAÍCES SEMÁNTICAS AMPLIAS PARA RECONOCER BUENAS RESPUESTAS NATURALES
+  const sitStems = [
+    "proyect", "durante", "cuando", "trabaj", "materia", "practic", "laboratori",
+    "ocasion", "context", "ocurri", "enfrent", "exist", "teniam", "situacion",
+    "anterior", "semestr", "empres", "client", "equi", "area", "sistem", "proces",
+    "plataform", "aplicacion", "servicio", "etapa", "inicio", "detect", "identific"
   ];
-  const taskMarkers = [
-    "objetivo", "tarea", "responsabilidad", "debia", "tenia que", "encargue",
-    "reto", "meta", "requeria", "necesitabamos", "rol", "cumplir", "proposito",
-    "asignaron", "resolver", "problema"
+  const taskStems = [
+    "objetiv", "tare", "responsab", "debi", "teni", "encarg", "reto", "meta",
+    "requer", "necesit", "rol", "cumpl", "proposit", "asign", "resolv", "problem",
+    "urgenc", "prioridad", "solicitud", "alcanc", "compromis", "garantiz", "asegur",
+    "reducir", "mejorar", "optimizar", "evitar", "lograr"
   ];
-  const actionMarkers1P = [
-    "implemente", "disene", "programe", "desarrolle", "analice", "construi",
-    "optimice", "configure", "propuse", "realice", "ejecute", "aplique",
-    "automatice", "estructure", "revise", "calibre", "modele", "negocie",
-    "coordine", "investigue", "migre", "valide", "estandarice", "documente",
-    "medi", "calcule", "entrene", "limpie", "reorganice", "utilice", "creamos"
+  const actionStems = [
+    "implement", "disen", "program", "desarroll", "analic", "analiz", "constru",
+    "optimic", "optimiz", "configur", "propus", "realic", "realiz", "ejecut",
+    "apliqu", "automat", "estructur", "revis", "calibr", "model", "negoci",
+    "coordin", "investig", "migr", "valid", "estandar", "document", "medi",
+    "calcul", "entren", "limpi", "reorganic", "utilic", "utiliz", "cree", "crea",
+    "levant", "diagnostic", "correg", "modific", "integr", "despleg", "prob",
+    "reemplac", "sustitu", "divid", "prioric", "lider", "establec", "defini"
   ];
-  const resultMarkers = [
-    "resultado", "logre", "logramos", "redujo", "redujimos", "incremento",
-    "aumento", "mejoro", "ahorramos", "permitio", "final", "conseguimos",
-    "impacto", "paso de", "bajo a", "subio a", "cumplimos", "obtuvimos"
+  const resultStems = [
+    "resultad", "logr", "reduj", "reduci", "increment", "aument", "mejor",
+    "ahorr", "permit", "final", "consegu", "impact", "paso de", "bajo a",
+    "subio a", "cumplim", "obtuv", "disminuy", "elimina", "estabiliz",
+    "entreg", "aprob", "satisfaccion", "exito", "gracias a", "con esto"
   ];
 
-  const sitHits = sitMarkers.filter((m) => norm.includes(m)).length;
-  const taskHits = taskMarkers.filter((m) => norm.includes(m)).length;
-  const actHits = actionMarkers1P.filter((m) => norm.includes(m)).length;
-  const resHits = resultMarkers.filter((m) => norm.includes(m)).length;
+  const sitHits = sitStems.filter((s) => norm.includes(s)).length;
+  const taskHits = taskStems.filter((s) => norm.includes(s)).length;
+  const actHits = actionStems.filter((s) => norm.includes(s)).length;
+  const resHits = resultStems.filter((s) => norm.includes(s)).length;
 
-  // Situación (1 a 5)
-  let s = 1;
-  if (sitHits >= 1 || wordCount >= 18) s = 2;
-  if (sitHits >= 1 && wordCount >= 28) s = 3;
-  if (sitHits >= 2 && wordCount >= 42) s = 4;
-  if (sitHits >= 3 && wordCount >= 60 && overlapRatio >= 0.25) s = 5;
+  // Si el usuario escribió texto desconectado de la pregunta, sin acciones y sin términos técnicos -> 0/5
+  if (overlapRatio === 0 && matchedTech.length === 0 && actHits === 0) {
+    return {
+      star_situation: sitHits > 0 ? 1 : 0,
+      star_task: 0,
+      star_action: 0,
+      star_result: 0,
+      technical_clarity: 0,
+      relevance: 0,
+      turn_average_score: Number(((sitHits > 0 ? 1 : 0) / 6).toFixed(2)),
+      metrics_detected: [],
+      tech_terms_detected: [],
+      strengths: "No se identifican argumentos técnicos ni relación con la pregunta planteada.",
+      improvement_areas: "Crítica directa: Tu respuesta divaga y no demuestra la habilidad evaluada. Explica el problema concreto, tu objetivo, las acciones técnicas aplicadas y el impacto medible.",
+      improved_example_star: buildQuestionSpecificStarExample(questionText, careerCode, role)
+    };
+  }
 
-  // Tarea (1 a 5)
-  let t = 1;
-  if (taskHits >= 1 || (sitHits >= 1 && wordCount >= 24)) t = 2;
-  if (taskHits >= 1 && wordCount >= 32) t = 3;
-  if (taskHits >= 2 && wordCount >= 45) t = 4;
-  if (taskHits >= 3 && wordCount >= 60) t = 5;
+  // --- SITUACIÓN (0 a 5) ---
+  let s = 0;
+  if (sitHits === 0 && wordCount < 15) s = 0;
+  else if (sitHits === 1 || wordCount < 22) s = sitHits >= 1 ? 2 : 1;
+  else if (sitHits === 2 && wordCount >= 22) s = 3;
+  else if (sitHits >= 3 && wordCount >= 30) s = 4;
+  else s = 3;
+  if (sitHits >= 4 && wordCount >= 42 && overlapRatio >= 0.25) s = 5;
 
-  // Acción (1 a 5)
-  let a = 1;
-  if (actHits >= 1) a = 2;
-  if (actHits >= 2 || (actHits >= 1 && matchedTech.length >= 1)) a = 3;
-  if (actHits >= 2 && matchedTech.length >= 2 && wordCount >= 40) a = 4;
-  if (actHits >= 3 && matchedTech.length >= 3 && wordCount >= 58) a = 5;
+  // --- TAREA (0 a 5) ---
+  let t = 0;
+  if (taskHits === 0) t = wordCount >= 30 ? 1 : 0;
+  else if (taskHits === 1) t = wordCount >= 26 ? 3 : 2;
+  else if (taskHits === 2) t = wordCount >= 34 ? 4 : 3;
+  else t = wordCount >= 40 ? 5 : 4;
 
-  // Resultado (1 a 5) — Sin métricas cuantitativas no puede superar 2 o 3
-  let r = 1;
-  if (resHits >= 1) r = 2;
-  if (metrics.length >= 1 || (resHits >= 2 && wordCount >= 45)) r = 3;
-  if (metrics.length >= 1 && resHits >= 1) r = 4;
-  if (metrics.length >= 2 && resHits >= 1 && wordCount >= 50) r = 5;
+  // --- ACCIÓN (0 a 5) ---
+  let a = 0;
+  if (actHits === 0) a = 0;
+  else if (actHits === 1) a = matchedTech.length >= 1 ? 3 : 2;
+  else if (actHits === 2) a = matchedTech.length >= 1 ? 4 : 3;
+  else a = matchedTech.length >= 2 && wordCount >= 38 ? 5 : 4;
 
-  // Claridad técnica (1 a 5)
-  let tech = 1;
-  if (matchedTech.length >= 1 || wordCount >= 25) tech = 2;
-  if (matchedTech.length >= 2) tech = 3;
-  if (matchedTech.length >= 3 && actHits >= 1) tech = 4;
-  if (matchedTech.length >= 4 && actHits >= 2 && wordCount >= 55) tech = 5;
+  // --- RESULTADO (0 a 5) ---
+  let r = 0;
+  if (resHits === 0 && metrics.length === 0) r = 0;
+  else if (resHits >= 1 && metrics.length === 0) r = wordCount >= 38 ? 3 : 2;
+  else if (metrics.length === 1) r = resHits >= 1 ? 4 : 3;
+  else r = resHits >= 1 ? 5 : 4;
 
-  // Pertinencia a la pregunta (1 a 5)
-  let rel = 1;
-  if (overlapRatio >= 0.12 || matchedTech.length >= 1) rel = 2;
-  if (overlapRatio >= 0.24) rel = 3;
-  if (overlapRatio >= 0.38 && wordCount >= 32) rel = 4;
-  if (overlapRatio >= 0.52 && wordCount >= 48) rel = 5;
+  // --- CLARIDAD TÉCNICA (0 a 5) ---
+  let tech = 0;
+  if (matchedTech.length === 0 && actHits === 0) tech = 0;
+  else if (matchedTech.length === 0) tech = wordCount >= 35 ? 2 : 1;
+  else if (matchedTech.length === 1) tech = 3;
+  else if (matchedTech.length === 2) tech = 4;
+  else tech = actHits >= 2 && wordCount >= 38 ? 5 : 4;
+
+  // --- PERTINENCIA (0 a 5) ---
+  let rel = 0;
+  if (overlapRatio === 0 && matchedTech.length === 0) rel = 0;
+  else if (overlapRatio < 0.15) rel = matchedTech.length >= 1 ? 2 : 1;
+  else if (overlapRatio < 0.30) rel = 3;
+  else if (overlapRatio < 0.45) rel = 4;
+  else rel = wordCount >= 34 ? 5 : 4;
 
   const avg = Number(((s + t + a + r + tech + rel) / 6).toFixed(2));
 
-  // Retroalimentación específica y dinámica según lo que realmente escribió el usuario
+  // Retroalimentación crítica, objetiva y concisa
   const goodParts = [];
-  if (s >= 4) goodParts.push("contextualizaste bien el escenario inicial");
-  if (a >= 4) goodParts.push("describiste acciones concretas en primera persona");
-  if (r >= 4 && metrics.length > 0) goodParts.push(`cuantificaste el impacto (${metrics.slice(0, 3).join(", ")})`);
-  if (tech >= 4 && matchedTech.length > 0) goodParts.push(`usaste vocabulario técnico sólido (${matchedTech.slice(0, 3).join(", ")})`);
+  if (s >= 4) goodParts.push("contexto del problema bien planteado (Situación)");
+  if (t >= 4) goodParts.push("objetivo o reto claramente delimitado (Tarea)");
+  if (a >= 4) goodParts.push("ejecución técnica bien fundamentada (Acción)");
+  if (r >= 4 && metrics.length > 0) goodParts.push(`impacto cuantificado (${metrics.slice(0, 3).join(", ")})`);
+  if (tech >= 4 && matchedTech.length > 0) goodParts.push(`uso preciso de conceptos (${matchedTech.slice(0, 4).join(", ")})`);
 
-  let strengths = "Registraste un intento inicial, pero faltan elementos concretos del caso.";
+  let strengths = "La respuesta carece de profundidad técnica suficiente en este turno.";
   if (goodParts.length > 0) {
-    strengths = "Fortalezas: " + goodParts.join(", ") + ".";
-  } else if (rel >= 3) {
-    strengths = "Abordaste el tema general de la pregunta, aunque con poca profundidad metodológica.";
+    strengths = "Evidencia sólida: " + goodParts.join("; ") + ".";
+  } else if (avg >= 2.5) {
+    strengths = "Se comprende la idea general del caso, pero faltó rigor en la ejecución y medición del impacto.";
   }
 
-  const missing = [];
-  if (rel <= 2) missing.push("responder directamente al problema específico planteado en la pregunta");
-  if (s <= 2) missing.push("explicar en qué proyecto o contexto ocurrió (Situación)");
-  if (t <= 2) missing.push("definir cuál era tu objetivo o restricción concreta (Tarea)");
-  if (a <= 2) missing.push("detallar con verbos en 1ra persona qué implementaste tú (Acción)");
-  if (r <= 2) missing.push("incluir métricas numéricas verificables como %, tiempos o ahorros (Resultado)");
-  if (tech <= 2) missing.push(`incorporar herramientas o conceptos técnicos propios de ${careerCode}`);
+  const critiques = [];
+  if (rel <= 2) critiques.push("no respondiste al núcleo específico de la pregunta ni al contexto de la vacante");
+  if (s <= 2) critiques.push("faltó contextualizar el escenario inicial o la magnitud del problema (Situación)");
+  if (t <= 2) critiques.push("no delimitaste cuál era tu responsabilidad o meta concreta a resolver (Tarea)");
+  if (a <= 2) critiques.push("no detallaste las acciones técnicas ni las herramientas que aplicaste directamente (Acción)");
+  if (r === 0) critiques.push("omitiste por completo el desenlace o impacto de tu intervención (Resultado: 0/5)");
+  else if (r <= 3 && metrics.length === 0) critiques.push("el resultado quedó subjetivo porque no incluiste indicadores numéricos (%, tiempos, costos o ahorro)");
+  if (tech <= 2) critiques.push(`faltó vocabulario técnico propio de ${careerCode}`);
 
-  const improvements = missing.length > 0
-    ? "Por mejorar en este turno: " + missing.join("; ") + "."
-    : "Respuesta sobresaliente; como toque adicional, menciona brevemente qué aprendizaje o estándar dejaste documentado.";
+  const improvements = critiques.length > 0
+    ? "Diagnóstico crítico: " + critiques.join("; ") + "."
+    : "Respuesta completa y rigurosa en las cuatro dimensiones STAR.";
 
   return {
     star_situation: s,
@@ -568,22 +744,24 @@ function buildQuestionSpecificStarExample(questionText, careerCode, role) {
   const careerObj = CAREER_CATALOG.find((c) => c.code === careerCode) || CAREER_CATALOG[0];
   const sampleTools = careerObj.lexicon.slice(0, 4).join(", ");
   const shortTopic = questionText.split(".")[0].replace(/^¿/, "");
-  return `Respecto a "${shortTopic}" en mi preparación como ${role} (Situación), mi objetivo era resolver el cuello de botella cumpliendo los criterios técnicos y el plazo de entrega (Tarea). Analicé la causa raíz y ejecuté personalmente la solución utilizando ${sampleTools}, validando cada iteración con pruebas controladas (Acción). Como resultado, reduje la tasa de error en un 38%, mejoré el tiempo de respuesta en un 45% y dejé el proceso estandarizado para el equipo (Resultado).`;
+  return `Ante el reto de "${shortTopic}" para el puesto de ${role} (Situación), mi objetivo era resolver la falla cumpliendo los requerimientos técnicos y el tiempo límite (Tarea). Diagnosticué la causa raíz e implementé directamente la solución utilizando ${sampleTools}, validando cada cambio con pruebas controladas (Acción). Como resultado, reduje la tasa de incidentes en un 38% y optimicé el tiempo de respuesta en un 45% (Resultado).`;
 }
 
-async function evaluateResponseWithLiveApiIfConfigured(questionText, cleanResponse, elapsedSec) {
-  const { provider, apiKey, model } = appState.aiSettings;
-  const localEval = evaluateResponseLocal(questionText, cleanResponse, appState.careerCode, appState.targetRole);
+// =============================================================================
+// LLAMADA A AGENTES DE IA (GEMINI 3.8 FLASH Y GPT-4o MINI) SI HAY LLAVES
+// =============================================================================
+async function evaluateTurnWithConfiguredAgents(questionText, cleanResponse) {
+  const localCriticalEval = evaluateResponseCritical(questionText, cleanResponse, appState.careerCode, appState.targetRole);
 
-  // Si el usuario configuró su API Key (Gemini, OpenAI o Groq) directamente en el navegador
-  if (provider !== "local" && apiKey) {
-    const sysPrompt = `Evalúa con rigor realista de 1 a 5 la respuesta del candidato para la carrera ${appState.careerCode} y puesto ${appState.targetRole}. Si la respuesta es corta, evasiva o irrelevante a la pregunta, asigna 1. Devuelve SOLO JSON con: star_situation, star_task, star_action, star_result, technical_clarity, relevance, strengths, improvement_areas.`;
-    const usrPrompt = `Contexto de la vacante: ${appState.vacancyContext}\nPregunta: ${questionText}\nRespuesta del candidato: ${cleanResponse}`;
+  const sysPrompt = `Eres un evaluador técnico crítico de entrevistas laborales (escala 0 a 5, donde 0 significa nulo o respuesta sin sentido). Está prohibido ser complaciente. Devuelve SOLO JSON válido con: star_situation, star_task, star_action, star_result, technical_clarity, relevance, strengths, improvement_areas.`;
+  const usrPrompt = `Carrera: ${appState.careerCode}\nPuesto: ${appState.targetRole}\nContexto de la vacante: ${appState.vacancyContext}\nPregunta: ${questionText}\nRespuesta: ${cleanResponse}`;
 
-    try {
-      if (provider === "gemini") {
-        const mdl = model || "gemini-2.5-flash";
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+  // 1) Si GEMINI_API_KEY fue colocada en AGENT_CONFIG (gemini-3.8-flash)
+  if (AGENT_CONFIG.GEMINI_API_KEY && !AGENT_CONFIG.GEMINI_API_KEY.startsWith("PON_AQUI")) {
+    const models = [AGENT_CONFIG.GEMINI_MODEL || "gemini-3.8-flash", "gemini-2.5-flash"];
+    for (const mdl of models) {
+      try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent?key=${encodeURIComponent(AGENT_CONFIG.GEMINI_API_KEY)}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -596,50 +774,50 @@ async function evaluateResponseWithLiveApiIfConfigured(questionText, cleanRespon
           const d = await r.json();
           const raw = d.candidates?.[0]?.content?.parts?.[0]?.text;
           if (raw) {
-            const parsed = JSON.parse(raw);
-            return mergeApiEvaluation(parsed, localEval);
+            return mergeAgentEvaluation(JSON.parse(raw), localCriticalEval);
           }
         }
-      } else if (provider === "openai" || provider === "groq") {
-        const url = provider === "groq"
-          ? "https://api.groq.com/openai/v1/chat/completions"
-          : "https://api.openai.com/v1/chat/completions";
-        const mdl = model || (provider === "groq" ? "llama-3.3-70b-versatile" : "gpt-4o-mini");
-        const r = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: mdl,
-            messages: [
-              { role: "system", content: sysPrompt },
-              { role: "user", content: usrPrompt }
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.1
-          })
-        });
-        if (r.ok) {
-          const d = await r.json();
-          const raw = d.choices?.[0]?.message?.content;
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            return mergeApiEvaluation(parsed, localEval);
-          }
-        }
-      }
-    } catch (_) {
-      // Si la llave falla o no hay red, usa el evaluador semántico local
+      } catch (_) {}
     }
   }
 
-  return localEval;
+  // 2) Si OPENAI_API_KEY fue colocada en AGENT_CONFIG (gpt-4o-mini)
+  if (AGENT_CONFIG.OPENAI_API_KEY && !AGENT_CONFIG.OPENAI_API_KEY.startsWith("PON_AQUI")) {
+    try {
+      const r = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${AGENT_CONFIG.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: AGENT_CONFIG.OPENAI_CHAT_MODEL || "gpt-4o-mini",
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: usrPrompt }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.1
+        })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const raw = d.choices?.[0]?.message?.content;
+        if (raw) {
+          return mergeAgentEvaluation(JSON.parse(raw), localCriticalEval);
+        }
+      }
+    } catch (_) {}
+  }
+
+  return localCriticalEval;
 }
 
-function mergeApiEvaluation(parsed, fallbackEval) {
-  const clamp = (v, def) => Math.max(1, Math.min(5, parseInt(v, 10) || def));
+function mergeAgentEvaluation(parsed, fallbackEval) {
+  const clamp = (v, def) => {
+    const n = parseInt(v, 10);
+    return Number.isNaN(n) ? def : Math.max(0, Math.min(5, n));
+  };
   const s = clamp(parsed.star_situation, fallbackEval.star_situation);
   const t = clamp(parsed.star_task, fallbackEval.star_task);
   const a = clamp(parsed.star_action, fallbackEval.star_action);
@@ -661,17 +839,7 @@ function mergeApiEvaluation(parsed, fallbackEval) {
   };
 }
 
-function shuffleArray(arr) {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
 function getRandomQuestionCount() {
-  // Valor aleatorio realista entre 15 y 20 preguntas
   return Math.floor(Math.random() * 6) + 15;
 }
 
@@ -714,8 +882,43 @@ function showAuthFeedback(message, isError = true) {
   el.classList.remove("hidden");
 }
 
+// =============================================================================
+// REINICIO ESTRICTO DE FORMULARIO Y SESIÓN AL CAMBIAR DE USUARIO
+// =============================================================================
+function resetPracticeFormAndSession() {
+  appState.sessionId = null;
+  appState.turns = [];
+  appState.questionsPool = [];
+  appState.currentIndex = 0;
+  appState.targetRole = "";
+  appState.cvSummary = "";
+  appState.vacancyContext = "";
+
+  const careerSelect = document.getElementById("setup-career");
+  if (careerSelect && careerSelect.options.length > 0) {
+    careerSelect.selectedIndex = 0;
+  }
+  const roleInput = document.getElementById("setup-role");
+  if (roleInput) roleInput.value = "";
+  const cvInput = document.getElementById("setup-cv");
+  if (cvInput) cvInput.value = "";
+  const jdInput = document.getElementById("setup-jd");
+  if (jdInput) jdInput.value = "";
+  const chatInput = document.getElementById("chat-input");
+  if (chatInput) chatInput.value = "";
+  const chatMessages = document.getElementById("chat-messages");
+  if (chatMessages) chatMessages.innerHTML = "";
+  const setupStatus = document.getElementById("setup-status");
+  if (setupStatus) setupStatus.classList.add("hidden");
+
+  resetStarMeters();
+}
+
 function setLoggedInUser(userObj) {
   appState.user = userObj;
+  // Limpiar siempre el apartado de nueva práctica y sesión previa para no mezclar datos de otro usuario
+  resetPracticeFormAndSession();
+
   const badge = document.getElementById("user-badge");
   const avatar = document.getElementById("user-avatar-chip");
   if (badge) {
@@ -730,13 +933,13 @@ function setLoggedInUser(userObj) {
       .toUpperCase();
     avatar.textContent = initials;
   }
-  // Previsualizar el próximo conteo aleatorio 15-20 en configuración
-  const previewCount = getRandomQuestionCount();
-  appState.totalQuestions = previewCount;
-  const countInput = document.getElementById("setup-count");
-  if (countInput) {
-    countInput.value = `${previewCount} preguntas (Aleatorio 15-20)`;
-  }
+
+  // Limpiar campos de login/registro
+  ["login-email", "login-password", "login-name", "reg-email", "reg-university", "reg-password"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
   showView("view-setup");
 }
 
@@ -744,12 +947,8 @@ async function handleLocalLogin() {
   const email = document.getElementById("login-email").value.trim().toLowerCase();
   const password = document.getElementById("login-password").value;
 
-  if (!isValidEmailFormat(email)) {
-    showAuthFeedback("Por favor ingresa un correo electrónico con formato válido (ejemplo@dominio.com).");
-    return;
-  }
-  if (!password) {
-    showAuthFeedback("Ingresa tu contraseña para iniciar sesión.");
+  if (!email || !password) {
+    showAuthFeedback("Ingresa tu correo electrónico y tu contraseña.");
     return;
   }
 
@@ -768,17 +967,15 @@ async function handleLocalLogin() {
       showAuthFeedback(err.detail || "Credenciales inválidas.");
       return;
     }
-  } catch (_) {
-    // Verificación local contra cuentas registradas
-  }
+  } catch (_) {}
 
   const found = appState.registeredUsers.find((u) => u.email.toLowerCase() === email);
   if (!found) {
-    showAuthFeedback("No existe ninguna cuenta registrada con ese correo. Usa la pestaña 'Registrar' o 'Continuar con Google'.");
+    showAuthFeedback("No existe ninguna cuenta registrada con ese correo. Regístrate primero en la pestaña 'Registrar'.");
     return;
   }
   if (found.password !== password) {
-    showAuthFeedback("Contraseña incorrecta para esta cuenta. Verifica tus datos.");
+    showAuthFeedback("Contraseña incorrecta. Verifica tus datos.");
     return;
   }
 
@@ -788,32 +985,41 @@ async function handleLocalLogin() {
 async function handleLocalRegister() {
   const fullName = document.getElementById("login-name").value.trim();
   const email = document.getElementById("reg-email").value.trim().toLowerCase();
-  const university = document.getElementById("reg-university").value.trim() || "Tecnológico de Monterrey";
+  const university = document.getElementById("reg-university").value.trim();
   const password = document.getElementById("reg-password").value;
 
-  if (fullName.length < 3) {
-    showAuthFeedback("Ingresa tu nombre y apellido completos.");
+  if (fullName.length < 3 || !fullName.includes(" ")) {
+    showAuthFeedback("Ingresa tu nombre y apellido reales.");
     return;
   }
-  if (!isValidEmailFormat(email)) {
-    showAuthFeedback("Ingresa un correo electrónico real y válido (ej. nombre@dominio.com).");
+
+  if (!university || university.length < 2) {
+    showAuthFeedback("Ingresa el nombre de tu universidad o institución.");
     return;
   }
+
   if (!password || password.length < 6) {
     showAuthFeedback("La contraseña debe tener al menos 6 caracteres.");
     return;
   }
 
-  const existsLocal = appState.registeredUsers.some((u) => u.email.toLowerCase() === email);
+  showAuthFeedback("Verificando existencia y servidores de correo (MX)...", false);
+  const emailValidation = await validateRealEmailAccount(email);
+  if (!emailValidation.valid) {
+    showAuthFeedback(emailValidation.reason, true);
+    return;
+  }
+
+  const existsLocal = appState.registeredUsers.some((u) => u.email.toLowerCase() === emailValidation.email);
   if (existsLocal) {
-    showAuthFeedback("Este correo ya está registrado. Cambia a la pestaña 'Iniciar sesión'.");
+    showAuthFeedback("Ya existe una cuenta con este correo electrónico. Inicia sesión en la primera pestaña.");
     return;
   }
 
   const newUser = {
     user_id: "usr-" + Math.random().toString(36).substring(2, 9),
     full_name: fullName,
-    email,
+    email: emailValidation.email,
     password,
     university,
     auth_provider: "local"
@@ -823,11 +1029,20 @@ async function handleLocalRegister() {
     const resp = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ full_name: fullName, email, password, university })
+      body: JSON.stringify({
+        full_name: fullName,
+        email: emailValidation.email,
+        password,
+        university
+      })
     });
     if (resp.ok) {
       const serverUser = await resp.json();
       newUser.user_id = serverUser.user_id;
+    } else if (resp.status === 400 || resp.status === 409) {
+      const err = await resp.json();
+      showAuthFeedback(err.detail || "No se pudo registrar el correo.");
+      return;
     }
   } catch (_) {}
 
@@ -836,66 +1051,144 @@ async function handleLocalRegister() {
   setLoggedInUser(newUser);
 }
 
-function openGoogleModal() {
-  const errEl = document.getElementById("google-modal-error");
-  if (errEl) errEl.classList.add("hidden");
-  document.getElementById("google-oauth-modal").classList.remove("hidden");
-}
-
-function closeGoogleModal() {
-  document.getElementById("google-oauth-modal").classList.add("hidden");
-}
-
-async function completeGoogleLogin(fullName, email, university = "Tecnológico de Monterrey") {
-  const cleanEmail = (email || "").trim().toLowerCase();
-  const errEl = document.getElementById("google-modal-error");
-
-  if (!fullName || fullName.trim().length < 2) {
-    if (errEl) {
-      errEl.textContent = "Ingresa el nombre asociado a tu cuenta de Google.";
-      errEl.classList.remove("hidden");
-    }
-    return;
+// =============================================================================
+// VERIFICADOR OFICIAL DE GOOGLE IDENTITY SERVICES (accounts.google.com/gsi/client)
+// =============================================================================
+function decodeJwtPayload(token) {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (_) {
+    return null;
   }
-  if (!isValidEmailFormat(cleanEmail)) {
-    if (errEl) {
-      errEl.textContent = "Ingresa un correo de Google válido (@gmail.com o institucional).";
-      errEl.classList.remove("hidden");
-    }
+}
+
+async function handleGoogleCredentialResponse(response) {
+  if (!response || !response.credential) {
+    showAuthFeedback("No se recibió credencial de Google Identity Services.");
     return;
   }
 
-  let googleUser = {
-    user_id: "usr-google-" + Math.random().toString(36).substring(2, 9),
-    full_name: fullName.trim(),
-    email: cleanEmail,
-    university,
-    auth_provider: "google"
-  };
-
+  // 1) Intentar verificación criptográfica en el backend (/api/auth/google)
   try {
     const resp = await fetch("/api/auth/google", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: cleanEmail,
-        full_name: fullName.trim(),
-        google_sub: "google-oauth-" + cleanEmail
-      })
+      body: JSON.stringify({ credential: response.credential })
     });
     if (resp.ok) {
-      googleUser = await resp.json();
+      const verifiedUser = await resp.json();
+      setLoggedInUser(verifiedUser);
+      return;
     }
   } catch (_) {}
 
-  // Sincronizar también en el registro local para futuras sesiones
-  if (!appState.registeredUsers.some((u) => u.email.toLowerCase() === cleanEmail)) {
-    appState.registeredUsers.push({ ...googleUser, password: "" });
-    saveRegisteredUsers();
+  // 2) Decodificar el JWT firmado por Google Identity Services en el cliente
+  const payload = decodeJwtPayload(response.credential);
+  if (!payload || !payload.email || !payload.email_verified) {
+    showAuthFeedback("La credencial de Google no pudo ser verificada.");
+    return;
   }
 
-  closeGoogleModal();
+  const googleUser = {
+    user_id: "google-" + payload.sub,
+    full_name: payload.name || payload.email.split("@")[0],
+    email: payload.email.toLowerCase(),
+    avatar_url: payload.picture || null,
+    university: payload.hd || "Cuenta de Google Verificada",
+    auth_provider: "google"
+  };
+
   setLoggedInUser(googleUser);
+}
+
+async function initOfficialGoogleVerifier() {
+  // Consultar si el backend tiene GOOGLE_CLIENT_ID configurado en .env
+  try {
+    const resp = await fetch("/api/auth/google-config");
+    if (resp.ok) {
+      const cfg = await resp.json();
+      if (cfg.is_configured && cfg.google_client_id) {
+        appState.googleClientId = cfg.google_client_id;
+      }
+    }
+  } catch (_) {}
+
+  if (appState.googleClientId && window.google && window.google.accounts && window.google.accounts.id) {
+    window.google.accounts.id.initialize({
+      client_id: appState.googleClientId,
+      callback: handleGoogleCredentialResponse,
+      auto_select: false
+    });
+    const container = document.getElementById("google-gsi-button-container");
+    if (container) {
+      window.google.accounts.id.renderButton(container, {
+        theme: "outline",
+        size: "large",
+        width: 340,
+        text: "signin_with",
+        locale: "es"
+      });
+      const fallbackBtn = document.getElementById("btn-google-login");
+      if (fallbackBtn) fallbackBtn.classList.add("hidden");
+    }
+  }
+}
+
+function handleGoogleLoginButtonClick() {
+  if (!appState.googleClientId || appState.googleClientId.startsWith("PON_AQUI")) {
+    showAuthFeedback(
+      "Para lanzar el verificador oficial de Google OAuth 2.0, coloca tu GOOGLE_CLIENT_ID en el archivo .env (consulta GUIA_CONFIGURACION_APIS.md). Mientras tanto, puedes usar 'Registrar' e 'Iniciar sesión'.",
+      true
+    );
+    return;
+  }
+
+  if (window.google && window.google.accounts) {
+    if (window.google.accounts.oauth2) {
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: appState.googleClientId,
+        scope: "openid email profile",
+        callback: async (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            try {
+              const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+                headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+              });
+              if (r.ok) {
+                const info = await r.json();
+                setLoggedInUser({
+                  user_id: "google-" + info.sub,
+                  full_name: info.name || info.email,
+                  email: info.email.toLowerCase(),
+                  avatar_url: info.picture || null,
+                  university: info.hd || "Cuenta de Google Verificada",
+                  auth_provider: "google"
+                });
+              }
+            } catch (_) {
+              showAuthFeedback("Error al obtener el perfil desde Google OAuth 2.0.");
+            }
+          }
+        }
+      });
+      tokenClient.requestAccessToken();
+      return;
+    }
+    if (window.google.accounts.id) {
+      window.google.accounts.id.prompt();
+      return;
+    }
+  }
+
+  showAuthFeedback("El script oficial de Google Identity Services (accounts.google.com) aún está cargando.");
 }
 
 function populateCareers() {
@@ -904,34 +1197,24 @@ function populateCareers() {
   careerSelect.innerHTML = CAREER_CATALOG.map(
     (c) => `<option value="${c.code}">${c.name}</option>`
   ).join("");
-  updateRoleSuggestions();
-}
-
-function updateRoleSuggestions() {
-  const careerSelect = document.getElementById("setup-career");
-  const roleInput = document.getElementById("setup-role");
-  if (!careerSelect || !roleInput) return;
-  const found = CAREER_CATALOG.find((c) => c.code === careerSelect.value) || CAREER_CATALOG[0];
-  roleInput.value = found.roles[0];
 }
 
 async function startInterview() {
   const careerCode = document.getElementById("setup-career").value;
-  const targetRole = document.getElementById("setup-role").value.trim() || "Practicante Profesional";
+  const targetRole = document.getElementById("setup-role").value.trim();
   const cvRaw = document.getElementById("setup-cv").value.trim();
   const jdRaw = document.getElementById("setup-jd").value.trim();
 
   const statusEl = document.getElementById("setup-status");
-  if (!cvRaw || !jdRaw) {
+  if (!targetRole || !cvRaw || !jdRaw) {
     if (statusEl) {
-      statusEl.textContent = "Por favor completa el resumen de tu currículum y el contexto de la vacante.";
+      statusEl.textContent = "Completa el puesto objetivo, el resumen de tu currículum y el contexto de la vacante.";
       statusEl.classList.remove("hidden");
     }
     return;
   }
   if (statusEl) statusEl.classList.add("hidden");
 
-  // Generar número aleatorio de preguntas entre 15 y 20
   const randomTotal = getRandomQuestionCount();
   appState.careerCode = careerCode;
   appState.targetRole = targetRole;
@@ -940,15 +1223,15 @@ async function startInterview() {
   appState.totalQuestions = randomTotal;
   appState.currentIndex = 0;
   appState.turns = [];
-  appState.lastEvaluation = null;
-
-  const countInput = document.getElementById("setup-count");
-  if (countInput) {
-    countInput.value = `${randomTotal} preguntas generadas`;
-  }
 
   const careerObj = CAREER_CATALOG.find((c) => c.code === careerCode) || CAREER_CATALOG[0];
-  appState.questionsPool = shuffleArray(careerObj.questions).slice(0, randomTotal);
+  appState.questionsPool = buildVacancyTailoredQuestions(
+    careerObj,
+    targetRole,
+    appState.cvSummary,
+    appState.vacancyContext,
+    randomTotal
+  );
 
   try {
     const resp = await fetch("/api/sessions/start", {
@@ -1025,14 +1308,17 @@ function resetStarMeters() {
     if (val) val.textContent = "-";
   });
   const badge = document.getElementById("turn-avg-badge");
-  if (badge) badge.textContent = "- / 5.0";
+  if (badge) {
+    badge.textContent = "- / 5.0";
+    badge.style.color = "var(--muted)";
+  }
   const mTags = document.getElementById("detected-metrics-tags");
-  if (mTags) mTags.textContent = "Ninguna aún";
+  if (mTags) mTags.textContent = "Ninguna";
   const tTags = document.getElementById("detected-tech-tags");
-  if (tTags) tTags.textContent = "Ninguno aún";
+  if (tTags) tTags.textContent = "Ninguna";
   const feedbackBox = document.getElementById("live-feedback-note");
   if (feedbackBox) {
-    feedbackBox.textContent = "Tus indicadores se calculan dinámicamente según la pregunta actual, tus verbos de acción, vocabulario técnico y métricas cuantitativas.";
+    feedbackBox.textContent = "El evaluador califica de 0 a 5 cada dimensión sin complacencia. Una habilidad no demostrada o respuesta sin sentido recibe 0/5.";
   }
 }
 
@@ -1066,7 +1352,7 @@ function updateStarMeters(evalObj) {
     const mList = evalObj.metrics_detected || [];
     mTags.innerHTML = mList.length > 0
       ? mList.map((m) => `<span class="tag-pill">${m}</span>`).join("")
-      : "Ninguna detectada (agrega %, tiempos o cifras)";
+      : "0 métricas cuantitativas";
   }
 
   const tTags = document.getElementById("detected-tech-tags");
@@ -1074,7 +1360,7 @@ function updateStarMeters(evalObj) {
     const tList = evalObj.tech_terms_detected || [];
     tTags.innerHTML = tList.length > 0
       ? tList.map((t) => `<span class="tag-pill">${t}</span>`).join("")
-      : "Ningún término técnico de la carrera detectado";
+      : "Sin términos técnicos detectados";
   }
 
   const feedbackBox = document.getElementById("live-feedback-note");
@@ -1094,7 +1380,7 @@ async function sendChatResponse() {
   appendChatMessage("user", cleanResponse);
 
   const elapsedSec = Number(((Date.now() - appState.turnStartTime) / 1000).toFixed(1));
-  let evalObj = await evaluateResponseWithLiveApiIfConfigured(currentQ, cleanResponse, elapsedSec);
+  let evalObj = await evaluateTurnWithConfiguredAgents(currentQ, cleanResponse);
   let nextQuestionFromServer = null;
 
   try {
@@ -1105,10 +1391,7 @@ async function sendChatResponse() {
         session_id: appState.sessionId,
         candidate_response: cleanResponse,
         response_time_seconds: elapsedSec,
-        allow_followups: false,
-        llm_provider: appState.aiSettings.provider,
-        llm_api_key: appState.aiSettings.apiKey || null,
-        llm_model: appState.aiSettings.model || null
+        allow_followups: false
       })
     });
     if (resp.ok) {
@@ -1136,7 +1419,7 @@ async function sendChatResponse() {
   appState.currentIndex += 1;
 
   if (appState.currentIndex >= appState.totalQuestions) {
-    appendChatMessage("ai", "Has completado todas las preguntas de la entrevista. Generando tu reporte final y plan de acción...");
+    appendChatMessage("ai", "Has completado las preguntas de la sesión. Generando tu evaluación final crítica...");
     setTimeout(() => {
       buildAndShowReport();
     }, 400);
@@ -1148,13 +1431,13 @@ async function sendChatResponse() {
     setTimeout(() => {
       appendChatMessage("ai", appState.questionsPool[appState.currentIndex]);
       appState.turnStartTime = Date.now();
-    }, 280);
+    }, 260);
   }
 }
 
 function finishInterviewEarly() {
   if (appState.turns.length === 0) {
-    appendChatMessage("ai", "Responde al menos la primera pregunta antes de generar el reporte de evaluación.");
+    appendChatMessage("ai", "Debes responder al menos una pregunta para generar el reporte de evaluación.");
     return;
   }
   buildAndShowReport();
@@ -1164,13 +1447,16 @@ function buildAndShowReport() {
   const turns = appState.turns;
   const avgScore = turns.length
     ? Number((turns.reduce((acc, t) => acc + t.evaluation.turn_average_score, 0) / turns.length).toFixed(2))
-    : 0;
+    : 0.0;
 
-  let evolution = 0;
-  if (appState.history.length > 0) {
-    const prev = appState.history[0].overallScore;
+  const userHistory = getCurrentUserHistoryList();
+  let evolution = 0.0;
+  if (userHistory.length > 0) {
+    const prev = userHistory[0].overallScore;
     if (prev > 0) {
       evolution = Number((((avgScore - prev) / prev) * 100).toFixed(1));
+    } else if (avgScore > 0) {
+      evolution = 100.0;
     }
   }
 
@@ -1180,18 +1466,20 @@ function buildAndShowReport() {
   const weakestTwo = sortedByWeakest.slice(0, 2);
   const careerObj = CAREER_CATALOG.find((c) => c.code === appState.careerCode) || CAREER_CATALOG[0];
 
-  appState.history.unshift({
+  // Guardar estrictamente en el historial personal del usuario activo
+  userHistory.unshift({
     date: new Date().toLocaleDateString("es-MX"),
     careerCode: appState.careerCode,
     targetRole: appState.targetRole,
     overallScore: avgScore,
     evolutionRate: evolution
   });
+  saveHistoriesByUser();
 
   document.getElementById("rep-score").textContent = `${avgScore} / 5.0`;
-  document.getElementById("rep-role").textContent = `${appState.targetRole} (${appState.careerCode}) · ${turns.length} de ${appState.totalQuestions} preguntas respondidas`;
+  document.getElementById("rep-role").textContent = `${appState.targetRole} (${appState.careerCode}) · ${turns.length} respuestas evaluadas`;
   document.getElementById("rep-evolution").textContent =
-    evolution >= 0 ? `+${evolution}% vs. sesión previa` : `${evolution}% vs. sesión previa`;
+    evolution >= 0 ? `+${evolution}% vs. tu sesión previa` : `${evolution}% vs. tu sesión previa`;
 
   const weakContainer = document.getElementById("rep-weakest-list");
   weakContainer.innerHTML = weakestTwo
@@ -1199,18 +1487,18 @@ function buildAndShowReport() {
       (item) => `
       <div style="border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem; margin-bottom: 1rem;">
         <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.25rem;">
-          Pregunta ${item.questionNumber} · Puntaje del turno: <strong>${item.evaluation.turn_average_score}/5.0</strong>
+          Pregunta ${item.questionNumber} · Puntaje obtenido: <strong>${item.evaluation.turn_average_score} / 5.0</strong>
           (S:${item.evaluation.star_situation} · T:${item.evaluation.star_task} · A:${item.evaluation.star_action} · R:${item.evaluation.star_result} · Tec:${item.evaluation.technical_clarity} · Pert:${item.evaluation.relevance})
         </div>
         <div style="font-weight: 500; font-size: 0.92rem; margin-bottom: 0.55rem;">${item.questionText}</div>
         <div style="font-size: 0.84rem; color: var(--muted); margin-bottom: 0.45rem;">
           <strong>Tu respuesta:</strong> "${item.responseText}"
         </div>
-        <div style="font-size: 0.82rem; color: var(--amber); margin-bottom: 0.55rem;">
-          <strong>Diagnóstico:</strong> ${item.evaluation.improvement_areas}
+        <div style="font-size: 0.82rem; color: var(--red); margin-bottom: 0.55rem;">
+          <strong>${item.evaluation.improvement_areas}</strong>
         </div>
         <div style="font-size: 0.84rem; background: #f9fafb; border-left: 3px solid var(--text); padding: 0.65rem 0.8rem; border-radius: 4px;">
-          <strong>Ejemplo de mejora bajo método STAR:</strong> ${item.evaluation.improved_example_star}
+          <strong>Ejemplo de respuesta nivel 5/5 bajo método STAR:</strong> ${item.evaluation.improved_example_star}
         </div>
       </div>`
     )
@@ -1236,9 +1524,6 @@ function buildAndShowReport() {
   showView("view-report");
 }
 
-// =============================================================================
-// Generador y Descargador Real de Archivo PDF (jsPDF + Fallback Binario PDF 1.4)
-// =============================================================================
 function buildMinimalPdfBinary(lines) {
   const sanitize = (s) =>
     normalizeStr(s)
@@ -1311,13 +1596,13 @@ function downloadReportPdf() {
         y += 4;
       };
 
-      writeWrapped("InterviewAI — Reporte de Entrevista y Plan de Accion", 16, true, [24, 24, 27]);
+      writeWrapped("InterviewAI — Reporte Critico de Entrevista y Plan de Accion", 16, true, [24, 24, 27]);
       writeWrapped(`Candidato: ${userName} (${(appState.user && appState.user.email) || ""})`, 10, false, [107, 114, 128]);
       writeWrapped(`Puesto y Carrera: ${roleText}`, 10, false, [107, 114, 128]);
-      writeWrapped(`Calificacion Global: ${scoreText} (${evoText})`, 12, true, [22, 163, 74]);
+      writeWrapped(`Calificacion Global (Escala 0-5): ${scoreText} (${evoText})`, 12, true, [24, 24, 27]);
       y += 8;
 
-      writeWrapped("1. Respuestas con Mayor Oportunidad de Mejora (Metodo STAR)", 13, true);
+      writeWrapped("1. Analisis Critico de Respuestas Mas Debiles", 13, true);
       weakestTwo.forEach((item, idx) => {
         writeWrapped(
           `${idx + 1}) Pregunta ${item.questionNumber} (Puntaje: ${item.evaluation.turn_average_score}/5.0): ${item.questionText}`,
@@ -1325,7 +1610,7 @@ function downloadReportPdf() {
           true
         );
         writeWrapped(`Tu respuesta: "${item.responseText}"`, 9.5, false, [75, 85, 99]);
-        writeWrapped(`Area de mejora: ${item.evaluation.improvement_areas}`, 9.5, false, [180, 83, 9]);
+        writeWrapped(`${item.evaluation.improvement_areas}`, 9.5, false, [180, 35, 24]);
         writeWrapped(`Ejemplo STAR recomendado: ${item.evaluation.improved_example_star}`, 9.5, false, [17, 24, 39]);
         y += 6;
       });
@@ -1348,6 +1633,7 @@ function downloadReportPdf() {
       weakestTwo.forEach((item) => {
         lines.push(`Pregunta ${item.questionNumber} (${item.evaluation.turn_average_score}/5): ${item.questionText}`);
         lines.push(`Tu respuesta: ${item.responseText}`);
+        lines.push(`Diagnostico: ${item.evaluation.improvement_areas}`);
         lines.push(`Mejora STAR: ${item.evaluation.improved_example_star}`);
         lines.push(" ");
       });
@@ -1367,18 +1653,22 @@ function downloadReportPdf() {
       pdfStatus.textContent = `PDF descargado (${safeFileName})`;
       pdfStatus.classList.remove("hidden");
     }
-  } catch (_) {
-    window.print();
-  }
+  } catch (_) {}
 }
 
 function renderHistoryView() {
   const tbody = document.getElementById("history-tbody");
+  const ownerLabel = document.getElementById("history-owner-label");
+  if (ownerLabel && appState.user) {
+    ownerLabel.textContent = `Cuenta activa: ${appState.user.full_name} (${appState.user.email})`;
+  }
   if (!tbody) return;
-  if (appState.history.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" style="padding: 1rem; text-align: center; color: var(--muted);">Aún no tienes entrevistas registradas.</td></tr>`;
+
+  const userHistory = getCurrentUserHistoryList();
+  if (userHistory.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="padding: 1rem; text-align: center; color: var(--muted);">Esta cuenta aún no tiene entrevistas registradas.</td></tr>`;
   } else {
-    tbody.innerHTML = appState.history
+    tbody.innerHTML = userHistory
       .map(
         (h) => `
         <tr style="border-bottom: 1px solid var(--border);">
@@ -1396,80 +1686,24 @@ function renderHistoryView() {
 function submitCsatRating(score) {
   const msg = document.getElementById("csat-thanks");
   if (msg) {
-    msg.textContent = `¡Gracias por calificar con ${score}/5! Tu opinión ha sido guardada.`;
+    msg.textContent = `Calificación registrada (${score}/5).`;
     msg.classList.remove("hidden");
   }
-}
-
-function openApiModal() {
-  document.getElementById("api-provider-select").value = appState.aiSettings.provider || "local";
-  document.getElementById("api-key-input").value = appState.aiSettings.apiKey || "";
-  document.getElementById("api-model-input").value = appState.aiSettings.model || "";
-  document.getElementById("api-modal-status").classList.add("hidden");
-  document.getElementById("api-settings-modal").classList.remove("hidden");
-}
-
-function saveApiSettings() {
-  appState.aiSettings.provider = document.getElementById("api-provider-select").value;
-  appState.aiSettings.apiKey = document.getElementById("api-key-input").value.trim();
-  appState.aiSettings.model = document.getElementById("api-model-input").value.trim();
-  try {
-    localStorage.setItem("interviewai_ai_settings_v2", JSON.stringify(appState.aiSettings));
-  } catch (_) {}
-  const st = document.getElementById("api-modal-status");
-  if (st) {
-    st.textContent = "Configuración guardada para los agentes de evaluación.";
-    st.classList.remove("hidden");
-  }
-  setTimeout(() => {
-    document.getElementById("api-settings-modal").classList.add("hidden");
-  }, 600);
 }
 
 window.addEventListener("DOMContentLoaded", () => {
   loadSavedState();
   populateCareers();
+  initOfficialGoogleVerifier();
 
   // Pestañas de autenticación
   document.getElementById("tab-login").addEventListener("click", () => setAuthTab("login"));
   document.getElementById("tab-register").addEventListener("click", () => setAuthTab("register"));
   document.getElementById("btn-submit-login").addEventListener("click", handleLocalLogin);
   document.getElementById("btn-submit-register").addEventListener("click", handleLocalRegister);
-
-  document.getElementById("btn-fill-demo").addEventListener("click", () => {
-    document.getElementById("login-email").value = "a01709802@tec.mx";
-    document.getElementById("login-password").value = "Interview2026!";
-    showAuthFeedback("Cuenta demo cargada. Haz clic en 'Iniciar sesión'.", false);
-  });
-
-  // Google OAuth Modal y Cuentas
-  document.getElementById("btn-google-login").addEventListener("click", openGoogleModal);
-  document.getElementById("btn-close-google-modal").addEventListener("click", closeGoogleModal);
-  document.querySelectorAll(".google-account-item").forEach((item) => {
-    item.addEventListener("click", () => {
-      completeGoogleLogin(
-        item.getAttribute("data-gname"),
-        item.getAttribute("data-gemail"),
-        item.getAttribute("data-guni")
-      );
-    });
-  });
-  document.getElementById("btn-confirm-google-custom").addEventListener("click", () => {
-    completeGoogleLogin(
-      document.getElementById("google-custom-name").value,
-      document.getElementById("google-custom-email").value
-    );
-  });
-
-  // Modal de Llaves API / Motor IA
-  document.getElementById("btn-open-api-modal").addEventListener("click", openApiModal);
-  document.getElementById("btn-close-api-modal").addEventListener("click", () => {
-    document.getElementById("api-settings-modal").classList.add("hidden");
-  });
-  document.getElementById("btn-save-api-settings").addEventListener("click", saveApiSettings);
+  document.getElementById("btn-google-login").addEventListener("click", handleGoogleLoginButtonClick);
 
   // Configuración y Chat
-  document.getElementById("setup-career").addEventListener("change", updateRoleSuggestions);
   document.getElementById("btn-start-interview").addEventListener("click", startInterview);
   document.getElementById("btn-send-chat").addEventListener("click", sendChatResponse);
   document.getElementById("btn-finish-early").addEventListener("click", finishInterviewEarly);
@@ -1482,23 +1716,19 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("nav-new-session").addEventListener("click", () => {
-    const nextRandom = getRandomQuestionCount();
-    appState.totalQuestions = nextRandom;
-    document.getElementById("setup-count").value = `${nextRandom} preguntas (Aleatorio 15-20)`;
+    resetPracticeFormAndSession();
     showView("view-setup");
   });
   document.getElementById("nav-history").addEventListener("click", renderHistoryView);
   document.getElementById("btn-logout").addEventListener("click", () => {
     appState.user = null;
+    resetPracticeFormAndSession();
     showView("view-login");
   });
 
-  // Descarga real de PDF
   document.getElementById("btn-print-report").addEventListener("click", downloadReportPdf);
   document.getElementById("btn-new-from-report").addEventListener("click", () => {
-    const nextRandom = getRandomQuestionCount();
-    appState.totalQuestions = nextRandom;
-    document.getElementById("setup-count").value = `${nextRandom} preguntas (Aleatorio 15-20)`;
+    resetPracticeFormAndSession();
     showView("view-setup");
   });
   document.getElementById("btn-back-from-history").addEventListener("click", () => showView("view-setup"));

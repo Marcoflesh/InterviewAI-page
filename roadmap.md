@@ -1,39 +1,39 @@
 # Roadmap de Desarrollo — InterviewAI
 
-Este documento registra la evolución iterativa de **InterviewAI**, diferenciando los hitos completados (Pasado), los componentes implementados en la iteración actual (`v0.2.0`) y las funcionalidades programadas para las siguientes iteraciones.
+Este documento registra la evolución iterativa de **InterviewAI**, diferenciando los hitos completados (Pasado), los componentes implementados en la iteración actual (`v0.3.0`) y las funcionalidades programadas para las siguientes iteraciones.
 
 ---
 
-## 1. Hitos Pasados (Fase 0 y Iteración `v0.1.0`)
+## 1. Hitos Pasados (Fase 0, `v0.1.0` y `v0.2.0`)
 
 - [x] **Diagnóstico Institucional y Levantamiento de Necesidades**: Análisis del problema de ansiedad en entrevistas (74.2% de los estudiantes) y desconocimiento del método STAR (65.5%).
-- [x] **Especificación de Requisitos de Software (SRS bajo ISO/IEC/IEEE 29148-2018)**: Definición formal de 12 Reglas de Negocio (`RN-01` a `RN-12`), 15 Requisitos Funcionales (`RF-01` a `RF-15`), 9 Requisitos No Funcionales (`RNF-01` a `RNF-09`), 5 Requisitos de Información (`RIF-01` a `RIF-05`) y 4 Requisitos de Interfaz (`RIN-01` a `RIN-04`).
-- [x] **Esqueleto Inicial Full-Stack (`v0.1.0`)**: Configuración base de contenedores Docker (`python:3.11.11-slim`, `postgres:16.6-alpine`, `ollama/ollama:0.5.7`, `nginx:1.27.3-alpine`), esquema inicial en PostgreSQL y grafo base en LangGraph.
+- [x] **Especificación de Requisitos de Software (SRS bajo ISO/IEC/IEEE 29148-2018)**: Definición formal de Reglas de Negocio (`RN-01` a `RN-12`), Requisitos Funcionales (`RF-01` a `RF-15`), No Funcionales (`RNF-01` a `RNF-09`), de Información (`RIF-01` a `RIF-05`) e Interfaz (`RIN-01` a `RIN-04`).
+- [x] **Infraestructura Docker, Esquema PostgreSQL con 176 Preguntas y Descarga PDF con `jsPDF` (`v0.1.0` – `v0.2.0`)**.
 
 ---
 
-## 2. Estado Actual (Iteración `v0.2.0` — Autenticación Triple, Evaluación Semántica STAR, Descarga PDF Real y 15–20 Preguntas Aleatorias)
+## 2. Estado Actual (Iteración `v0.3.0` — Evaluación Crítica 0–5, Agentes `gpt-4o-mini` + `gemini-3.8-flash`, Validador de Correo Real MX, Google SDK Oficial y Aislamiento por Usuario)
 
-- [x] **Autenticación Triple Verificada (`Iniciar sesión`, `Registrar` y `Continuar con Google`)**:
-  - **Iniciar sesión (Cuentas existentes)**: Verifica formato de correo electrónico, existencia de la cuenta registrada en PostgreSQL (`/api/auth/login`) / almacenamiento local y validación de contraseña con hash PBKDF2-HMAC-SHA256 (`backend/app/auth.py`).
-  - **Registrar (Nuevas cuentas)**: Permite dar de alta nuevas cuentas verificando correo único, institución y contraseña mínima de 6 caracteres (`/api/auth/register`).
-  - **Iniciar sesión con Google**: Selector y verificador OAuth de cuenta de Google (`/api/auth/google`) que valida el correo y carga los datos reales del perfil del usuario (nombre completo, correo verificado e iniciales/avatar en la barra superior).
-- [x] **Generación Aleatoria Realista de 15 a 20 Preguntas por Sesión (`database/init.sql`, `backend/app/main.py`, `frontend/js/app.js`)**:
-  - Expansión del banco de preguntas a **176 preguntas autocontenidas (22 por cada una de las 8 carreras)**.
-  - Cada sesión genera automáticamente un número aleatorio entre **15 y 20 preguntas** sin repetición, e incluye un botón de corte voluntario (`Finalizar y ver reporte`) durante el chat para pruebas rápidas.
-  - Cambio de etiqueta en configuración a **"Contexto de la vacante"**.
-- [x] **Motor de Evaluación STAR Semántico y Léxico + Conector de Llaves API (`backend/app/agents/evaluator.py`, `frontend/js/app.js`)**:
-  - Penalización inmediata (`1/5`) para respuestas cortas (`< 8` palabras), evasivas (`"no sé"`, `"hola"`) o sin relación con la pregunta.
-  - Evaluación independiente de **Situación**, **Tarea**, **Acción (verbos en 1ra persona)**, **Resultado (conectores de logro + métricas Regex)**, **Claridad Técnica** (diccionario de 30+ términos técnicos por cada una de las 8 carreras) y **Pertinencia** (cruce léxico con la pregunta actual y el contexto de la vacante).
-  - Visualización en vivo de las métricas cuantitativas y conceptos técnicos detectados en cada turno.
-  - Modal **"Configurar API / IA"** en la barra superior para conectar llaves API propias (Google Gemini, OpenAI, Groq) o usar Ollama local.
-- [x] **Descarga Directa de Archivo PDF (`jsPDF` + Generador Binario PDF 1.4)**:
-  - Reemplazo de `window.print()` por generación y descarga real de documento `.pdf` (`Reporte_InterviewAI_<Candidato>.pdf`) mediante `jsPDF` con respaldo binario PDF 1.4 nativo para funcionar dentro de iframes/Canvas y cualquier navegador.
+- [x] **Evaluación Crítica y Objetiva en Escala `0 a 5` (Cero Complacencia)**:
+  - Se amplió la escala a **`[0, 5]`** en PostgreSQL (`database/init.sql`), esquemas Pydantic (`schemas.py`), Agente Evaluador (`evaluator.py`) y Frontend (`js/app.js`).
+  - Respuestas sin sentido, evasivas (`"no sé"`, `"nada"`), vacías o habilidades no demostradas reciben **`0/5` (`0.0 / 5.0`)** con diagnóstico crítico directo.
+  - Ampliación del analizador de raíces semánticas y léxicas para reconocer respuestas bien estructuradas en lenguaje natural profesional y premiarlas justamente entre `4/5` y `5/5` sin penalizaciones artificiales.
+- [x] **Integración y Documentación de Agentes `gpt-4o-mini` y `gemini-3.8-flash` (`GUIA_CONFIGURACION_APIS.md`)**:
+  - Configuración directa en `.env.example`, `docker-compose.yml`, `backend/app/config.py`, `evaluator.py`, `interviewer.py`, `synthesizer.py` y `frontend/js/app.js` con comentarios explícitos (`# >>> AQUÍ COLOCA TU API KEY ... <<<`) y guía paso a paso en `GUIA_CONFIGURACION_APIS.md`.
+  - Eliminación del botón y modal de configuración de API de la interfaz gráfica para mantener toda la configuración limpia en `.env`.
+- [x] **Validador de Correos Reales con Verificación DNS MX en Vivo (`backend/app/auth.py`, `frontend/js/app.js`)**:
+  - Bloqueo de dominios ficticios, de prueba o temporales (`ejemplo.com`, `test.com`, `tempmail.com`, `mailinator.com`, etc.) y consulta en tiempo real a `https://dns.google/resolve?name=<dominio>&type=MX` para comprobar que el dominio del correo tenga servidores de correo reales antes de registrar una cuenta.
+- [x] **Verificador Oficial de Google Identity Services (`accounts.google.com/gsi/client`)**:
+  - Eliminación del modal simulado y conexión directa con el SDK oficial de Google Identity Services y validación criptográfica JWT en `backend/app/auth.py`.
+- [x] **Vinculación del "Contexto de la vacante" con las Preguntas y Limpieza de Interfaz**:
+  - Selección y adaptación de las 15–20 preguntas de la carrera en función de la afinidad semántica con el **Contexto de la vacante** y el **Puesto objetivo**.
+  - Eliminación de textos autorrellenados en todos los campos, eliminación de la ventana de conteo de preguntas en configuración, eliminación del subtítulo en login y ajuste del placeholder del chat únicamente a `"Escribe tu respuesta"`.
+- [x] **Aislamiento Total de Perfil, Historial y Formulario por Usuario**:
+  - Cada cuenta almacena y consulta exclusivamente su propio historial (`historiesByUser[email]`), y al cerrar sesión o cambiar de usuario se reinician por completo los campos de **Nueva práctica** y la sesión activa.
 
 ---
 
 ## 3. Siguientes Funcionalidades (Fase 2 y Fase 3)
 
-- [ ] **Pruebas en Vivo con las Llaves API del Usuario**: Conectar las llaves API definitivas en el archivo `.env` / modal de configuración para comparar latencia y correlación entre `llama3.2:3b` (Ollama), `gemini-2.5-flash` y `gpt-4o-mini`.
-- [ ] **Extracción directa de archivos PDF/DOCX en carga de CV**: Integrar parser (`pypdf` / `python-docx`) además del campo de texto en la pantalla de configuración.
-- [ ] **Panel de Administración para Product Owner y MLOps (`/admin`)**: CRUD protegido por RBAC para gestionar el Golden Dataset y visualizar la correlación estadística (`>= 0.75`).
+- [ ] **Extracción directa de archivos PDF/DOCX en carga de CV**: Integrar parser (`pypdf` / `python-docx`) para adjuntar archivo además de escribir el resumen.
+- [ ] **Panel de Administración para Product Owner y MLOps (`/admin`)**: CRUD protegido por RBAC para gestionar el Golden Dataset y ejecutar auditorías estadísticas (`>= 0.75`).
