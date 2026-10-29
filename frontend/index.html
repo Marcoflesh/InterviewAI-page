@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InterviewAI — Simulador de Entrevistas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- Barra superior minimalista -->
+  <header class="topbar no-print">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>InterviewAI</span>
+    </div>
+    <div id="topbar-nav" class="nav-actions hidden">
+      <span id="user-badge" style="font-size: 0.85rem; color: var(--muted); margin-right: 0.5rem;"></span>
+      <button id="nav-new-session" type="button" class="btn btn-outline">Nueva práctica</button>
+      <button id="nav-history" type="button" class="btn btn-outline">Historial</button>
+      <button id="btn-logout" type="button" class="btn btn-outline">Salir</button>
+    </div>
+  </header>
+
+  <!-- VISTA 1: Inicio de Sesión con Google -->
+  <main id="view-login" class="login-wrapper">
+    <div class="card login-card">
+      <h1 style="font-size: 1.35rem; font-weight: 600; margin-bottom: 0.4rem;">Bienvenido a InterviewAI</h1>
+      <p style="font-size: 0.875rem; color: var(--muted); margin-bottom: 1.5rem;">
+        Practica entrevistas laborales por escrito con preguntas aleatorias según tu carrera.
+      </p>
+
+      <div class="field">
+        <label for="login-name">Nombre</label>
+        <input id="login-name" type="text" value="Marco Hernández" placeholder="Tu nombre" />
+      </div>
+      <div class="field" style="margin-bottom: 1.4rem;">
+        <label for="login-email">Correo de Google</label>
+        <input id="login-email" type="email" value="a01709802@tec.mx" placeholder="correo@ejemplo.com" />
+      </div>
+
+      <button id="btn-google-login" type="button" class="btn btn-google">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        <span>Continuar con Google</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- VISTA 2: Configuración Minimalista de la Sesión -->
+  <section id="view-setup" class="container-narrow hidden">
+    <div class="card">
+      <h2 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.35rem;">Configura tu entrevista</h2>
+      <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem;">
+        Seleccionaremos preguntas aleatorias de tu carrera. Tus datos personales se anonimizan automáticamente.
+      </p>
+
+      <div class="field">
+        <label for="setup-career">Carrera profesional</label>
+        <select id="setup-career"></select>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+        <div class="field">
+          <label for="setup-role">Puesto objetivo</label>
+          <input id="setup-role" type="text" placeholder="Ej. Software Engineer Intern" />
+        </div>
+        <div class="field">
+          <label for="setup-count">Número de preguntas</label>
+          <select id="setup-count">
+            <option value="5" selected>5 preguntas</option>
+            <option value="6">6 preguntas</option>
+            <option value="8">8 preguntas</option>
+            <option value="10">10 preguntas</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="setup-cv">Resumen de tu currículum o proyectos</label>
+        <textarea id="setup-cv" rows="3" placeholder="Pega aquí tu experiencia, proyectos académicos y herramientas que dominas...">Estudiante de últimos semestres con experiencia en desarrollo de aplicaciones web en Python, SQL, contenedores Docker y trabajo en equipos ágiles.</textarea>
+      </div>
+
+      <div class="field">
+        <label for="setup-jd">Descripción de la vacante</label>
+        <textarea id="setup-jd" rows="3" placeholder="Pega aquí los requisitos principales de la oferta laboral...">Buscamos candidato para puesto Junior / Intern con capacidad de resolución de problemas, pensamiento estructurado y comunicación efectiva de resultados.</textarea>
+      </div>
+
+      <p id="setup-status" class="hidden" style="color: var(--red); font-size: 0.82rem; margin-bottom: 0.9rem;"></p>
+
+      <button id="btn-start-interview" type="button" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">
+        Comenzar entrevista
+      </button>
+    </div>
+  </section>
+
+  <!-- VISTA 3: Entrevista por Chat (Solo Texto) + Indicadores STAR en Vivo -->
+  <section id="view-chat" class="container-wide hidden">
+    <div class="chat-grid">
+      <!-- Conversación por texto -->
+      <div class="chat-box">
+        <div style="padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 500; font-size: 0.9rem;">Entrevista en curso</span>
+          <span id="chat-progress-label" style="font-size: 0.8rem; color: var(--muted);">Pregunta 1 de 5</span>
+        </div>
+
+        <div id="chat-messages" class="chat-messages"></div>
+
+        <div class="chat-input-bar">
+          <textarea id="chat-input" placeholder="Escribe tu respuesta aquí (describe la situación, tu tarea, la acción que realizaste y el resultado)..."></textarea>
+          <button id="btn-send-chat" type="button" class="btn btn-primary">Enviar</button>
+        </div>
+      </div>
+
+      <!-- Panel lateral minimalista de métricas en vivo -->
+      <aside class="card" style="padding: 1.25rem;">
+        <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem;">Desempeño del turno</h3>
+
+        <div class="meter-row">
+          <div class="meter-header"><span>Situación</span><span id="val-situation">-</span></div>
+          <div class="meter-track"><div id="bar-situation" class="meter-fill" style="width: 0%;"></div></div>
+        </div>
+
+        <div class="meter-row">
+          <div class="meter-header"><span>Tarea</span><span id="val-task">-</span></div>
+          <div class="meter-track"><div id="bar-task" class="meter-fill" style="width: 0%;"></div></div>
+        </div>
+
+        <div class="meter-row">
+          <div class="meter-header"><span>Acción</span><span id="val-action">-</span></div>
+          <div class="meter-track"><div id="bar-action" class="meter-fill" style="width: 0%;"></div></div>
+        </div>
+
+        <div class="meter-row">
+          <div class="meter-header"><span>Resultado</span><span id="val-result">-</span></div>
+          <div class="meter-track"><div id="bar-result" class="meter-fill" style="width: 0%;"></div></div>
+        </div>
+
+        <div class="meter-row">
+          <div class="meter-header"><span>Claridad técnica</span><span id="val-clarity">-</span></div>
+          <div class="meter-track"><div id="bar-clarity" class="meter-fill" style="width: 0%;"></div></div>
+        </div>
+
+        <div class="meter-row">
+          <div class="meter-header"><span>Pertinencia</span><span id="val-relevance">-</span></div>
+          <div class="meter-track"><div id="bar-relevance" class="meter-fill" style="width: 0%;"></div></div>
+        </div>
+
+        <p id="live-feedback-note" style="font-size: 0.8rem; color: var(--muted); margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border);">
+          Tus indicadores se actualizarán al enviar cada respuesta.
+        </p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- VISTA 4: Reporte Final y Plan de Acción -->
+  <section id="view-report" class="container-narrow hidden">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 600;">Resultados de tu entrevista</h2>
+          <p id="rep-role" style="font-size: 0.85rem; color: var(--muted);"></p>
+        </div>
+        <div style="text-align: right;">
+          <div id="rep-score" style="font-size: 1.5rem; font-weight: 600;">4.2 / 5.0</div>
+          <div id="rep-evolution" style="font-size: 0.8rem; color: var(--muted);"></div>
+        </div>
+      </div>
+
+      <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem;">Respuestas con mayor oportunidad de mejora</h3>
+      <div id="rep-weakest-list" style="margin-bottom: 1.5rem;"></div>
+
+      <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem;">Plan de acción recomendado</h3>
+      <div id="rep-resources-list" style="margin-bottom: 1.5rem;"></div>
+
+      <div class="no-print" style="border-top: 1px solid var(--border); padding-top: 1.25rem; margin-top: 1rem;">
+        <div style="font-size: 0.85rem; margin-bottom: 0.6rem;">¿Qué tan útil te resultó esta retroalimentación?</div>
+        <div style="display: flex; gap: 0.4rem; margin-bottom: 0.75rem;">
+          <button type="button" class="btn btn-outline csat-star-btn" data-score="1">1</button>
+          <button type="button" class="btn btn-outline csat-star-btn" data-score="2">2</button>
+          <button type="button" class="btn btn-outline csat-star-btn" data-score="3">3</button>
+          <button type="button" class="btn btn-outline csat-star-btn" data-score="4">4</button>
+          <button type="button" class="btn btn-outline csat-star-btn" data-score="5">5</button>
+        </div>
+        <p id="csat-thanks" class="hidden" style="font-size: 0.8rem; color: var(--green); margin-bottom: 1rem;"></p>
+
+        <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+          <button id="btn-print-report" type="button" class="btn btn-primary">Descargar PDF</button>
+          <button id="btn-new-from-report" type="button" class="btn btn-outline">Practicar otra vez</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VISTA 5: Historial de Sesiones -->
+  <section id="view-history" class="container-narrow hidden">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+        <h2 style="font-size: 1.15rem; font-weight: 600;">Historial de prácticas</h2>
+        <button id="btn-back-from-history" type="button" class="btn btn-outline">Volver</button>
+      </div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: left;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border); color: var(--muted);">
+            <th style="padding: 0.6rem 0.75rem;">Fecha</th>
+            <th style="padding: 0.6rem 0.75rem;">Carrera y Puesto</th>
+            <th style="padding: 0.6rem 0.75rem;">Puntaje</th>
+            <th style="padding: 0.6rem 0.75rem;">Evolución</th>
+          </tr>
+        </thead>
+        <tbody id="history-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

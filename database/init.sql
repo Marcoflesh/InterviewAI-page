@@ -1,0 +1,360 @@
+-- =============================================================================
+-- InterviewAI - Esquema Relacional PostgreSQL y Banco de Preguntas por Carrera
+-- Cumple con la estructura de información del proyecto (Sesiones, Turnos,
+-- Evaluaciones STAR, Retroalimentación, Golden Dataset, RBAC y Banco Aleatorio)
+-- =============================================================================
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- -----------------------------------------------------------------------------
+-- 1. Catálogo de Control de Acceso Basado en Roles (RBAC)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS rbac_roles (
+    role_id SERIAL PRIMARY KEY,
+    role_code VARCHAR(50) UNIQUE NOT NULL,
+    role_name VARCHAR(100) NOT NULL,
+    permissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO rbac_roles (role_code, role_name, permissions) VALUES
+('student', 'Estudiante / Candidato', '["upload_cv", "start_interview", "view_live_star", "download_report", "submit_csat", "view_own_history"]'::jsonb),
+('product_owner', 'Product Owner / Evaluador Experto', '["manage_rubrics", "manage_resources", "annotate_golden_dataset", "review_hitl"]'::jsonb),
+('mlops_admin', 'Administrador / Equipo MLOps', '["configure_langgraph", "run_statistical_validation", "view_analytics", "manage_pipelines", "manage_docker"]'::jsonb)
+ON CONFLICT (role_code) DO NOTHING;
+
+-- -----------------------------------------------------------------------------
+-- 2. Usuarios (Autenticación con Google OAuth 2.0)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS users (
+    user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    google_sub VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    avatar_url TEXT,
+    university VARCHAR(255) DEFAULT 'Tecnológico de Monterrey',
+    career_code VARCHAR(50),
+    role_code VARCHAR(50) NOT NULL DEFAULT 'student' REFERENCES rbac_roles(role_code),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------------------------------------------------------
+-- 3. Catálogo de Carreras Profesionales
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS careers (
+    career_code VARCHAR(50) PRIMARY KEY,
+    career_name VARCHAR(150) NOT NULL,
+    faculty VARCHAR(150) NOT NULL,
+    default_target_roles JSONB NOT NULL DEFAULT '[]'::jsonb,
+    active BOOLEAN DEFAULT TRUE
+);
+
+INSERT INTO careers (career_code, career_name, faculty, default_target_roles) VALUES
+('ITC', 'Ingeniería en Tecnologías Computacionales (Software)', 'Ingeniería y Ciencias', '["Software Engineer Intern", "Junior Full-Stack Developer", "Backend Developer"]'::jsonb),
+('ISD', 'Ciencia de Datos e Inteligencia Artificial', 'Ingeniería y Ciencias', '["Data Scientist Jr", "Machine Learning Engineer Intern", "Data Analyst"]'::jsonb),
+('IIS', 'Ingeniería Industrial y de Sistemas', 'Ingeniería y Ciencias', '["Supply Chain Analyst", "Continuous Improvement Intern", "Operations Coordinator"]'::jsonb),
+('IMT', 'Ingeniería Mecatrónica y Automatización', 'Ingeniería y Ciencias', '["Automation Engineer Jr", "Embedded Systems Intern", "Robotics Engineer"]'::jsonb),
+('LAF', 'Finanzas, Economía y Consultoría de Negocios', 'Negocios', '["Financial Analyst Jr", "Business Consultant Intern", "Corporate Finance Associate"]'::jsonb),
+('LMC', 'Marketing Digital, Producto y Desarrollo de Negocios', 'Negocios', '["Associate Product Manager", "Growth Marketing Analyst", "Business Development Rep"]'::jsonb),
+('IBT', 'Ingeniería Biomédica y Biotecnología', 'Salud y Ciencias', '["Clinical Engineering Intern", "R&D Biotech Associate", "Quality & Regulatory Affairs Jr"]'::jsonb),
+('ARQ', 'Arquitectura, Diseño Industrial y UX', 'Estudios Creativos', '["UX/UI Product Designer", "Architectural Project Jr", "Industrial Design Intern"]'::jsonb)
+ON CONFLICT (career_code) DO NOTHING;
+
+-- -----------------------------------------------------------------------------
+-- 4. Banco de Preguntas por Carrera (Selección Aleatoria por Sesión)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS question_bank (
+    question_id SERIAL PRIMARY KEY,
+    career_code VARCHAR(50) NOT NULL REFERENCES careers(career_code) ON DELETE CASCADE,
+    category VARCHAR(80) NOT NULL, -- 'conductual_star', 'tecnica_aplicada', 'resolucion_problemas'
+    seniority_level VARCHAR(50) NOT NULL DEFAULT 'Junior / Intern',
+    competency VARCHAR(120) NOT NULL,
+    question_text TEXT NOT NULL,
+    expected_star_focus TEXT NOT NULL,
+    active BOOLEAN DEFAULT TRUE
+);
+
+-- =============================================================================
+-- SEMILLA DE PREGUNTAS ALEATORIAS POR CARRERA (120 Preguntas en 8 Carreras)
+-- Diseñadas como preguntas autocontenidas para evitar repreguntas innecesarias
+-- =============================================================================
+
+-- 1) ITC: Ingeniería en Tecnologías Computacionales (15 preguntas)
+INSERT INTO question_bank (career_code, category, seniority_level, competency, question_text, expected_star_focus) VALUES
+('ITC', 'conductual_star', 'Junior / Intern', 'Resolución de Bugs Críticos', 'Cuéntame sobre una ocasión en la que detectaste un error crítico en un proyecto de software poco antes de la entrega. ¿Cuál era el contexto, qué acciones técnicas ejecutaste para aislarlo y cuál fue el impacto medible en el despliegue?', 'Aislar causa raíz, uso de debugging/tests y métrica de tiempo o reducción de fallos.'),
+('ITC', 'tecnica_aplicada', 'Junior / Intern', 'Optimización de Rendimiento', 'Describe algún proyecto donde una consulta a base de datos o endpoint de API era demasiado lento. ¿Qué diagnóstico realizaste, qué cambios implementaste en el código o índices y en qué porcentaje o milisegundos mejoró la latencia?', 'Diagnóstico de cuello de botella, refactorización o indexación y latencia antes/después.'),
+('ITC', 'conductual_star', 'Junior / Intern', 'Trabajo con Deuda Técnica', 'Platícame de una situación en la que tuviste que trabajar sobre código legado o mal documentado. ¿Qué estrategia seguiste para comprenderlo y modificarlo sin romper funcionalidades existentes, y qué resultado obtuviste?', 'Pruebas de regresión, refactorización incremental y estabilidad del módulo.'),
+('ITC', 'resolucion_problemas', 'Junior / Intern', 'Diseño de Arquitectura Modular', 'Háblame de un sistema o aplicación que hayas construido desde cero en equipo. ¿Qué responsabilidad técnica asumiste tú directamente, cómo definiste la comunicación entre frontend y backend y qué resultados lograron en la evaluación o producción?', 'Diseño de API REST, separación de capas y métricas de adopción o cobertura.'),
+('ITC', 'conductual_star', 'Junior / Intern', 'Colaboración en Git y Code Reviews', 'Recuerda alguna vez en que tuviste un desacuerdo técnico o un conflicto de integración de ramas (merge conflict complejo) con otro desarrollador. ¿Cómo lo abordaste y cómo mejoró el flujo de trabajo del equipo?', 'Comunicación asertiva, estándares de Git/PR y reducción de retrabajo.'),
+('ITC', 'tecnica_aplicada', 'Junior / Intern', 'Seguridad y Autenticación', 'Describe una experiencia implementando autenticación, manejo de sesiones o protección de rutas en una aplicación web. ¿Qué vulnerabilidades preveniste, qué herramientas utilizaste y cuál fue el resultado final?', 'OAuth/JWT, validación de entradas y cero incidentes de acceso no autorizado.'),
+('ITC', 'conductual_star', 'Junior / Intern', 'Aprendizaje Rápido de Stack', 'Cuéntame de algún proyecto en el que tuviste que aprender un lenguaje, framework o herramienta de nube desconocido en pocos días. ¿Qué plan de acción seguiste para implementarlo a tiempo y qué entregable lograste?', 'Autogestión del aprendizaje, prototipado rápido y cumplimiento de fecha límite.'),
+('ITC', 'resolucion_problemas', 'Junior / Intern', 'Automatización y Pruebas', 'Comparte un caso donde el proceso de pruebas o despliegue manual consumía demasiado tiempo del equipo. ¿Qué automatizaste mediante scripts o pruebas unitarias y cuánto tiempo ahorraron?', 'Implementación de tests o CI/CD y reducción cuantificable de tiempo manual.'),
+('ITC', 'tecnica_aplicada', 'Junior / Intern', 'Contenedorización y Entornos', 'Platícame sobre una ocasión en la que enfrentaste problemas de compatibilidad entre entornos ("en mi máquina sí funciona"). ¿Cómo estandarizaste la configuración o los contenedores y qué impacto tuvo en el equipo?', 'Uso de Docker/variables de entorno y eliminación de errores de configuración.'),
+('ITC', 'conductual_star', 'Junior / Intern', 'Priorización bajo Presión', 'Describe un sprint o entrega final donde los requerimientos cambiaron a mitad del desarrollo. ¿Cómo renegociaste el alcance técnico, qué priorizaste programar primero y qué porcentaje de los objetivos se cumplió?', 'Gestión de alcance (MVP), comunicación con stakeholders y entrega funcional.'),
+('ITC', 'tecnica_aplicada', 'Junior / Intern', 'Integración de APIs Externas', 'Cuéntame sobre un proyecto donde integraste una API externa o servicio de terceros que fallaba o tenía límites de tasa. ¿Cómo manejaste los errores, reintentos o estados de carga y qué experiencia obtuvo el usuario final?', 'Manejo de excepciones, timeouts/fallbacks y tasa de éxito en peticiones.'),
+('ITC', 'resolucion_problemas', 'Junior / Intern', 'Estructuras de Datos y Algoritmos', 'Relata una situación en la que el procesamiento de una colección grande de datos en memoria causaba lentitud o bloqueos. ¿Qué estructura de datos o algoritmo aplicaste para optimizar la complejidad y qué mejora lograste?', 'Cambio de complejidad algorítmica y reducción en uso de memoria o CPU.'),
+('ITC', 'conductual_star', 'Junior / Intern', 'Traducción de Requerimientos', 'Háblame de una vez en que trabajaste con un usuario o cliente no técnico cuyos requerimientos eran ambiguos. ¿Qué preguntas o prototipos utilizaste para aterrizar la especificación y cuál fue la satisfacción con el software entregado?', 'Levantamiento de requerimientos, validación temprana y aceptación del entregable.'),
+('ITC', 'tecnica_aplicada', 'Junior / Intern', 'Diseño Responsivo y Accesibilidad', 'Describe un reto importante que hayas resuelto en el frontend para que una interfaz compleja fuera rápida, limpia y usable en distintos dispositivos. ¿Qué decisiones de CSS o estado tomaste y cómo impactó la usabilidad?', 'Uso de Grid/Flexbox, manejo limpio del DOM y mejora en tiempos o pruebas de usuario.'),
+('ITC', 'conductual_star', 'Junior / Intern', 'Post-Mortem y Mejora Continua', 'Cuéntame de algún despliegue o demostración en vivo donde algo no salió como esperabas. ¿Cómo reaccionaste en el momento para mitigar el problema y qué cambiaste en tu proceso de ingeniería después?', 'Mitigación inmediata, análisis de causa raíz y prevención verificable.');
+
+-- 2) ISD: Ciencia de Datos e Inteligencia Artificial (15 preguntas)
+INSERT INTO question_bank (career_code, category, seniority_level, competency, question_text, expected_star_focus) VALUES
+('ISD', 'tecnica_aplicada', 'Junior / Intern', 'Limpieza y Calidad de Datos', 'Cuéntame sobre un proyecto de datos donde el dataset original tenía valores faltantes, ruido o inconsistencias severas. ¿Qué pipeline de limpieza e imputación diseñaste y cómo impactó en el desempeño final del modelo?', 'Pipeline de preprocesamiento reproducible y mejora cuantitativa en métricas del modelo.'),
+('ISD', 'conductual_star', 'Junior / Intern', 'Comunicación de Hallazgos a Negocio', 'Describe una ocasión en la que tuviste que explicar los resultados de un modelo predictivo o análisis estadístico a una audiencia no técnica. ¿Cómo visualizaste y tradujiste las métricas y qué decisión se tomó gracias a tu análisis?', 'Storytelling con datos, traducción a KPIs de negocio y acción tomada.'),
+('ISD', 'tecnica_aplicada', 'Junior / Intern', 'Manejo de Desbalance de Clases', 'Platícame de un problema de clasificación donde la clase de interés era muy minoritaria. ¿Qué técnicas de muestreo, pesos o métricas de evaluación elegiste en lugar de exactitud (accuracy) y qué F1-score o ROC-AUC alcanzaste?', 'Selección de Precision/Recall/F1, técnicas como SMOTE o class weights y métrica final.'),
+('ISD', 'resolucion_problemas', 'Junior / Intern', 'Prevención de Overfitting', 'Háblame de un modelo que obtenía excelentes métricas en entrenamiento pero fallaba al generalizar en validación. ¿Cómo diagnosticaste el sobreajuste, qué regularización o validación cruzada aplicaste y cuánto mejoró en datos nuevos?', 'Uso de K-Fold CV, regularización o poda de variables y reducción de brecha train-test.'),
+('ISD', 'tecnica_aplicada', 'Junior / Intern', 'Orquestación de LLMs y Prompts', 'Describe un proyecto en el que utilizaste modelos de lenguaje (LLMs) o agentes para automatizar una tarea. ¿Cómo estructuraste los prompts o el flujo para evitar alucinaciones y asegurar salidas JSON válidas, y qué tasa de éxito lograste?', 'Ingeniería de prompts, validación de esquemas y reducción de errores de formato.'),
+('ISD', 'conductual_star', 'Junior / Intern', 'Ética, Privacidad y Sesgos en IA', 'Cuéntame de una situación en la que identificaste un posible riesgo de privacidad de datos personales o sesgo demográfico en un dataset. ¿Qué acciones de anonimización o auditoría implementaste y cuál fue el resultado?', 'Anonimización de PII o pruebas de invariancia y cumplimiento ético/estadístico.'),
+('ISD', 'tecnica_aplicada', 'Junior / Intern', 'Ingeniería de Características (Feature Engineering)', 'Relata un caso donde los algoritmos estándar no superaban la línea base (baseline). ¿Qué nuevas variables o transformaciones creaste a partir del conocimiento del dominio y cuánto incrementó el poder predictivo?', 'Creación de variables de dominio, selección de features y ganancia porcentual sobre baseline.'),
+('ISD', 'resolucion_problemas', 'Junior / Intern', 'Consultas SQL y Grandes Volúmenes', 'Describe una experiencia extrayendo y agregando información compleja desde bases de datos relacionales con múltiples tablas. ¿Cómo estructuraste tus consultas SQL y qué hallazgo clave descubriste para el proyecto?', 'Uso de JOINs, funciones de ventana o agregaciones y tiempo de ejecución/hallazgo.'),
+('ISD', 'conductual_star', 'Junior / Intern', 'Alineación de Métricas Técnicas y de Producto', 'Platícame de alguna vez en que el equipo quería usar un modelo complejo pero una solución más simple resolvía mejor la necesidad del usuario. ¿Cómo evaluaste el costo-beneficio y qué resultado obtuvieron en latencia y precisión?', 'Comparativa contra baseline simple, criterio de parsimonia y mejora en tiempo de inferencia.'),
+('ISD', 'tecnica_aplicada', 'Junior / Intern', 'Evaluación con Golden Dataset', 'Háblame de cómo has validado la calidad de un sistema de IA generativa o predictiva cuando no existían etiquetas limpias al inicio. ¿Cómo construiste el conjunto de validación y qué correlación o concordancia lograste?', 'Construcción de conjunto de referencia estratificado y métrica de correlación/concordancia.'),
+('ISD', 'resolucion_problemas', 'Junior / Intern', 'Series de Tiempo y Pronósticos', 'Describe un proyecto de pronóstico de demanda, ventas o comportamiento temporal. ¿Cómo manejaste la estacionalidad y tendencia, y en cuánto redujiste el error (MAE o MAPE) frente al método anterior?', 'Descomposición temporal, validación walk-forward y reducción porcentual de MAPE/RMSE.'),
+('ISD', 'conductual_star', 'Junior / Intern', 'Reproducibilidad en Experimentos', 'Cuéntame sobre un proyecto en equipo donde era difícil rastrear qué versión del código y de los datos produjo el mejor modelo. ¿Qué prácticas de control de versiones o contenedores implementaste y qué impacto tuvo?', 'Estandarización con Git/Docker/semillas aleatorias y reducción en tiempo de reproducción.'),
+('ISD', 'tecnica_aplicada', 'Junior / Intern', 'Diseño de Dashboards y KPIs', 'Platícame de un tablero analítico que hayas diseñado para monitorear un proceso o producto. ¿Qué indicadores clave seleccionaste, cómo evitaste saturar la vista y cómo ayudó a detectar anomalías?', 'Jerarquía visual de KPIs, segmentación accionable y detección oportuna de desviaciones.'),
+('ISD', 'resolucion_problemas', 'Junior / Intern', 'Procesamiento de Texto y Regex', 'Describe una ocasión en la que necesitabas extraer patrones estructurados o métricas cuantitativas de texto libre. ¿Cómo combinaste expresiones regulares o NLP y qué precisión obtuviste en la extracción?', 'Diseño de patrones Regex/tokenización y porcentaje de precisión en extracción.'),
+('ISD', 'conductual_star', 'Junior / Intern', 'Iteración ante Hipótesis Fallida', 'Háblame de un análisis exploratorio donde los datos refutaron la hipótesis principal de tu equipo. ¿Cómo presentaste la evidencia objetivamente, hacia dónde pivotaron el proyecto y qué lograron al final?', 'Rigor estadístico, comunicación transparente y pivote exitoso basado en evidencia.');
+
+-- 3) IIS: Ingeniería Industrial y de Sistemas (15 preguntas)
+INSERT INTO question_bank (career_code, category, seniority_level, competency, question_text, expected_star_focus) VALUES
+('IIS', 'tecnica_aplicada', 'Junior / Intern', 'Eliminación de Cuellos de Botella', 'Cuéntame sobre un proyecto donde analizaste un proceso productivo o de servicio con tiempos de espera elevados. ¿Qué herramientas de estudio de tiempos o mapeo de valor (VSM) aplicaste y en qué porcentaje redujiste el tiempo de ciclo?', 'Diagnóstico con VSM/tiempos, balanceo de línea y reducción porcentual de tiempo de ciclo.'),
+('IIS', 'conductual_star', 'Junior / Intern', 'Gestión del Cambio en Piso/Operaciones', 'Describe una situación en la que propusiste un nuevo estándar operativo y encontraste resistencia por parte de los operadores o colaboradores. ¿Qué acciones tomaste para involucrarlos y cuál fue el nivel de adopción logrado?', 'Empatía en piso (Gemba), capacitación práctica y cumplimiento sostenido del estándar.'),
+('IIS', 'tecnica_aplicada', 'Junior / Intern', 'Optimización de Inventarios', 'Platícame de un caso donde existía exceso de inventario o quiebres de stock frecuentes. ¿Qué modelo de punto de reorden, clasificación ABC o pronóstico implementaste y qué impacto financiero u operativo generó?', 'Clasificación ABC/EOQ/stock de seguridad y reducción de faltantes o costo de almacenamiento.'),
+('IIS', 'resolucion_problemas', 'Junior / Intern', 'Análisis de Causa Raíz y Calidad', 'Háblame de un problema recurrente de defectos o retrabajo en un proceso. ¿Cómo utilizaste herramientas de calidad (Ishikawa, 5 Porqués, Pareto o Six Sigma) para erradicar la causa raíz y cuánto disminuyó la tasa de defectos?', 'Aplicación estructurada de Pareto/Ishikawa y reducción medible de PPM o merma.'),
+('IIS', 'conductual_star', 'Junior / Intern', 'Coordinación con Proveedores', 'Describe una ocasión en la que un retraso o incumplimiento de un proveedor externo puso en riesgo una entrega crítica. ¿Qué plan de contingencia ejecutaste y cómo aseguraste la continuidad operativa?', 'Negociación, activación de plan alterno y porcentaje de entregas a tiempo (OTIF).'),
+('IIS', 'tecnica_aplicada', 'Junior / Intern', 'Rediseño de Layout e Instalaciones', 'Cuéntame de algún proyecto donde optimizaste la distribución física de un almacén, laboratorio o celda de manufactura. ¿Cómo analizaste el flujo de materiales y cuántos metros de recorrido o minutos por lote ahorraste?', 'Diagrama de espagueti/SLP, aplicación de 5S y ahorro cuantitativo en traslados.'),
+('IIS', 'resolucion_problemas', 'Junior / Intern', 'Simulación de Procesos', 'Relata una experiencia utilizando software de simulación de eventos discretos o modelado matemático para evaluar escenarios antes de invertir recursos. ¿Qué variables modelaste y qué recomendación validaste con los resultados?', 'Validación estadística del modelo, comparación de escenarios y ahorro o incremento de capacidad.'),
+('IIS', 'conductual_star', 'Junior / Intern', 'Liderazgo de Equipos Multidisciplinarios', 'Platícame de un proyecto donde coordinaste a personas de distintas áreas con prioridades encontradas. ¿Cómo alineaste los entregables mediante indicadores compartidos y qué resultado final obtuvieron?', 'Definición de cronograma, seguimiento de KPIs y entrega en tiempo y presupuesto.'),
+('IIS', 'tecnica_aplicada', 'Junior / Intern', 'Mejora de OEE y Mantenimiento', 'Describe un análisis que hayas realizado para incrementar la efectividad global de equipos (OEE) o reducir paros no programados. ¿Qué pérdidas atacaste mediante SMED o TPM y cuántos puntos porcentuales subió la disponibilidad?', 'Análisis de paros, reducción de tiempos de cambio (SMED) e incremento en OEE.'),
+('IIS', 'resolucion_problemas', 'Junior / Intern', 'Ruteo y Logística de Distribución', 'Háblame de un reto logístico relacionado con costos de transporte o tiempos de entrega de última milla. ¿Cómo reestructuraste las rutas o la consolidación de carga y qué porcentaje de ahorro lograste?', 'Optimización de rutas/consolidación y reducción de costo logístico o kilómetros.'),
+('IIS', 'conductual_star', 'Junior / Intern', 'Seguridad Industrial y Ergonomía', 'Cuéntame de una ocasión en la que detectaste una condición insegura o riesgo ergonómico en una estación de trabajo. ¿Qué análisis realizaste, qué controles implementaste y cómo impactó la seguridad del área?', 'Evaluación de riesgo (RULA/NIOSH/matriz IPER) y reducción de incidentes o fatiga.'),
+('IIS', 'tecnica_aplicada', 'Junior / Intern', 'Estandarización y Documentación SOP', 'Describe un proceso que dependía totalmente de la experiencia informal de una sola persona. ¿Cómo levantaste, estandarizaste y documentaste el procedimiento (SOP) y cuánto se redujo la curva de aprendizaje de nuevos integrantes?', 'Creación de ayudas visuales/SOPs y reducción en tiempo de capacitación y errores.'),
+('IIS', 'resolucion_problemas', 'Junior / Intern', 'Análisis Financiero de Proyectos de Mejora', 'Platícame de una propuesta de mejora en la que tuviste que justificar la inversión ante directivos o profesores. ¿Cómo calculaste el ROI, TIR o periodo de recuperación y qué decisión se tomó?', 'Cálculo riguroso de ahorros vs inversión y aprobación o retorno cuantificado.'),
+('IIS', 'conductual_star', 'Junior / Intern', 'Resolución de Crisis Operativa', 'Relata un momento en el que un imprevisto detuvo una operación o entrega importante. ¿Cómo priorizaste las acciones en las primeras horas y qué resultado obtuviste al cierre de la jornada?', 'Toma de decisiones bajo presión, contención inmediata y recuperación del nivel de servicio.'),
+('IIS', 'tecnica_aplicada', 'Junior / Intern', 'Automatización de Reportes Operativos', 'Háblame de algún proceso administrativo u operativo donde la captura manual en hojas de cálculo generaba errores y demoras. ¿Cómo estandarizaste la captura o los tableros de control y cuántas horas semanales liberaste?', 'Automatización de plantillas/consultas y reducción de horas-hombre y errores de captura.');
+
+-- 4) IMT: Ingeniería Mecatrónica y Automatización (15 preguntas)
+INSERT INTO question_bank (career_code, category, seniority_level, competency, question_text, expected_star_focus) VALUES
+('IMT', 'tecnica_aplicada', 'Junior / Intern', 'Integración Hardware-Software', 'Cuéntame sobre un proyecto mecatrónico donde tuviste que integrar sensores, actuadores y un microcontrolador o PLC. ¿Qué problema de ruido eléctrico, sincronización o comunicación enfrentaste, cómo lo resolviste y qué precisión alcanzaste?', 'Acondicionamiento de señal/protocolo de comunicación y precisión o repetibilidad lograda.'),
+('IMT', 'resolucion_problemas', 'Junior / Intern', 'Diagnóstico de Fallas Electromecánicas', 'Describe una ocasión en la que un prototipo o sistema automatizado dejó de funcionar de forma intermitente. ¿Qué metodología de diagnóstico con instrumentos de medición seguiste para aislar la falla y cómo aseguraste su confiabilidad?', 'Uso sistemático de multímetro/osciloscopio/logs, aislamiento por subsistemas y tiempo medio sin fallas.'),
+('IMT', 'tecnica_aplicada', 'Junior / Intern', 'Sintonización de Control (PID)', 'Platícame de algún sistema de control en lazo cerrado (posición, velocidad, temperatura o presión) que hayas implementado. ¿Cómo sintonizaste el controlador para reducir el sobreimpulso y el error en estado estacionario, y qué respuesta temporal lograste?', 'Método de sintonización PID y reducción medible de overshoot y tiempo de asentamiento.'),
+('IMT', 'conductual_star', 'Junior / Intern', 'Trabajo Multidisciplinario (Mecánica, Electrónica y Código)', 'Háblame de un proyecto donde las decisiones del diseño mecánico afectaban a la electrónica o al firmware. ¿Cómo coordinaste las restricciones entre áreas y qué retrabajos evitaste antes de fabricar?', 'Definición de interfaces claras, revisiones de diseño conjunto y ahorro en tiempo/material.'),
+('IMT', 'tecnica_aplicada', 'Junior / Intern', 'Programación de PLC y Secuencias Industriales', 'Describe una secuencia de automatización industrial que hayas programado en lenguaje Ladder o texto estructurado. ¿Cómo incluiste las condiciones de paro de emergencia e interbloqueos de seguridad y qué mejora de ciclo lograste?', 'Estructura de máquina de estados en PLC, seguridad funcional y eficiencia del ciclo.'),
+('IMT', 'resolucion_problemas', 'Junior / Intern', 'Diseño CAD y Manufactura Rápida', 'Cuéntame de una pieza o mecanismo que diseñaste en CAD y fabricaste mediante impresión 3D o maquinado CNC. ¿Qué problema de tolerancias o resistencia mecánica surgió en la primera iteración y cómo optimizaste el diseño final?', 'Análisis de tolerancias/esfuerzos (FEA), rediseño iterativo y reducción de peso o fallas.'),
+('IMT', 'conductual_star', 'Junior / Intern', 'Gestión de Presupuesto y Componentes', 'Relata una situación en la que un componente electrónico o actuador clave no estaba disponible o excedía el presupuesto del proyecto. ¿Cómo evaluaste alternativas técnicas en hojas de datos (datasheets) y qué resultado obtuviste?', 'Análisis comparativo de datasheets, adaptación del circuito y cumplimiento de presupuesto.'),
+('IMT', 'tecnica_aplicada', 'Junior / Intern', 'Sistemas Embebidos en Tiempo Real', 'Platícame sobre un desarrollo en C/C++ para microcontroladores donde el uso de bloqueos (delays) afectaba la respuesta del sistema. ¿Cómo reestructuraste el código mediante interrupciones o temporizadores y cuánto mejoró el desempeño?', 'Uso de interrupciones (ISR), timers o RTOS y latencia determinista de respuesta.'),
+('IMT', 'resolucion_problemas', 'Junior / Intern', 'Visión Artificial o Sensores Avanzados', 'Describe un proyecto donde utilizaste visión por computadora o fusión de sensores para detectar objetos o guiar un mecanismo. ¿Cómo compensaste las variaciones de iluminación o entorno y qué porcentaje de detección exitosa lograste?', 'Calibración, filtrado de imagen/señal y tasa de acierto en pruebas reales.'),
+('IMT', 'conductual_star', 'Junior / Intern', 'Seguridad en Laboratorio y Pruebas', 'Cuéntame de una experiencia realizando pruebas con potencia eléctrica, neumática o robots en movimiento. ¿Qué protocolo de verificación aplicaste antes de energizar el sistema y cómo preveniste daños al equipo o a las personas?', 'Checklist pre-energizado, protecciones eléctricas/mecánicas y cero accidentes.'),
+('IMT', 'tecnica_aplicada', 'Junior / Intern', 'Diseño de PCB y Electrónica de Potencia', 'Háblame de una tarjeta electrónica o etapa de potencia que hayas diseñado y soldado. ¿Cómo manejaste la disipación térmica, las tierras o el acoplamiento óptico y cómo validaste su operación continua?', 'Separación de etapa lógica y potencia, pruebas de carga térmica y operación estable.'),
+('IMT', 'resolucion_problemas', 'Junior / Intern', 'Protocolos de Comunicación Industrial / Embebida', 'Describe un reto al comunicar dos o más dispositivos mediante I2C, SPI, UART, CAN o Modbus. ¿Cómo identificaste pérdidas de tramas o colisiones y qué solución implementaste en el protocolo?', 'Análisis de tramas, checksums/velocidades de baudios y tasa de transmisión sin errores.'),
+('IMT', 'conductual_star', 'Junior / Intern', 'Resolución bajo Presión en Competencia o Entrega', 'Platícame de una entrega final o competencia tecnológica donde un subsistema falló a pocas horas de la evaluación. ¿Cómo dividiste las tareas de emergencia y qué porcentaje de la funcionalidad lograron rescatar?', 'Priorización crítica, calma bajo presión y demostración funcional exitosa.'),
+('IMT', 'tecnica_aplicada', 'Junior / Intern', 'IIoT y Monitoreo Remoto', 'Cuéntame de algún proyecto donde conectaste sensores físicos a una base de datos o dashboard en tiempo real. ¿Qué arquitectura de adquisición y transmisión utilizaste y qué indicadores permitiste monitorear?', 'Adquisición de datos, transmisión MQTT/HTTP y disponibilidad del monitoreo en vivo.'),
+('IMT', 'conductual_star', 'Junior / Intern', 'Documentación de Planos y Diagramas', 'Describe cómo has documentado diagramas eléctricos, neumáticos y manuales de código para que otra persona pudiera dar mantenimiento a tu sistema. ¿Qué estándares seguiste y cómo facilitó la transferencia del proyecto?', 'Diagramas normalizados, comentarios claros y reducción en tiempo de soporte posterior.');
+
+-- 5) LAF: Finanzas, Economía y Consultoría de Negocios (15 preguntas)
+INSERT INTO question_bank (career_code, category, seniority_level, competency, question_text, expected_star_focus) VALUES
+('LAF', 'tecnica_aplicada', 'Junior / Intern', 'Modelado Financiero y Valuación', 'Cuéntame sobre un modelo financiero o valuación por flujos descontados (DCF) que hayas construido para analizar una empresa o proyecto. ¿Cómo fundamentaste los supuestos de crecimiento y tasa de descuento, y a qué conclusión de inversión llegaste?', 'Estructura de estados financieros proyectados, análisis de sensibilidad WACC y recomendación cuantificada.'),
+('LAF', 'resolucion_problemas', 'Junior / Intern', 'Análisis de Variaciones Presupuestales', 'Describe una ocasión en la que detectaste una desviación importante entre el presupuesto planeado y los costos o ingresos reales de un proyecto. ¿Cómo desglosaste las causas y qué ajustes propusiste para recuperar la rentabilidad?', 'Análisis horizontal/vertical de partidas, identificación del driver de costo y ahorro porcentual.'),
+('LAF', 'conductual_star', 'Junior / Intern', 'Presentación Ejecutiva bajo Escrutinio', 'Platícame de alguna vez en que presentaste una recomendación financiera o estratégica ante un comité, cliente o jurado que cuestionó fuertemente tus números. ¿Cómo defendiste tu metodología con datos y cuál fue el veredicto?', 'Dominio de supuestos, respaldo con escenarios de sensibilidad y aceptación de la propuesta.'),
+('LAF', 'tecnica_aplicada', 'Junior / Intern', 'Evaluación de Riesgo Crediticio o de Portafolio', 'Háblame de un análisis donde evaluaste el riesgo de liquidez, solvencia o volatilidad de una cartera o contraparte. ¿Qué razones financieras o métricas de riesgo (VaR, Beta, Sharpe) calculaste y qué estrategia de mitigación diseñaste?', 'Cálculo preciso de razones/métricas de riesgo y mejora en la relación riesgo-rendimiento.'),
+('LAF', 'resolucion_problemas', 'Junior / Intern', 'Estructuración de Caso de Negocio (Consultoría)', 'Describe un caso de consultoría donde el problema del cliente era ambiguo (por ejemplo, caída en márgenes o entrada a un nuevo mercado). ¿Cómo estructuraste el árbol de problemas (MECE), qué datos recolectaste y qué impacto proyectó tu solución?', 'Desglose MECE, dimensionamiento de mercado/costos y cuantificación del impacto en EBITDA o ventas.'),
+('LAF', 'conductual_star', 'Junior / Intern', 'Ética e Integridad en el Manejo de Información', 'Cuéntame de una situación en la que encontraste un error en una hoja de cálculo o reporte financiero que favorecía artificialmente los resultados del equipo. ¿Cómo actuaste para corregirlo y transparentarlo?', 'Integridad profesional, auditoría de fórmulas y corrección oportuna con trazabilidad.'),
+('LAF', 'tecnica_aplicada', 'Junior / Intern', 'Optimización de Capital de Trabajo', 'Platícame de un análisis enfocado en mejorar el flujo de efectivo operativo mediante el ciclo de conversión de efectivo (cuentas por cobrar, inventarios o cuentas por pagar). ¿Qué hallazgos obtuviste y qué políticas recomendaste?', 'Cálculo de días cartera/inventario/proveedores y liberación cuantificable de flujo de caja.'),
+('LAF', 'resolucion_problemas', 'Junior / Intern', 'Estrategia de Precios y Márgenes (Pricing)', 'Háblame de un proyecto en el que analizaste la estructura de costos fijos, costos variables y punto de equilibrio de un producto o servicio. ¿Qué ajuste de precios o mezcla de productos propusiste y cuánto mejoró el margen de contribución?', 'Análisis de punto de equilibrio y elasticidad, y mejora en margen bruto/contribución.'),
+('LAF', 'conductual_star', 'Junior / Intern', 'Trabajo bajo Fechas Límite Estrictas (Cierres)', 'Describe una entrega financiera o de consultoría donde contabas con muy poco tiempo y múltiples fuentes de información incompletas. ¿Cómo organizaste la validación de datos y lograste entregar sin errores?', 'Priorización de cifras clave, controles cruzados en Excel/SQL y entrega puntual con cero errores.'),
+('LAF', 'tecnica_aplicada', 'Junior / Intern', 'Automatización y Auditoría de Modelos en Excel', 'Cuéntame sobre una plantilla financiera compleja que era propensa a errores manuales. ¿Cómo la rediseñaste usando buenas prácticas de modelado o automatización y cuánto tiempo de análisis ahorraste?', 'Separación de inputs/cálculos/outputs, validaciones automáticas y reducción de tiempo de actualización.'),
+('LAF', 'resolucion_problemas', 'Junior / Intern', 'Análisis Macroeconómico y Sectorial', 'Relata un proyecto donde tuviste que incorporar variables macroeconómicas (inflación, tasas de interés o tipo de cambio) en la planeación de una empresa. ¿Qué escenarios de estrés construiste y cómo protegiste el flujo del proyecto?', 'Construcción de escenarios base/pesimista/optimista y estrategia de cobertura o reserva.'),
+('LAF', 'conductual_star', 'Junior / Intern', 'Alineación de Stakeholders con Intereses Opuestos', 'Platícame de una negociación o proyecto donde el área comercial buscaba crecer rápido pero finanzas debía cuidar el margen y el riesgo. ¿Cómo encontraste un punto medio sustentado en números?', 'Análisis de rentabilidad por segmento, acuerdo basado en métricas y beneficio conjunto.'),
+('LAF', 'tecnica_aplicada', 'Junior / Intern', 'Due Diligence y Comparables de Mercado', 'Describe una experiencia realizando una valuación por múltiplos comparables o análisis competitivo financiero. ¿Cómo seleccionaste la muestra de empresas comparables y qué conclusión obtuviste sobre si el activo estaba subvaluado o sobrevaluado?', 'Criterios de selección de peers (EV/EBITDA, P/E) y rango de valuación justificado.'),
+('LAF', 'resolucion_problemas', 'Junior / Intern', 'Reducción de Costos sin Afectar Calidad', 'Háblame de un diagnóstico de gastos operativos (OPEX) donde identificaste ineficiencias. ¿Qué partidas priorizaste recortar o renegociar y qué porcentaje de ahorro anualizado proyectaste?', 'Pareto de gastos, análisis costo-beneficio y porcentaje de reducción de OPEX.'),
+('LAF', 'conductual_star', 'Junior / Intern', 'Aprendizaje de un Sector Industrial Nuevo', 'Cuéntame de algún proyecto de consultoría o finanzas en el que tuviste que analizar una industria que desconocías por completo. ¿Cómo investigaste sus motores de valor (value drivers) en pocos días y qué calidad tuvo tu entregable?', 'Investigación estructurada de reportes anuales/unit economics y validación experta del modelo.');
+
+-- 6) LMC: Marketing Digital, Producto y Desarrollo de Negocios (15 preguntas)
+INSERT INTO question_bank (career_code, category, seniority_level, competency, question_text, expected_star_focus) VALUES
+('LMC', 'tecnica_aplicada', 'Junior / Intern', 'Optimización de Embudo de Conversión', 'Cuéntame sobre un proyecto o campaña donde detectaste una alta tasa de abandono en alguna etapa del embudo (funnel) de adquisición o registro. ¿Qué datos analizaste, qué experimento o cambio implementaste y en qué porcentaje subió la conversión?', 'Diagnóstico de embudo por etapa, hipótesis A/B y aumento porcentual en tasa de conversión.'),
+('LMC', 'conductual_star', 'Junior / Intern', 'Priorización de Roadmap de Producto', 'Describe una situación en la que tenías múltiples ideas o solicitudes de funcionalidades para un producto pero recursos y tiempo limitados. ¿Qué matriz de priorización (RICE, MoSCoW, Impacto vs Esfuerzo) aplicaste y cuál fue el resultado del lanzamiento?', 'Aplicación objetiva de framework de priorización, alineación del equipo y métricas de adopción.'),
+('LMC', 'tecnica_aplicada', 'Junior / Intern', 'Investigación de Usuarios (User Research)', 'Platícame de un proyecto donde las suposiciones iniciales del equipo sobre el cliente resultaron incorrectas tras entrevistar o encuestar a usuarios reales. ¿Cómo diseñaste la investigación, qué insight clave descubriste y cómo cambió la propuesta de valor?', 'Metodología de entrevistas/encuestas sin sesgo, hallazgo accionable y mejora en aceptación o CSAT.'),
+('LMC', 'resolucion_problemas', 'Junior / Intern', 'Eficiencia de Presupuesto Publicitario (CAC / ROAS)', 'Háblame de una campaña digital donde el costo de adquisición de clientes (CAC) era demasiado alto o el retorno publicitario (ROAS) era bajo. ¿Cómo redistribuiste el presupuesto, la segmentación o los creativos y qué mejora cuantitativa lograste?', 'Análisis por canal/segmento, optimización de pauta y reducción de CAC o aumento de CTR/ROAS.'),
+('LMC', 'conductual_star', 'Junior / Intern', 'Colaboración entre Producto, Diseño e Ingeniería', 'Describe una ocasión en la que trabajaste con perfiles técnicos o de diseño para llevar una idea desde el concepto hasta un prototipo funcional. ¿Cómo redactaste las historias de usuario o criterios de aceptación y cómo aseguraste que se entregara a tiempo?', 'Especificación clara de requerimientos, seguimiento ágil y entrega funcional sin fricciones.'),
+('LMC', 'tecnica_aplicada', 'Junior / Intern', 'Estrategia Go-To-Market (Lanzamiento)', 'Cuéntame sobre el plan de lanzamiento de un nuevo producto, servicio o iniciativa universitaria. ¿Cómo definiste el segmento objetivo (ICP), los canales de distribución y las metas de tracción, y qué alcance o registros obtuviste?', 'Definición de ICP, ejecución multicanal y métricas de usuarios adquiridos o alcance.'),
+('LMC', 'resolucion_problemas', 'Junior / Intern', 'Retención y Reducción de Churn', 'Relata un caso en el que los usuarios probaban un producto o servicio una vez pero no regresaban. ¿Cómo identificaste el motivo de abandono y qué estrategia de activación o fidelización implementaste para mejorar la retención?', 'Análisis de cohortes o feedback de salida, acción de onboarding/retención y mejora porcentual.'),
+('LMC', 'conductual_star', 'Junior / Intern', 'Manejo de Crisis o Feedback Negativo', 'Platícame de alguna vez en que una campaña, presentación o prototipo recibió críticas fuertes de los usuarios o evaluadores. ¿Cómo procesaste la retroalimentación objetivamente, qué cambios rápidos ejecutaste y cómo revertiste la percepción?', 'Escucha activa, iteración rápida basada en datos y mejora medible en satisfacción.'),
+('LMC', 'tecnica_aplicada', 'Junior / Intern', 'Pruebas A/B y Toma de Decisiones con Datos', 'Describe un experimento A/B que hayas diseñado para validar un mensaje de valor, llamado a la acción (CTA) o diseño de página. ¿Qué métrica principal definiste, qué tamaño de muestra evaluaste y qué versión ganó?', 'Diseño experimental con variable control/tratamiento y ganancia porcentual estadísticamente válida.'),
+('LMC', 'resolucion_problemas', 'Junior / Intern', 'Prospección B2B y Desarrollo de Negocios', 'Háblame de una experiencia buscando alianzas estratégicas, patrocinios o clientes B2B. ¿Cómo construiste tu embudo de prospección, cómo personalizaste el acercamiento y qué tasa de respuesta o cierre conseguiste?', 'Estrategia de outbound/networking, propuesta de valor a medida y número/monto de cierres.'),
+('LMC', 'conductual_star', 'Junior / Intern', 'Persuasión con Datos ante Stakeholders', 'Cuéntame de una ocasión en la que tuviste que convencer a tu equipo o patrocinador de cancelar una iniciativa que no estaba dando resultados para enfocar los recursos en otra. ¿Qué métricas presentaste y cuál fue el impacto del cambio?', 'Presentación objetiva de costos hundidos vs oportunidad y mejora de resultados tras reasignar recursos.'),
+('LMC', 'tecnica_aplicada', 'Junior / Intern', 'Posicionamiento Competitivo y Benchmarking', 'Describe un análisis de competencia que hayas realizado en un mercado saturado. ¿Qué brecha de mercado (océano azul o diferenciador) identificaste y cómo posicionaste la oferta para destacar?', 'Matriz competitiva de atributos/precios, propuesta única de valor (UVP) y tracción obtenida.'),
+('LMC', 'resolucion_problemas', 'Junior / Intern', 'Estrategia de Contenidos y Crecimiento Orgánico', 'Platícame de un proyecto donde no contabas con presupuesto para anuncios pagados y debías generar tráfico o comunidad de forma orgánica. ¿Qué estrategia de SEO, contenido o referidos ejecutaste y qué crecimiento porcentual lograste?', 'Consistencia de contenido/SEO/viralidad y crecimiento medible en tráfico, leads o comunidad.'),
+('LMC', 'conductual_star', 'Junior / Intern', 'Coordinación de Eventos o Activaciones', 'Háblame de un evento comercial, lanzamiento o activación que hayas organizado con múltiples proveedores y fechas críticas. ¿Qué imprevisto logístico resolviste y cómo se reflejó en la asistencia y satisfacción final?', 'Gestión operativa detallada, resolución ágil de contingencias y métricas de asistencia/NPS.'),
+('LMC', 'tecnica_aplicada', 'Junior / Intern', 'Unit Economics y Monetización', 'Describe un proyecto en el que diseñaste o ajustaste el modelo de monetización (suscripción, freemium, comisión o venta directa) de una solución. ¿Cómo calculaste la relación LTV/CAC y qué viabilidad demostró el modelo?', 'Cálculo claro de LTV, CAC y margen, demostrando escalabilidad del modelo de negocio.');
+
+-- 7) IBT: Ingeniería Biomédica y Biotecnología (15 preguntas)
+INSERT INTO question_bank (career_code, category, seniority_level, competency, question_text, expected_star_focus) VALUES
+('IBT', 'tecnica_aplicada', 'Junior / Intern', 'Rigor Experimental y Reproducibilidad en Laboratorio', 'Cuéntame sobre un protocolo experimental o ensayo de laboratorio cuyos resultados inicialmente tenían alta variabilidad o contaminación. ¿Cómo identificaste la fuente de error, qué controles implementaste y cómo aseguraste la reproducibilidad estadística?', 'Identificación de variable confusora, controles positivos/negativos y reducción de desviación estándar.'),
+('IBT', 'resolucion_problemas', 'Junior / Intern', 'Validación y Calibración de Dispositivos Médicos', 'Describe una experiencia diseñando o calibrando un instrumento biomédico o sensor fisiológico (ECG, EMG, oximetría, temperatura). ¿Cómo filtraste el ruido de la señal y contra qué referencia validaste su exactitud?', 'Filtrado analógico/digital, comparación contra estándar y porcentaje de error relativo.'),
+('IBT', 'conductual_star', 'Junior / Intern', 'Cumplimiento Normativo y Calidad (ISO / COFEPRIS / FDA)', 'Platícame de un proyecto donde debías alinear el desarrollo de un producto médico o biotecnológico con normas regulatorias o de gestión de riesgos (como ISO 13485 o ISO 14971). ¿Cómo documentaste la matriz de riesgos y qué resultado obtuviste en la revisión?', 'Trazabilidad documental, análisis de modo y efecto de falla (AMEF) y aprobación del protocolo.'),
+('IBT', 'tecnica_aplicada', 'Junior / Intern', 'Análisis Estadístico de Datos Clínicos o Biológicos', 'Háblame de un estudio donde analizaste datos experimentales o clínicos para comprobar una hipótesis. ¿Qué pruebas estadísticas (ANOVA, t-student, regresión, supervivencia) aplicaste y qué conclusión rigurosa obtuviste?', 'Verificación de supuestos estadísticos, selección de prueba (p-valor/intervalos) y hallazgo validado.'),
+('IBT', 'conductual_star', 'Junior / Intern', 'Comunicación con Personal Médico o Clínico', 'Describe una ocasión en la que colaboraste con médicos, enfermeros o especialistas de salud para entender una necesidad clínica. ¿Cómo tradujiste sus observaciones cotidianas en especificaciones técnicas medibles para tu diseño?', 'Empatía clínica, definición de requerimientos de usuario y validación funcional del prototipo.'),
+('IBT', 'resolucion_problemas', 'Junior / Intern', 'Optimización de Bioprocesos o Cultivos', 'Cuéntame sobre algún proyecto de fermentación, cultivo celular o reacción enzimática donde el rendimiento era inferior al esperado. ¿Qué parámetros fisicoquímicos ajustaste y en qué porcentaje incrementaste la productividad o viabilidad?', 'Diseño de experimentos (DoE), control de pH/temperatura/sustrato y aumento porcentual de rendimiento.'),
+('IBT', 'tecnica_aplicada', 'Junior / Intern', 'Mantenimiento Preventivo y Correctivo Hospitalario', 'Relata un caso relacionado con la gestión de equipo médico o de laboratorio donde era necesario reducir tiempos de inactividad. ¿Qué plan de mantenimiento o inventario de refacciones propusiste y qué disponibilidad lograste?', 'Priorización por criticidad clínica, rutinas de verificación y mejora en disponibilidad operativa.'),
+('IBT', 'conductual_star', 'Junior / Intern', 'Bioética y Confidencialidad de Datos de Pacientes', 'Platícame de una situación en la que manejaste muestras biológicas o información sensible de salud. ¿Qué protocolos de anonimización, consentimiento o bioseguridad aplicaste para garantizar cero brechas éticas?', 'Apego estricto a normas bioéticas, codificación/anonimización de registros y cumplimiento total.'),
+('IBT', 'resolucion_problemas', 'Junior / Intern', 'Escalamiento y Costo-Efectividad de Prototipos', 'Describe un proyecto de innovación en salud donde el prototipo inicial funcionaba pero era demasiado costoso para su aplicación real. ¿Qué materiales o componentes sustituiste sin comprometer la seguridad y cuánto redujiste el costo unitario?', 'Selección de materiales biocompatibles/accesibles y reducción porcentual del costo de fabricación.'),
+('IBT', 'tecnica_aplicada', 'Junior / Intern', 'Procesamiento de Imágenes Médicas o Señales', 'Háblame de algún desarrollo en Python o MATLAB para segmentar imágenes médicas o clasificar señales fisiológicas. ¿Qué técnicas de preprocesamiento aplicaste y qué sensibilidad o especificidad alcanzó tu algoritmo?', 'Pipeline de filtrado/segmentación y métricas de sensibilidad y especificidad.'),
+('IBT', 'conductual_star', 'Junior / Intern', 'Resiliencia ante Experimentos Fallidos en I+D', 'Cuéntame de una investigación o desarrollo donde después de semanas de trabajo los resultados fueron negativos. ¿Cómo documentaste el aprendizaje, cómo replanteaste la metodología a tiempo y qué entregable lograste presentar?', 'Análisis crítico de causas, pivote metodológico oportuno y rescate del proyecto con evidencia sólida.'),
+('IBT', 'resolucion_problemas', 'Junior / Intern', 'Cadena de Frío y Estabilidad de Reactivos/Muestras', 'Describe una situación en la que la conservación de muestras o reactivos termosensibles estaba en riesgo por limitaciones logísticas o de equipo. ¿Qué protocolo de monitoreo y contingencia implementaste y cómo evitaste pérdidas?', 'Trazabilidad térmica, plan de respaldo y preservación del 100% de las muestras críticas.'),
+('IBT', 'tecnica_aplicada', 'Junior / Intern', 'Bionanotecnología, Biomateriales o Liberación Controlada', 'Platícame de un proyecto donde evaluaste las propiedades mecánicas, químicas o de degradación de un biomaterial o formulación. ¿Qué técnicas de caracterización utilizaste y cómo cumpliste los criterios de desempeño?', 'Caracterización instrumental cuantitativa y cumplimiento de parámetros objetivo.'),
+('IBT', 'conductual_star', 'Junior / Intern', 'Seguridad y Manejo de Residuos (RPBI / Químicos)', 'Háblame de una ocasión en la que mejoraste el orden, etiquetado o disposición de residuos peligrosos en un laboratorio de docencia o investigación. ¿Qué acciones implementaste y cómo redujiste los riesgos operativos?', 'Aplicación de normas oficiales (NOM/GHS), capacitación a compañeros y cero incidentes.'),
+('IBT', 'tecnica_aplicada', 'Junior / Intern', 'Revisión Sistemática y Estado del Arte', 'Describe cómo estructuraste la búsqueda de literatura científica y patentes antes de iniciar un proyecto de diseño biomédico o biotecnológico. ¿Cómo evitaste duplicar esfuerzos y qué brecha tecnológica decidiste atacar?', 'Criterios de filtrado de artículos/patentes, matriz comparativa y diferenciación técnica clara.');
+
+-- 8) ARQ: Arquitectura, Diseño Industrial y UX (15 preguntas)
+INSERT INTO question_bank (career_code, category, seniority_level, competency, question_text, expected_star_focus) VALUES
+('ARQ', 'tecnica_aplicada', 'Junior / Intern', 'Diseño Centrado en el Usuario y Pruebas de Usabilidad', 'Cuéntame sobre un proyecto de diseño (espacial, de producto o interfaz UX) donde las pruebas con usuarios reales revelaron fricciones que no habías previsto. ¿Cómo condujiste las pruebas, qué iteraciones realizaste y cómo mejoró la experiencia final?', 'Observación estructurada de usuarios, rediseño puntual y reducción de errores o tiempo de tarea.'),
+('ARQ', 'resolucion_problemas', 'Junior / Intern', 'Optimización de Presupuesto y Materiales', 'Describe una ocasión en la que tu propuesta arquitectónica o de diseño industrial superaba el presupuesto o tenía restricciones constructivas/de manufactura. ¿Cómo aplicaste ingeniería de valor para mantener la intención estética y funcional reduciendo costos?', 'Sustitución inteligente de materiales/procesos constructivos y porcentaje de ahorro en presupuesto.'),
+('ARQ', 'conductual_star', 'Junior / Intern', 'Defensa de Propuesta y Manejo de Crítica de Diseño', 'Platícame de una entrega o revisión con clientes o sinodales donde recibiste retroalimentación contradictoria o muy dura sobre tu concepto. ¿Cómo separaste las opiniones subjetivas de los requerimientos funcionales y cómo evolucionaste el proyecto?', 'Argumentación basada en criterios funcionales/normativos y aceptación de la iteración final.'),
+('ARQ', 'tecnica_aplicada', 'Junior / Intern', 'Sistemas de Diseño y Estandarización (BIM / Design Systems)', 'Háblame de un proyecto en equipo donde múltiples diseñadores trabajaban sobre el mismo modelo BIM, plano o sistema de componentes UI. ¿Cómo estandarizaste las librerías, capas o componentes y cuánto tiempo de retrabajo ahorraron?', 'Nomenclatura estandarizada, componentes reutilizables y reducción de inconsistencias entre planos/pantallas.'),
+('ARQ', 'resolucion_problemas', 'Junior / Intern', 'Sustentabilidad y Eficiencia Bioclimática / Ciclo de Vida', 'Describe un proyecto en el que integraste criterios de diseño pasivo, eficiencia energética o economía circular. ¿Qué simulaciones o análisis de asoleamiento, ventilación o huella de materiales realizaste y qué mejora cuantificable lograste?', 'Simulación ambiental/selección de materiales de bajo impacto y mejora en confort térmico o reducción de desperdicio.'),
+('ARQ', 'conductual_star', 'Junior / Intern', 'Coordinación con Ingeniería y Especialidades', 'Cuéntame de una situación en la que tu propuesta de diseño chocó con requerimientos estructurales, de instalaciones o de desarrollo de software. ¿Cómo negociaste la solución técnica con los ingenieros sin sacrificar la experiencia del usuario?', 'Sesión de coordinación interdisciplinaria, ajuste técnico-espacial y factibilidad total del proyecto.'),
+('ARQ', 'tecnica_aplicada', 'Junior / Intern', 'Accesibilidad Universal y Ergonomía', 'Platícame de un proyecto donde diseñaste para usuarios con movilidad reducida, necesidades especiales o condiciones antropométricas diversas. ¿Qué normativas de accesibilidad aplicaste y cómo verificaste que el diseño fuera inclusivo?', 'Cumplimiento de normas de accesibilidad/ergonomía/contraste WCAG y validación en recorridos o prototipos.'),
+('ARQ', 'resolucion_problemas', 'Junior / Intern', 'Prototipado Rápido y Validación Funcional', 'Háblame de una vez en que construiste maquetas de estudio, prototipos físicos o wireframes interactivos en muy poco tiempo para destrabar una decisión de diseño. ¿Qué fidelidad elegiste y qué decisión clave permitió tomar?', 'Elección estratégica de baja/media fidelidad, prueba rápida y ahorro de semanas de desarrollo.'),
+('ARQ', 'conductual_star', 'Junior / Intern', 'Gestión del Alcance ante Cambios de Última Hora', 'Describe un proyecto donde el cliente o profesor cambió una condición clave del programa arquitectónico o brief de diseño a pocos días de la entrega. ¿Cómo reorganizaste el flujo de producción de planos, renders o prototipos para llegar a tiempo?', 'Priorización de entregables críticos, división eficiente del trabajo y entrega completa al 100%.'),
+('ARQ', 'tecnica_aplicada', 'Junior / Intern', 'Documentación Ejecutiva y Especificaciones Técnicas', 'Cuéntame sobre la elaboración de un paquete de planos constructivos, detalles de fabricación o handoff para desarrolladores. ¿Qué nivel de detalle y cotas incluiste para evitar errores de interpretación durante la ejecución?', 'Claridad en detalles constructivos/especificaciones y reducción de dudas o errores en taller/obra/código.'),
+('ARQ', 'resolucion_problemas', 'Junior / Intern', 'Optimización de Flujos y Aprovechamiento Espacial', 'Relata un proyecto donde debías resolver un programa complejo dentro de un área o espacio muy reducido. ¿Cómo analizaste los flujos de circulación o jerarquía visual y qué eficiencia de uso lograste?', 'Zonificación funcional, flexibilidad de uso y optimización de metros cuadrados o densidad de pantalla.'),
+('ARQ', 'conductual_star', 'Junior / Intern', 'Trato con Proveedores, Talleres o Contratistas', 'Platícame de alguna experiencia supervisando la producción de un prototipo, mobiliario o elemento constructivo con un taller externo. ¿Qué problema de calidad o acabado detectaste a tiempo y cómo aseguraste que se corrigiera?', 'Supervisión oportuna con muestras/planos, comunicación clara con el fabricante y acabado final impecable.'),
+('ARQ', 'tecnica_aplicada', 'Junior / Intern', 'Investigación de Contexto, Sitio y Tendencias', 'Describe cómo realizaste el levantamiento de sitio, contexto urbano o benchmarking de usuario antes de trazar la primera línea de un proyecto. ¿Qué hallazgo del sitio o del contexto determinó el partido arquitectónico o concepto de diseño?', 'Análisis riguroso de preexistencias/usuarios y conexión directa entre diagnóstico y concepto.'),
+('ARQ', 'resolucion_problemas', 'Junior / Intern', 'Optimización de Tiempos de Renderizado y Presentación', 'Háblame de una entrega donde la producción visual (renders, láminas, recorridos o prototipos en alta fidelidad) amenazaba con retrasar al equipo. ¿Cómo optimizaste el flujo de modelado y postproducción para cumplir la fecha con alta calidad?', 'Optimización de geometrías/assets, plantillas de postproducción y reducción de tiempos de entrega.'),
+('ARQ', 'conductual_star', 'Junior / Intern', 'Síntesis Visual y Minimalismo Funcional', 'Cuéntame de un diseño que inicialmente estaba saturado de elementos y resultaba confuso. ¿Qué criterio seguiste para depurar lo innecesario y cómo impactó esa simplicidad en la claridad y funcionalidad del resultado?', 'Jerarquía funcional, eliminación de ruido visual/espacial y mejora en comprensión y uso.');
+
+-- -----------------------------------------------------------------------------
+-- 5. Catálogo de Recursos de Estudio Curados por Carrera (Plan de Acción)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS study_resources (
+    resource_id SERIAL PRIMARY KEY,
+    career_code VARCHAR(50) REFERENCES careers(career_code) ON DELETE CASCADE,
+    dimension_target VARCHAR(50) NOT NULL, -- 'STAR_Action', 'STAR_Result', 'Technical_Clarity', 'Relevance'
+    title VARCHAR(200) NOT NULL,
+    provider VARCHAR(100) NOT NULL,
+    url TEXT NOT NULL,
+    description TEXT NOT NULL
+);
+
+INSERT INTO study_resources (career_code, dimension_target, title, provider, url, description) VALUES
+('ITC', 'STAR_Result', 'Cómo cuantificar impacto de ingeniería en entrevistas (Latencia, Uptime y Cobertura)', 'Tech Interview Handbook', 'https://www.techinterviewhandbook.org/behavioral-interview/', 'Guía práctica para transformar tareas de programación en resultados medibles con métricas de rendimiento y negocio.'),
+('ITC', 'Technical_Clarity', 'System Design & API Architecture Fundamentals', 'roadmap.sh', 'https://roadmap.sh/backend', 'Estructura clara para explicar decisiones de arquitectura, bases de datos y APIs sin perderse en detalles irrelevantes.'),
+('ISD', 'STAR_Result', 'Translating ML Metrics (F1, AUC, RMSE) to Business KPIs', 'Google Developers ML', 'https://developers.google.com/machine-learning/crash-course', 'Metodología para conectar métricas estadísticas de validación con ahorros, retención o eficiencia operativa.'),
+('ISD', 'Technical_Clarity', 'LLM-as-a-Judge & LangGraph Orchestration Patterns', 'LangChain Academy', 'https://docs.langchain.com/oss/python/langgraph/overview', 'Buenas prácticas para explicar pipelines de datos, prevención de data leakage y validación con Golden Datasets.'),
+('IIS', 'STAR_Result', 'Cuantificación de Proyectos Lean Six Sigma (OEE, Tiempo de Ciclo y Merma)', 'ASQ Lean Six Sigma', 'https://asq.org/quality-resources/six-sigma', 'Plantillas para expresar mejoras operativas en porcentaje de reducción de desperdicio, OTIF y ahorro anualizado.'),
+('IMT', 'STAR_Action', 'Documentación de Diagnóstico Electromecánico y Control Embebido', 'IEEE Robotics & Automation', 'https://www.ieee-ras.org/', 'Guía para estructurar la explicación de integración hardware-software, sintonización PID y resolución de fallas.'),
+('LAF', 'STAR_Result', 'Estructuración MECE y Presentación de Impacto en EBITDA / Flujo de Caja', 'Corporate Finance Institute', 'https://corporatefinanceinstitute.com/resources/valuation/', 'Cómo sintetizar supuestos de valuación, sensibilidad WACC y recomendaciones ejecutivas en menos de dos minutos.'),
+('LMC', 'STAR_Result', 'Métricas de Producto y Growth: CAC, LTV, Retención y Pruebas A/B', 'Reforge / Product School', 'https://productschool.com/blog/product-fundamentals', 'Marco para respaldar decisiones de diseño de producto y campañas con tasas de conversión y cohortes.'),
+('IBT', 'Technical_Clarity', 'Validación Biomédica, Bioestadística y Normativa ISO 13485', 'WHO Medical Devices', 'https://www.who.int/health-topics/medical-devices', 'Cómo comunicar rigor experimental, reproducibilidad y cumplimiento regulatorio en entrevistas del sector salud.'),
+('ARQ', 'STAR_Action', 'Presentación de Casos de Estudio UX y Proyectos Arquitectónicos con Métricas', 'Nielsen Norman Group', 'https://www.nngroup.com/articles/ux-research-cheat-sheet/', 'Estructura para explicar decisiones de diseño, restricciones constructivas y resultados de pruebas de usabilidad.');
+
+-- -----------------------------------------------------------------------------
+-- 6. Sesiones de Entrevista (interview_sessions)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS interview_sessions (
+    session_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    career_code VARCHAR(50) NOT NULL REFERENCES careers(career_code),
+    university VARCHAR(255) NOT NULL DEFAULT 'Tecnológico de Monterrey',
+    target_role VARCHAR(150) NOT NULL,
+    seniority_level VARCHAR(50) NOT NULL DEFAULT 'Junior / Intern',
+    anonymized_cv_text TEXT NOT NULL,
+    job_description_text TEXT NOT NULL,
+    selected_question_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    total_questions INTEGER NOT NULL DEFAULT 5 CHECK (total_questions BETWEEN 5 AND 10),
+    current_question_index INTEGER NOT NULL DEFAULT 0,
+    session_state VARCHAR(50) NOT NULL DEFAULT 'pasar_a_siguiente_tema'
+        CHECK (session_state IN ('profundizar_pregunta', 'pasar_a_siguiente_tema', 'finalizar_entrevista', 'abandonada')),
+    overall_score NUMERIC(4,2),
+    score_evolution_rate NUMERIC(6,2) DEFAULT 0.00,
+    final_report_json JSONB,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- -----------------------------------------------------------------------------
+-- 7. Turnos de Conversación (message_turns)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS message_turns (
+    turn_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL REFERENCES interview_sessions(session_id) ON DELETE CASCADE,
+    question_number INTEGER NOT NULL CHECK (question_number BETWEEN 1 AND 10),
+    question_id INTEGER REFERENCES question_bank(question_id),
+    is_followup BOOLEAN NOT NULL DEFAULT FALSE,
+    interviewer_question TEXT NOT NULL,
+    candidate_response TEXT NOT NULL,
+    response_length_chars INTEGER NOT NULL DEFAULT 0,
+    response_word_count INTEGER NOT NULL DEFAULT 0,
+    has_quantitative_metrics BOOLEAN NOT NULL DEFAULT FALSE,
+    quantitative_metrics_count INTEGER NOT NULL DEFAULT 0,
+    detected_metrics_list JSONB NOT NULL DEFAULT '[]'::jsonb,
+    response_time_seconds NUMERIC(6,2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------------------------------------------------------
+-- 8. Evaluaciones del Modelo (model_evaluations)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS model_evaluations (
+    evaluation_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    turn_id UUID UNIQUE NOT NULL REFERENCES message_turns(turn_id) ON DELETE CASCADE,
+    session_id UUID NOT NULL REFERENCES interview_sessions(session_id) ON DELETE CASCADE,
+    star_situation SMALLINT NOT NULL CHECK (star_situation BETWEEN 1 AND 5),
+    star_task SMALLINT NOT NULL CHECK (star_task BETWEEN 1 AND 5),
+    star_action SMALLINT NOT NULL CHECK (star_action BETWEEN 1 AND 5),
+    star_result SMALLINT NOT NULL CHECK (star_result BETWEEN 1 AND 5),
+    technical_clarity SMALLINT NOT NULL CHECK (technical_clarity BETWEEN 1 AND 5),
+    relevance SMALLINT NOT NULL CHECK (relevance BETWEEN 1 AND 5),
+    turn_average_score NUMERIC(4,2) NOT NULL,
+    strengths TEXT NOT NULL,
+    improvement_areas TEXT NOT NULL,
+    is_weakest_response BOOLEAN NOT NULL DEFAULT FALSE,
+    improved_example_star TEXT,
+    recommended_resources JSONB DEFAULT '[]'::jsonb,
+    evaluation_latency_ms INTEGER DEFAULT 0,
+    json_format_valid BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------------------------------------------------------
+-- 9. Retroalimentación del Usuario y Abandono (user_feedback)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_feedback (
+    feedback_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID UNIQUE NOT NULL REFERENCES interview_sessions(session_id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    csat_score SMALLINT CHECK (csat_score BETWEEN 1 AND 5),
+    perceived_utility BOOLEAN DEFAULT TRUE,
+    student_comment TEXT,
+    abandonment_reason VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------------------------------------------------------
+-- 10. Golden Dataset y Auditoría Human-in-the-loop (golden_dataset)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS golden_dataset (
+    golden_id SERIAL PRIMARY KEY,
+    career_code VARCHAR(50) NOT NULL REFERENCES careers(career_code),
+    competency_rubric VARCHAR(150) NOT NULL,
+    sample_question TEXT NOT NULL,
+    sample_response TEXT NOT NULL,
+    human_expert_score NUMERIC(4,2) NOT NULL CHECK (human_expert_score BETWEEN 1.0 AND 5.0),
+    model_score NUMERIC(4,2) CHECK (model_score BETWEEN 1.0 AND 5.0),
+    hitl_review_status VARCHAR(50) NOT NULL DEFAULT 'approved'
+        CHECK (hitl_review_status IN ('pending_review', 'approved', 'recalibrated')),
+    reviewer_notes TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO golden_dataset (career_code, competency_rubric, sample_question, sample_response, human_expert_score, model_score, hitl_review_status, reviewer_notes) VALUES
+('ITC', 'Optimización de Rendimiento', 'Describe algún proyecto donde una consulta o API era demasiado lenta.', 'En mi proyecto de prácticas el endpoint de reportes tardaba 4.2 segundos porque hacía N+1 queries. Mi tarea era bajarlo a menos de 500ms. Reemplacé el bucle por un JOIN indexado en PostgreSQL y agregué caché Redis. Como resultado, el tiempo bajó a 180ms (reducción del 95%) y soportó 300 usuarios concurrentes sin errores.', 4.80, 4.75, 'approved', 'Excelente estructura STAR con métricas claras antes y después.'),
+('ISD', 'Limpieza y Calidad de Datos', 'Cuéntame sobre un proyecto con datos incompletos o ruidosos.', 'Teníamos una base de ventas con varios datos vacíos. Yo limpié la tabla en Python quitando nulos y entrené una regresión lineal que funcionó bien para el equipo.', 2.30, 2.50, 'approved', 'Respuesta vaga en Acción y sin ninguna métrica cuantitativa en Resultado.'),
+('IIS', 'Eliminación de Cuellos de Botella', 'Cuéntame cómo redujiste tiempos de espera en un proceso.', 'En la celda de empaque el tiempo de ciclo era de 14 minutos por lote. Mapeé el proceso con VSM, redistribuí 3 estaciones aplicando 5S y estandaricé el abastecimiento. El tiempo de ciclo bajó a 9.5 minutos (-32%) y el cumplimiento de entregas subió del 84% al 97%.', 4.90, 4.83, 'approved', 'Cuantificación sobresaliente en Resultado y claridad técnica en herramientas Lean.')
+ON CONFLICT DO NOTHING;
+
+CREATE INDEX IF NOT EXISTS idx_questions_career ON question_bank(career_code, active);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON interview_sessions(user_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_turns_session ON message_turns(session_id, question_number);
+CREATE INDEX IF NOT EXISTS idx_evals_session ON model_evaluations(session_id);
