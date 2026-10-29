@@ -1,122 +1,57 @@
-# Documento de Handoff y Continuidad Técnica — InterviewAI
+# Documento de Handoff y Continuidad Técnica — InterviewAI (`v0.2.0`)
 
-**Fecha de corte:** 29 de octubre de 2026  
+**Fecha de actualización:** 29 de octubre de 2026  
 **Repositorio objetivo:** `https://github.com/Marcoflesh/InterviewAI-page.git`  
-**Propósito:** Garantizar la continuidad inmediata del desarrollo en caso de agotamiento de tokens o cambio de sesión/desarrollador, registrando la arquitectura construida, las decisiones técnicas tomadas y los pasos exactos para continuar.
+**Propósito:** Garantizar la continuidad inmediata del desarrollo en caso de agotamiento de tokens o cambio de sesión, documentando todos los ajustes de la iteración `v0.2.0`, las decisiones tomadas y los siguientes pasos.
 
 ---
 
-## 1. Resumen del Estado Actual
+## 1. Cambios Implementados en la Iteración `v0.2.0`
 
-Se construyó desde cero el esqueleto completo y funcional de la plataforma **InterviewAI** siguiendo la Especificación de Requisitos de Software (SRS) y las directrices explícitas del usuario:
+En respuesta a la revisión funcional del usuario se corrigieron y evolucionaron 5 áreas críticas tanto en el backend (`backend/app/`) como en el frontend (`frontend/`) y en la aplicación interactiva (`interviewai.html`):
 
-1. **Base de Datos SQL (`database/init.sql`)**: Esquema relacional completo en PostgreSQL con 10 tablas normalizadas, índices de rendimiento y una semilla de **120 preguntas de entrevista distribuidas en 8 carreras universitarias** (15 por carrera) más recursos de estudio curados y registros base del Golden Dataset.
-2. **Backend en Python con FastAPI, LangGraph y Ollama (`backend/app/`)**:
-   - Orquestación cíclica/condicional en `backend/app/agents/graph.py` usando `StateGraph` de LangGraph.
-   - Integración con **Ollama** (`backend/app/agents/evaluator.py`, `interviewer.py`, `synthesizer.py`) empleando salidas JSON estructuradas y un mecanismo de *fallback* determinista para que la evaluación nunca falle ni supere el umbral de 2.5 segundos por turno, incluso mientras Ollama descarga el modelo local.
-   - Pipeline de anonimización de datos personales (PII) y extractor Regex de métricas cuantitativas en `backend/app/services/anonymizer.py`.
-   - Selector aleatorio de preguntas por carrera sin repetición en `backend/app/services/question_selector.py`.
-3. **Frontend Minimalista (`frontend/index.html`, `frontend/css/styles.css`, `frontend/js/app.js`)**:
-   - Diseño limpio y minimalista en CSS puro (Grid/Flexbox), sin saturación de elementos.
-   - Pantalla inicial con autenticación mediante Google (`Continuar con Google`).
-   - **Cero etiquetas de requerimientos (`RF-XX`, `RN-XX`, etc.) visibles en la interfaz**.
-   - **Cero controles de grabación o uso de voz**: interacción 100% por texto en el chatbot.
-   - Panel lateral limpio de indicadores STAR en vivo y vista de Reporte Final con las 2 respuestas más débiles, ejemplos redactados de mejora, Plan de Acción Personalizado, exportación a PDF y encuesta CSAT.
-4. **Contenedorización con Docker (`docker-compose.yml`, `Dockerfile.backend`, `Dockerfile.frontend`)**:
-   - Versiones fijadas para evitar conflictos entre entornos (`python:3.11.11-slim`, `postgres:16.6-alpine`, `ollama/ollama:0.5.7`, `nginx:1.27.3-alpine`).
-
----
-
-## 2. Decisiones Arquitectónicas y de Producto Tomadas
-
-| Tema | Decisión Tomada | Justificación |
-| :--- | :--- | :--- |
-| **Motor de IA Local (Ollama vs. API Cloud)** | Se configuró **Ollama** (`http://ollama:11434`, modelo por defecto `llama3.2:3b` configurable vía `.env`) en lugar de Gemini/OpenAI mencionadas en el SRS original. | Solicitud explícita del usuario: *"Use ollama for the AI, Langraph for the manage of the AI agents, Docker for the versions and SQL for the database."* |
-| **Política de Preguntas de Seguimiento (`profundizar_pregunta`)** | En `backend/app/config.py` y `graph.py`, el parámetro `ENABLE_FOLLOWUP_QUESTIONS` está configurado en `false` por defecto. Cada turno avanza directamente a la siguiente pregunta aleatoria de la carrera (`pasar_a_siguiente_tema`), pero el nodo `profundizar_pregunta` permanece programado en el grafo y puede activarse cambiando `ENABLE_FOLLOWUP_QUESTIONS=true`. | Solicitud explícita del usuario: *"Create a whole bunch of questions for the careers so the questions can be randomized for every user depending on their career and avoid follow-up questions if not needed."* |
-| **Interfaz Limpia sin Códigos del SRS ni Voz** | Se eliminó cualquier referencia visual a códigos `RF-XX`/`RN-XX`/`RIF-XX` en las pantallas y se omitió cualquier botón de micrófono o API de voz (Web Speech API). | Solicitud explícita del usuario: *"Don't show were are the RF or any of the requirements being used in the page. Keep it all simple. Don't use any voice record or usage, just texting the chatbot."* |
-| **Autenticación con Google en Desarrollo vs. Producción** | `backend/app/auth.py` verifica tokens JWT reales de Google OAuth 2.0 cuando `GOOGLE_CLIENT_ID` está definido en `.env`, y ofrece un flujo inmediato de desarrollo local cuando no se ha configurado aún la credencial de Google Cloud. | Permite probar todo el flujo extremo a extremo desde el primer `docker compose up` sin bloquear al desarrollador por credenciales externas pendientes. |
-| **Resiliencia del Frontend (Modo Conectado + Modo Autónomo)** | `frontend/js/app.js` consume los endpoints REST de FastAPI (`/api/...`) y cuenta con respaldo local en memoria con las 120 preguntas por carrera. | Garantiza que la interfaz sea 100% funcional tanto dentro del stack Docker como en previsualizaciones estáticas (Canvas). |
+1. **Botón "Descargar PDF" 100% Funcional (`frontend/js/app.js`, `frontend/index.html`)**:
+   - **Problema previo**: `window.print()` es bloqueado por los iframes con sandbox (como Canvas) y no descargaba un archivo directo.
+   - **Solución implementada**: Se integró `jsPDF` (`2.5.1`) junto con un generador binario nativo PDF 1.4 de respaldo (`buildMinimalPdfBinary`). Al hacer clic en **Descargar PDF**, se construye y descarga directamente el archivo `Reporte_InterviewAI_<Nombre>.pdf` con el puntaje global, evolución, desglose de las 2 respuestas más débiles, ejemplos STAR recomendados y el Plan de Acción.
+2. **Sistema de Evaluación STAR Sensible, Diferenciado y Conectado a Llaves API (`backend/app/agents/evaluator.py`, `frontend/js/app.js`)**:
+   - **Problema previo**: El evaluador heurístico de respaldo otorgaba calificaciones muy similares (`3/5` o `4/5`) basándose casi únicamente en el conteo de palabras.
+   - **Solución implementada**:
+     - Se programó un motor de análisis semántico y léxico (`_deep_star_analyzer` / `evaluateResponseLocal`) con diccionarios técnicos específicos por carrera (`ITC`, `ISD`, `IIS`, `IMT`, `LAF`, `LMC`, `IBT`, `ARQ` — más de 30 términos por carrera), cruce de palabras clave contra la pregunta específica y el **Contexto de la vacante**, detección de verbos de acción en primera persona y extracción Regex de métricas cuantitativas.
+     - Si el usuario escribe una respuesta corta (`< 8` palabras), evasiva (`"no sé"`, `"hola"`) o ajena a la pregunta, recibe `1/5` y retroalimentación específica sobre qué le faltó.
+     - El panel lateral ahora muestra en vivo las **Métricas detectadas** y los **Conceptos clave** identificados en ese turno, además de ejemplos de mejora redactados específicamente para la pregunta evaluada.
+     - Se añadió el botón y modal **"Configurar API / IA"** en la barra superior (y soporte en `POST /api/sessions/turn`) para usar llaves API de **Google Gemini**, **OpenAI**, **Groq** o **Ollama**.
+3. **Autenticación Completa en 3 Modalidades (`Iniciar sesión`, `Registrar` e `Iniciar sesión con Google`)**:
+   - **Iniciar sesión (`POST /api/auth/login`)**: Para cuentas ya existentes; valida formato de correo, verifica que el correo exista en la base de datos de usuarios registrados y comprueba la contraseña (hash PBKDF2-SHA256 en backend). Incluye cuenta demo verificada (`a01709802@tec.mx` / `Interview2026!`) para pruebas inmediatas.
+   - **Registrar (`POST /api/auth/register`)**: Para cuentas nuevas; valida nombre completo, formato real de correo electrónico, universidad y contraseña de al menos 6 caracteres, impidiendo correos duplicados.
+   - **Continuar con Google (`POST /api/auth/google`)**: Abre el selector y verificador de cuentas de Google que valida el correo (`@gmail.com` / cuenta institucional) y carga los datos reales del usuario (nombre completo, correo e iniciales/avatar) en la sesión activa.
+4. **Cambio de Etiqueta a "Contexto de la vacante"**:
+   - En la vista de configuración (`view-setup`) y en los esquemas del backend (`schemas.py`, `evaluator.py`), se reemplazó `"Descripción de la vacante"` por **"Contexto de la vacante"**.
+5. **Cantidad Aleatoria Realista de 15 a 20 Preguntas por Sesión**:
+   - Se eliminó el selector fijo de 5–10 preguntas. Ahora cada entrevista genera automáticamente un valor aleatorio entre **15 y 20 preguntas** (`random.randint(15, 20)` en Python y `Math.floor(Math.random() * 6) + 15` en JS).
+   - Se amplió el banco de preguntas en `database/init.sql` y `frontend/js/app.js` de 120 a **176 preguntas únicas (22 por cada una de las 8 carreras)** para garantizar que ninguna sesión de 15 a 20 preguntas repita temas.
+   - Se añadió el botón **"Finalizar y ver reporte"** en el encabezado del chat para permitir evaluar y descargar el reporte en cualquier momento después de responder al menos 1 pregunta.
 
 ---
 
-## 3. Estructura del Proyecto
+## 2. Cómo Subir los Cambios a GitHub y Ejecutar con Docker
 
-```text
-InterviewAI-page/
-├── .env.example                  # Variables de entorno de referencia
-├── .gitignore                    # Archivos ignorados por Git
-├── Dockerfile.backend            # Imagen Python 3.11.11-slim para FastAPI + LangGraph
-├── Dockerfile.frontend           # Imagen Nginx 1.27.3-alpine con proxy inverso a /api/
-├── docker-compose.yml            # Orquestación de db, ollama, backend y frontend
-├── push_to_github.sh             # Script listo para subir los commits a GitHub
-├── README.md                     # Guía de instalación y levantamiento con Docker
-├── roadmap.md                    # Estado de features pasadas, actuales y siguientes
-├── handoff.md                    # Este documento de continuidad técnica
-├── traceability.md               # Bitácora de cambios y matriz de trazabilidad contra el SRS
-├── database/
-│   └── init.sql                  # Esquema PostgreSQL + 120 preguntas aleatorias en 8 carreras
-├── backend/
-│   ├── requirements.txt          # Dependencias Python con versiones fijas
-│   └── app/
-│       ├── main.py               # Endpoints FastAPI (/api/auth/google, /api/sessions/start, /turn, /report, /csat)
-│       ├── config.py             # Configuración centralizada con Pydantic Settings
-│       ├── database.py           # Conexión SQLAlchemy a PostgreSQL
-│       ├── models.py             # Modelos ORM (Users, Careers, QuestionBank, Sessions, Turns, Evaluations, Feedback)
-│       ├── schemas.py            # Esquemas Pydantic de entrada/salida
-│       ├── auth.py               # Verificación de Google Sign-In y RBAC
-│       ├── services/
-│       │   ├── anonymizer.py     # Anonimización de PII en CV y extracción Regex de métricas cuantitativas
-│       │   └── question_selector.py # Muestreo aleatorio sin reemplazo por carrera
-│       └── agents/
-│           ├── state.py          # Definición de InterviewGraphState para LangGraph
-│           ├── evaluator.py      # Nodo Agente Evaluador (Ollama JSON + fallback heurístico)
-│           ├── interviewer.py    # Nodos Agente Entrevistador (avance aleatorio, seguimiento opcional y cierre)
-│           ├── synthesizer.py    # Síntesis de las 2 respuestas más débiles y Plan de Acción
-│           └── graph.py          # Compilación del StateGraph de LangGraph
-└── frontend/
-    ├── nginx.conf                # Configuración Nginx para SPA y proxy /api/
-    ├── index.html                # Estructura HTML5 minimalista en 5 vistas limpias
-    ├── css/
-    │   └── styles.css            # Hoja de estilos minimalista y responsiva
-    └── js/
-        └── app.js                # Lógica de cliente, Google login, chat por texto y reporte PDF
-```
-
----
-
-## 4. Cómo Levantar el Proyecto y Subirlo a GitHub
-
-### 4.1 Subir al repositorio `https://github.com/Marcoflesh/InterviewAI-page.git`
-Debido a que el entorno sandbox de generación no tiene salida de red hacia GitHub ni acceso a tus llaves privadas/tokens de GitHub, el repositorio Git ya fue inicializado localmente con todos los commits listos. Solo descarga y descomprime `InterviewAI-page.zip` y ejecuta:
-
+### 2.1 Subir a `https://github.com/Marcoflesh/InterviewAI-page.git`
 ```bash
 cd InterviewAI-page
-chmod +x push_to_github.sh
 ./push_to_github.sh
 ```
-*(O manualmente: `git push -u origin main`)*.
 
-### 4.2 Levantar con Docker y Descargar el Modelo en Ollama
+### 2.2 Levantar el Stack Docker
 ```bash
 cp .env.example .env
 docker compose up --build -d
-# Descargar el modelo ligero en el contenedor de Ollama (solo la primera vez):
 docker exec -it interviewai-ollama ollama pull llama3.2:3b
 ```
-- **Frontend**: `http://localhost:3000`
-- **Backend API & Swagger Docs**: `http://localhost:8000/docs`
 
 ---
 
-## 5. Próximos Pasos Exactos para la Siguiente Sesión (Next Steps)
+## 3. Próximos Pasos (Next Steps)
 
-1. **Confirmar decisiones abiertas con el usuario** (listadas en la respuesta de entrega):
-   - Modelo exacto de Ollama preferido según la RAM/VRAM disponible (`llama3.2:3b`, `llama3.1:8b` o `qwen2.5:7b`).
-   - Política de repreguntas: mantener desactivadas las preguntas de seguimiento (`ENABLE_FOLLOWUP_QUESTIONS=false`) en todos los casos o activarlas únicamente cuando el puntaje de Resultado sea crítico (`1/5`).
-   - Vistas de administración (Product Owner y MLOps): definir si se mantienen como rutas separadas (`/admin`) para no ensuciar la interfaz minimalista del estudiante.
-2. **Integrar Google Identity Services SDK real en el cliente**:
-   - Una vez que el usuario genere su `GOOGLE_CLIENT_ID` en Google Cloud Console, colocarlo en `.env` y en el botón de Google Identity Services en `frontend/index.html`.
-3. **Implementar cargador de archivos PDF para el CV**:
-   - Agregar endpoint `POST /api/sessions/upload-cv` con `pypdf` que extraiga el texto del PDF y lo pase automáticamente por `anonymize_pii()`.
-4. **Construir el notebook/script de validación estadística (`scripts/evaluate_golden_dataset.py`)**:
-   - Conectar a la tabla `golden_dataset` en PostgreSQL y calcular la correlación frente a las calificaciones humanas (`>= 0.75`).
+1. **Configuración de Llaves API de los Agentes**: Probar las llaves API disponibles del usuario (Gemini, OpenAI, Groq u Ollama) desde el botón **"Configurar API / IA"** en la barra superior o inyectándolas en `.env`.
+2. **Carga de Archivo PDF en CV**: Añadir extracción automática de texto desde archivos `.pdf` en el formulario de configuración.
+3. **Vistas de Product Owner y MLOps**: Conectar las tablas `golden_dataset` y `study_resources` a una ruta `/admin` separada.

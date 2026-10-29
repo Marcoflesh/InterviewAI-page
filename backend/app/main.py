@@ -1,6 +1,7 @@
+import random
 from datetime import datetime, timezone
 from typing import List
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -18,18 +19,25 @@ from app.models import (
 )
 from app.schemas import (
     GoogleLoginRequest,
+    LocalLoginRequest,
+    LocalRegisterRequest,
     StartSessionRequest,
     SubmitCsatRequest,
     SubmitTurnRequest,
     UserProfileResponse,
 )
-from app.auth import verify_google_token
+from app.auth import (
+    hash_password,
+    validate_email_format,
+    verify_google_token,
+    verify_password,
+)
 from app.services.anonymizer import anonymize_pii, extract_auxiliary_features
 from app.services.question_selector import select_randomized_questions_for_career
 from app.agents.graph import interview_graph
 from app.agents.synthesizer import synthesize_final_report
 
-app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
+app = FastAPI(title=settings.APP_NAME, version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,9 +53,81 @@ def health_check():
     return {
         "status": "ok",
         "service": settings.APP_NAME,
+        "version": "0.2.0",
         "ollama_model": settings.OLLAMA_MODEL,
         "followups_enabled_by_default": settings.ENABLE_FOLLOWUP_QUESTIONS,
     }
+
+
+@app.post("/api/auth/register", response_model=UserProfileResponse)
+def register_local_user(payload: LocalRegisterRequest, db: Session = Depends(get_db)):
+    clean_email = validate_email_format(payload.email)
+    existing = db.query(User).filter(User.email == clean_email).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya existe una cuenta registrada con este correo electrónico. Por favor inicia sesión.",
+        )
+
+    user = User(
+        email=clean_email,
+        password_hash=hash_password(payload.password),
+        auth_provider="local",
+        email_verified=True,
+        full_name=payload.full_name.strip(),
+        university=payload.university.strip() or "Tecnológico de Monterrey",
+        role_code="student",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return UserProfileResponse(
+        user_id=str(user.user_id),
+        email=user.email,
+        full_name=user.full_name,
+        university=user.university,
+        auth_provider=user.auth_provider,
+        avatar_url=user.avatar_url,
+        career_code=user.career_code,
+        role_code=user.role_code,
+    )
+
+
+@app.post("/api/auth/login", response_model=UserProfileResponse)
+def login_local_user(payload: LocalLoginRequest, db: Session = Depends(get_db)):
+    clean_email = validate_email_format(payload.email)
+    user = db.query(User).filter(User.email == clean_email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No encontramos una cuenta con ese correo electrónico. Regístrate primero o usa Google.",
+        )
+    if user.auth_provider == "google" and not user.password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Esta cuenta fue creada con Google. Usa el botón 'Iniciar Sesión con Google'.",
+        )
+    if not verify_password(payload.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Contraseña incorrecta. Verifica tus datos e intenta nuevamente.",
+        )
+
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(user)
+
+    return UserProfileResponse(
+        user_id=str(user.user_id),
+        email=user.email,
+        full_name=user.full_name,
+        university=user.university,
+        auth_provider=user.auth_provider,
+        avatar_url=user.avatar_url,
+        career_code=user.career_code,
+        role_code=user.role_code,
+    )
 
 
 @app.post("/api/auth/google", response_model=UserProfileResponse)
@@ -57,12 +137,15 @@ def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
         fallback_email=payload.email,
         fallback_name=payload.full_name,
         fallback_sub=payload.google_sub,
+        fallback_avatar=payload.avatar_url,
     )
     user = db.query(User).filter(User.email == verified["email"]).first()
     if not user:
         user = User(
             google_sub=verified["google_sub"],
             email=verified["email"],
+            auth_provider="google",
+            email_verified=True,
             full_name=verified["full_name"],
             avatar_url=verified.get("avatar_url"),
             role_code="student",
@@ -71,6 +154,10 @@ def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
     else:
         user.last_login_at = datetime.now(timezone.utc)
         user.full_name = verified["full_name"]
+        if verified.get("avatar_url"):
+            user.avatar_url = verified["avatar_url"]
+        if verified.get("google_sub") and not user.google_sub:
+            user.google_sub = verified["google_sub"]
     db.commit()
     db.refresh(user)
 
@@ -79,6 +166,8 @@ def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
         email=user.email,
         full_name=user.full_name,
         university=user.university,
+        auth_provider=user.auth_provider,
+        avatar_url=user.avatar_url,
         career_code=user.career_code,
         role_code=user.role_code,
     )
@@ -102,13 +191,15 @@ def list_careers(db: Session = Depends(get_db)):
 def start_interview_session(
     payload: StartSessionRequest, db: Session = Depends(get_db)
 ):
-    # 1. Anonimizar currículum antes de almacenar en PostgreSQL
     anonymized_cv = anonymize_pii(payload.cv_text)
     anonymized_jd = anonymize_pii(payload.job_description_text)
 
-    # 2. Seleccionar preguntas aleatorias según la carrera elegida
+    # Número aleatorio realista de preguntas entre 15 y 20
+    random_count = payload.total_questions or random.randint(15, 20)
+    random_count = max(15, min(20, random_count))
+
     selected_questions = select_randomized_questions_for_career(
-        db=db, career_code=payload.career_code, count=payload.total_questions
+        db=db, career_code=payload.career_code, count=random_count
     )
     if not selected_questions:
         raise HTTPException(
@@ -183,11 +274,9 @@ def submit_interview_turn(
         if next_q_obj:
             next_q_text = next_q_obj.question_text
 
-    # Extraer longitud y métricas cuantitativas mediante Regex
     aux_features = extract_auxiliary_features(payload.candidate_response)
     anonymized_response = anonymize_pii(payload.candidate_response)
 
-    # Ejecutar grafo de estados en LangGraph (Agente Evaluador -> Arista Condicional -> Agente Entrevistador)
     graph_output = interview_graph.invoke(
         {
             "session_id": str(session_obj.session_id),
@@ -203,6 +292,9 @@ def submit_interview_turn(
             "auxiliary_features": aux_features,
             "allow_followups": payload.allow_followups,
             "is_followup_turn": session_obj.session_state == "profundizar_pregunta",
+            "llm_provider": payload.llm_provider,
+            "llm_api_key": payload.llm_api_key,
+            "llm_model": payload.llm_model,
             "evaluation_result": {},
             "session_state": session_obj.session_state,
             "next_question_bank_text": next_q_text,
@@ -215,7 +307,6 @@ def submit_interview_turn(
     eval_res = graph_output["evaluation_result"]
     new_state = graph_output["session_state"]
 
-    # Guardar turno en message_turns
     turn_obj = MessageTurn(
         session_id=session_obj.session_id,
         question_number=min(session_obj.total_questions, idx + 1),
@@ -233,7 +324,6 @@ def submit_interview_turn(
     db.add(turn_obj)
     db.flush()
 
-    # Guardar evaluación en model_evaluations
     model_eval = ModelEvaluation(
         turn_id=turn_obj.turn_id,
         session_id=session_obj.session_id,
@@ -251,7 +341,6 @@ def submit_interview_turn(
     )
     db.add(model_eval)
 
-    # Actualizar índice y estado de la sesión
     session_obj.session_state = new_state
     if new_state == "pasar_a_siguiente_tema":
         session_obj.current_question_index = idx + 1
@@ -330,7 +419,6 @@ def get_final_report(session_id: str, db: Session = Depends(get_db)):
         for r in resources
     ]
 
-    # Calcular evolución respecto a la sesión previa del estudiante
     prev_sessions = (
         db.query(InterviewSession)
         .filter(

@@ -27,8 +27,11 @@ class RbacRole(Base):
 class User(Base):
     __tablename__ = "users"
     user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    google_sub = Column(String(255), unique=True, nullable=False)
+    google_sub = Column(String(255), unique=True, nullable=True)
     email = Column(String(255), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=True)
+    auth_provider = Column(String(50), nullable=False, default="local")
+    email_verified = Column(Boolean, nullable=False, default=True)
     full_name = Column(String(255), nullable=False)
     avatar_url = Column(Text, nullable=True)
     university = Column(String(255), default="Tecnológico de Monterrey")
@@ -91,7 +94,7 @@ class InterviewSession(Base):
     anonymized_cv_text = Column(Text, nullable=False)
     job_description_text = Column(Text, nullable=False)
     selected_question_ids = Column(JSONB, nullable=False, default=list)
-    total_questions = Column(Integer, nullable=False, default=5)
+    total_questions = Column(Integer, nullable=False, default=16)
     current_question_index = Column(Integer, nullable=False, default=0)
     session_state = Column(
         String(50), nullable=False, default="pasar_a_siguiente_tema"
