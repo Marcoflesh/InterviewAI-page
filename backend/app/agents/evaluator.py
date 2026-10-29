@@ -39,7 +39,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido con estas llaves exactas:
   "technical_clarity": int,
   "relevance": int,
   "strengths": "Análisis crítico y objetivo de los puntos bien fundamentados (o indicar directamente si no hubo ninguno)",
-  "improvement_areas": "Crítica directa, concisa y accionable señalando exactamente qué carencias técnicas o estructurales tuvo la respuesta"
+  "improvement_areas": "Retroalimentación concisa y accionable señalando exactamente qué carencias técnicas o estructurales tuvo la respuesta"
 }"""
 
 STOPWORDS_ES = {
@@ -183,7 +183,7 @@ def _critical_star_analyzer(
             "technical_clarity": 0,
             "relevance": 0,
             "strengths": "Ninguna fortaleza identificada. La respuesta entregada es nula, evasiva o carece de sentido profesional.",
-            "improvement_areas": "Crítica directa: En una entrevista real esta respuesta descarta automáticamente al candidato. Debes estructurar un caso real especificando el contexto del problema (Situación), tu responsabilidad concreta (Tarea), las acciones técnicas que ejecutaste (Acción) y el resultado medible (Resultado).",
+            "improvement_areas": "Retroalimentación: En una entrevista real esta respuesta descarta automáticamente al candidato. Debes estructurar un caso real especificando el contexto del problema (Situación), tu responsabilidad concreta (Tarea), las acciones técnicas que ejecutaste (Acción) y el resultado medible (Resultado).",
         }
 
     # 2. Pertinencia con la pregunta actual y el contexto de la vacante

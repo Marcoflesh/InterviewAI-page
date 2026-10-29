@@ -581,7 +581,7 @@ function evaluateResponseCritical(questionText, responseText, careerCode, role) 
       metrics_detected: [],
       tech_terms_detected: [],
       strengths: "Ninguna fortaleza identificada (0/5). La respuesta entregada carece de contenido profesional, es evasiva o no tiene sentido.",
-      improvement_areas: "Crítica directa: Una respuesta vacía o incoherente recibe 0/5 porque no demuestra ninguna competencia. Debes describir un caso real detallando el problema inicial (Situación), tu responsabilidad concreta (Tarea), las acciones técnicas que ejecutaste (Acción) y el resultado medible (Resultado).",
+      improvement_areas: "Retroalimentación: Una respuesta vacía o incoherente recibe 0/5 porque no demuestra ninguna competencia. Debes describir un caso real detallando el problema inicial (Situación), tu responsabilidad concreta (Tarea), las acciones técnicas que ejecutaste (Acción) y el resultado medible (Resultado).",
       improved_example_star: buildQuestionSpecificStarExample(questionText, careerCode, role)
     };
   }
@@ -643,7 +643,7 @@ function evaluateResponseCritical(questionText, responseText, careerCode, role) 
       metrics_detected: [],
       tech_terms_detected: [],
       strengths: "No se identifican argumentos técnicos ni relación con la pregunta planteada.",
-      improvement_areas: "Crítica directa: Tu respuesta divaga y no demuestra la habilidad evaluada. Explica el problema concreto, tu objetivo, las acciones técnicas aplicadas y el impacto medible.",
+      improvement_areas: "Retroalimentación: Tu respuesta divaga y no demuestra la habilidad evaluada. Explica el problema concreto, tu objetivo, las acciones técnicas aplicadas y el impacto medible.",
       improved_example_star: buildQuestionSpecificStarExample(questionText, careerCode, role)
     };
   }
