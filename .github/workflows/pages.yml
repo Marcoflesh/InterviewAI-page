@@ -1,0 +1,51 @@
+# Publica el frontend (carpeta frontend/) en GitHub Pages.
+# Requisitos (una sola vez): Settings > Pages > Source: "GitHub Actions".
+# Variables opcionales (Settings > Secrets and variables > Actions > Variables):
+#   API_BASE_URL     -> URL https de tu backend desplegado (vacío = "Modo demo")
+#   GOOGLE_CLIENT_ID -> Client ID público de Google Sign-In
+# Nunca pongas OPENAI_API_KEY ni GEMINI_API_KEY aquí: el navegador las expondría.
+name: Deploy frontend to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["frontend/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Escribir configuración pública
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          cfg = {"API_BASE_URL": os.environ.get("API_BASE_URL", ""),
+                 "GOOGLE_CLIENT_ID": os.environ.get("GOOGLE_CLIENT_ID", "")}
+          open("frontend/js/config.js", "w").write(
+              "// Generado por pages.yml (configuración pública, sin secretos)\n"
+              f"window.INTERVIEWAI_CONFIG = {json.dumps(cfg)};\n")
+          PY
+          rm -f frontend/nginx.conf
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend
+      - id: deployment
+        uses: actions/deploy-pages@v4

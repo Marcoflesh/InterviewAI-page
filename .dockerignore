@@ -1,0 +1,15 @@
+# Nunca enviar secretos ni basura al contexto de Docker
+.env
+.env.*
+!.env.example
+.git
+.github
+**/__pycache__
+**/*.pyc
+.venv
+venv
+.vscode
+backend/tests
+pgdata
+ollamadata
+*.zip

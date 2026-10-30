@@ -1,0 +1,10 @@
+# Configuración del escáner de secretos usado en CI
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Librerías de terceros minificadas y valores falsos de pruebas"
+paths = [
+  '''frontend/vendor/.*''',
+  '''backend/tests/.*''',
+]

@@ -1,4 +1,11 @@
-version: "3.9"
+# InterviewAI — entorno local (http://localhost:3000)
+#   docker compose up --build -d
+# Con el modelo local de respaldo (Ollama, ~2 GB extra):
+#   docker compose --profile local-llm up --build -d
+#   docker compose exec ollama ollama pull llama3.2:3b
+#
+# Las llaves se leen de `.env` (NUNCA se suben a GitHub; ver .gitignore).
+# Los puertos de la base de datos y del backend solo escuchan en 127.0.0.1.
 
 services:
   db:
@@ -7,10 +14,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-interviewai}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-interviewai_secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
       POSTGRES_DB: ${POSTGRES_DB:-interviewai}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -24,8 +31,9 @@ services:
     image: ollama/ollama:0.5.7
     container_name: interviewai-ollama
     restart: unless-stopped
+    profiles: ["local-llm"]
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollamadata:/root/.ollama
 
@@ -38,13 +46,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      ollama:
-        condition: service_started
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-interviewai}:${POSTGRES_PASSWORD:-interviewai_secret}@db:5432/${POSTGRES_DB:-interviewai}
-      # =======================================================================
-      # >>> VARIABLES DE ENTORNO QUE INYECTAN TUS API KEYS DESDE EL ARCHIVO .env <<<
-      # =======================================================================
+      DATABASE_URL: postgresql://${POSTGRES_USER:-interviewai}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-interviewai}
+      # >>> Llaves inyectadas desde .env (no se escriben aquí) <<<
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-4o-mini}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
@@ -52,12 +56,21 @@ services:
       EVALUATOR_PROVIDER: ${EVALUATOR_PROVIDER:-gemini}
       INTERVIEWER_PROVIDER: ${INTERVIEWER_PROVIDER:-openai}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      SECRET_KEY: ${SECRET_KEY:-}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,https://marcoflesh.github.io}
+      EMAIL_MX_CHECK: ${EMAIL_MX_CHECK:-strict}
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
       ENABLE_FOLLOWUP_QUESTIONS: ${ENABLE_FOLLOWUP_QUESTIONS:-false}
       FOLLOWUP_STAR_THRESHOLD: ${FOLLOWUP_STAR_THRESHOLD:-3}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/api/health',timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
   frontend:
     build:
@@ -66,7 +79,8 @@ services:
     container_name: interviewai-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "3000:80"
 
