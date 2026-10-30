@@ -1,10 +1,27 @@
-# Configuración del escáner de secretos usado en CI
+# Configuración del escáner de secretos usado en CI (gitleaks)
 [extend]
 useDefault = true
 
 [allowlist]
-description = "Librerías de terceros minificadas y valores falsos de pruebas"
+description = "Librerías de terceros, valores de prueba y marcadores de posición de la documentación"
 paths = [
   '''frontend/vendor/.*''',
   '''backend/tests/.*''',
+]
+regexes = [
+  '''TU_LLAVE_REAL''',
+  '''PON_AQUI''',
+  '''CAMBIA_ESTA_CONTRASENA''',
+  '''interviewai_secret''',
+  '''ci_only_password''',
+  '''Contrasena123''',
+  '''interviewai_token''',
+]
+# Commits históricos (v0.1.0 – v0.3.0) revisados manualmente: solo contienen marcadores de posición.
+commits = [
+  "76d9a54d0db38baa2e153a68bf87954e15280a6b",
+  "41da409c9cbc6a676b4950f09dca471e16ca0ca0",
+  "92d88f58bfe6969fe6035075a1b867f2f91ee700",
+  "af8b7ff3053cdf51a846963bcff6541e6896525e",
+  "a0b4299d0aa23a9c63d707c8bc3a7d67dfeaf8a1",
 ]
