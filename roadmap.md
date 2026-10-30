@@ -26,7 +26,8 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 - [x] **`v0.4.3`**: "Error interno" al iniciar sesión corregido (diagnóstico de base de datos + autorreparación en `iniciar`).
 - [x] **`v0.4.4`**: el registro ya indica "mínimo 8 caracteres" (coincide con la validación real).
 - [x] **`v0.5.0`**: el entrevistador responde al instante (preguntas preparadas por adelantado y evaluación en segundo plano), sin emojis y con preguntas humanizadas.
-- [ ] **Pendiente del usuario**: activar GitHub Pages (Settings → Pages → GitHub Actions), agregar orígenes en Google Cloud, revocar el token `ghp_` y la llave `sk-proj-` vieja, y correr `stress_test_agents.py` en su computadora.
+- [x] **`v0.6.0`**: investigación STAR, 58 preguntas nuevas con fuentes, rúbrica de 30 indicadores, set de calibración y arnés de medición.
+- [ ] **Pendiente del usuario**: correr `scripts/evaluar_evaluador.py --modo llm` con sus llaves y conseguir 2–3 calificadores humanos; activar GitHub Pages (Settings → Pages → GitHub Actions), agregar orígenes en Google Cloud, revocar el token `ghp_` y la llave `sk-proj-` vieja, y correr `stress_test_agents.py` en su computadora.
 
 ---
 
@@ -34,10 +35,10 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 
 Estado actual: los agentes **no están entrenados**; son modelos generales (`gpt-4o-mini`, `gemini-3.8-flash`) guiados por prompts, más un analizador determinista y un *guardrail*. Aún no hay medición contra calificaciones humanas (`golden_dataset` vacío, RN-07).
 
-- [ ] **Fase A — Rúbrica con anclas**: definir qué significa 0, 1, 2, 3, 4 y 5 en cada dimensión STAR, con un ejemplo real por nivel y ajustes por carrera.
-- [ ] **Fase B — Golden dataset**: 150–200 respuestas reales anonimizadas y con consentimiento, calificadas por 2–3 personas (profesores/reclutadores). Medir el acuerdo entre humanos primero.
-- [ ] **Fase C — Arnés de evaluación**: comparar modelo vs. humanos (kappa ponderado, error medio, % de coincidencia ±1) en cada cambio de prompt, como pruebas automáticas.
-- [ ] **Fase D — Mejoras de prompt**: rúbrica con anclas, ejemplos *few-shot* del golden set, citar evidencia antes de calificar, salida con esquema JSON, mediana de 3 evaluaciones o de ambos modelos.
+- [x] **Fase A — Rúbrica con anclas** (v0.6.0: 30 indicadores en `backend/app/data/rubrica_star.json`): definir qué significa 0, 1, 2, 3, 4 y 5 en cada dimensión STAR, con un ejemplo real por nivel y ajustes por carrera.
+- [ ] **Fase B — Golden dataset** (v0.6.0: plantilla y guía en `datos/golden/`; faltan calificadores humanos): 150–200 respuestas reales anonimizadas y con consentimiento, calificadas por 2–3 personas (profesores/reclutadores). Medir el acuerdo entre humanos primero.
+- [x] **Fase C — Arnés de evaluación** (v0.6.0: `scripts/evaluar_evaluador.py`): comparar modelo vs. humanos (kappa ponderado, error medio, % de coincidencia ±1) en cada cambio de prompt, como pruebas automáticas.
+- [x] **Fase D — Mejoras de prompt** (v0.6.0: rúbrica, evidencia antes de calificar y 3 ejemplos resueltos; falta mediana de varias evaluaciones): rúbrica con anclas, ejemplos *few-shot* del golden set, citar evidencia antes de calificar, salida con esquema JSON, mediana de 3 evaluaciones o de ambos modelos.
 - [ ] **Fase E — Ciclo con usuarios**: botón "esta retroalimentación no me sirvió", revisión humana y alimentación del golden set; pruebas de sesgo (misma respuesta, distinto perfil).
 - [ ] **Fase F — Fine-tuning (opcional)**: solo con 500–1000 ejemplos de calidad y si el prompt ya no mejora; no sobre `gpt-4o-mini` (se retira el 14/01/2027 junto con sus versiones afinadas).
 

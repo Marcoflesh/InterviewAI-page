@@ -1,0 +1,1248 @@
+{
+  "version": "2026-10-30",
+  "descripcion": "Banco de preguntas conductuales STAR para ITC e ISD recopilado de fuentes públicas y adaptado al español de México para estudiantes (Junior / Intern).",
+  "fuentes": {
+    "TIH": {
+      "nombre": "Tech Interview Handbook: preguntas conductuales más frecuentes en empresas de tecnología (copia publicada en jiangren.com.au)",
+      "url": "https://jiangren.com.au/job-interview/handbook/behavioral-interview-questions"
+    },
+    "LVL": {
+      "nombre": "A Complete Student Guide to Software Engineering Behavioral Interviews (Level Up Coding)",
+      "url": "https://levelup.gitconnected.com/a-complete-student-guide-to-software-engineering-behavioral-interviews-6ebb2264f5f6"
+    },
+    "ARC": {
+      "nombre": "8 Behavioral Interview Questions Asked by Top Tech Companies (Arc.dev)",
+      "url": "https://arc.dev/talent-blog/behavioral-interview-questions-tech/"
+    },
+    "CPD": {
+      "nombre": "Behavioral interview questions for software engineers (CoderPad)",
+      "url": "https://coderpad.io/blog/hiring-developers/behavioral-interview-questions-software-engineers/"
+    },
+    "IKS": {
+      "nombre": "Behavioral Interview Questions for Software Developers (Interview Kickstart)",
+      "url": "https://interviewkickstart.com/blogs/articles/behavioral-interview-questions-software-engineer-and-developer"
+    },
+    "BLT": {
+      "nombre": "35 Behavioral Interview Questions and How to Answer Them (Built In)",
+      "url": "https://builtin.com/articles/behavioral-interview-questions"
+    },
+    "AMZ": {
+      "nombre": "Amazon: guía de entrevistas presenciales, método STAR y Leadership Principles",
+      "url": "https://origin.gamma.amazon.jobs/en-gb/landing_pages/in-person-interview"
+    },
+    "AVD": {
+      "nombre": "20 Behavioral Questions to Ace Your Next Data Science Interview (Analytics Vidhya, 2025)",
+      "url": "https://www.analyticsvidhya.com/blog/2025/06/data-science-behavioral-interview-questions/"
+    },
+    "YRD": {
+      "nombre": "Machine Learning Engineer interview questions (Yardstick)",
+      "url": "https://yardstick.team/interview-questions/machine-learning-engineer"
+    },
+    "TIO": {
+      "nombre": "Why Your STAR Answers Sound Rehearsed, and How to Fix It (techinterview.org)",
+      "url": "https://www.techinterview.org/post/3233476086/star-answers-that-dont-sound-rehearsed/"
+    },
+    "DER": {
+      "nombre": "Derivada por el equipo a partir de las fuentes anteriores (tendencias 2026)",
+      "url": ""
+    }
+  },
+  "preguntas": [
+    {
+      "id": "ITC-001",
+      "career_code": "ITC",
+      "category": "apertura",
+      "seniority_level": "Junior / Intern",
+      "competency": "Proyecto destacado",
+      "question_text": "Platícame del proyecto del que estás más orgulloso, de la escuela, de una práctica o personal. ¿Qué parte construiste tú?",
+      "expected_star_focus": "Un proyecto concreto, su aporte personal claramente separado del equipo, decisiones técnicas propias y un resultado verificable (se usó, se calificó, se publicó).",
+      "repreguntas": [
+        "¿Qué harías distinto si lo empezaras hoy?",
+        "¿Cuál fue la parte técnica más difícil?"
+      ],
+      "senales_de_alerta": [
+        "Describe el proyecto sin decir qué hizo él o ella",
+        "Solo enumera tecnologías"
+      ],
+      "fuentes": [
+        "TIH",
+        "ARC"
+      ]
+    },
+    {
+      "id": "ITC-002",
+      "career_code": "ITC",
+      "category": "apertura",
+      "seniority_level": "Junior / Intern",
+      "competency": "Reto técnico más difícil",
+      "question_text": "Cuéntame del reto técnico más difícil que has enfrentado en un proyecto. ¿Cómo lo resolviste?",
+      "expected_star_focus": "Un problema real con su complejidad, el razonamiento para atacarlo, pasos concretos y cómo supo que quedó resuelto.",
+      "repreguntas": [
+        "¿Qué intentaste primero que no funcionó?",
+        "¿Cómo validaste la solución?"
+      ],
+      "senales_de_alerta": [
+        "Respuesta hipotética",
+        "Sin desenlace"
+      ],
+      "fuentes": [
+        "TIH",
+        "ARC",
+        "CPD"
+      ]
+    },
+    {
+      "id": "ITC-003",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Conflicto técnico con un compañero",
+      "question_text": "Cuéntame de una vez que no estuviste de acuerdo con alguien de tu equipo sobre cómo resolver algo técnico. ¿Qué hiciste y cómo terminó?",
+      "expected_star_focus": "Escucha la otra postura, argumenta con evidencia (pruebas, datos, documentación), llegan a un acuerdo y la relación sigue funcionando.",
+      "repreguntas": [
+        "¿Qué argumento de la otra persona te pareció válido?",
+        "¿Volverías a decidir lo mismo?"
+      ],
+      "senales_de_alerta": [
+        "Culpa a la otra persona",
+        "El conflicto se 'resuelve' solo o lo evita"
+      ],
+      "fuentes": [
+        "TIH",
+        "LVL",
+        "ARC",
+        "CPD"
+      ]
+    },
+    {
+      "id": "ITC-004",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Desacuerdo con una figura de autoridad",
+      "question_text": "Platícame de una ocasión en la que no estuviste de acuerdo con una decisión de tu líder, profesor o cliente. ¿Cómo lo manejaste?",
+      "expected_star_focus": "Expresa el desacuerdo con respeto y argumentos, propone alternativas y, si la decisión se mantiene, se compromete con ella.",
+      "repreguntas": [
+        "¿Cómo preparaste tus argumentos?",
+        "¿Qué pasó con la relación después?"
+      ],
+      "senales_de_alerta": [
+        "Desobedece sin comunicar",
+        "Habla mal de la persona"
+      ],
+      "fuentes": [
+        "TIH",
+        "BLT"
+      ]
+    },
+    {
+      "id": "ITC-005",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Recibir retroalimentación",
+      "question_text": "Cuéntame del comentario más útil, o el más duro, que te han hecho sobre tu código o tu trabajo. ¿Qué cambiaste después?",
+      "expected_star_focus": "Recibe el comentario sin ponerse a la defensiva, entiende la causa y muestra un cambio concreto y sostenido en su forma de trabajar.",
+      "repreguntas": [
+        "¿Cómo te sentiste en el momento?",
+        "¿Cómo sabes que sí mejoraste?"
+      ],
+      "senales_de_alerta": [
+        "Dice que nunca ha recibido críticas",
+        "Justifica en lugar de aprender"
+      ],
+      "fuentes": [
+        "TIH",
+        "LVL",
+        "BLT"
+      ]
+    },
+    {
+      "id": "ITC-006",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Dar retroalimentación en revisión de código",
+      "question_text": "Háblame de una vez que tuviste que señalar un problema en el código o el trabajo de alguien más. ¿Cómo se lo dijiste?",
+      "expected_star_focus": "Feedback específico y respetuoso sobre el código (no la persona), con propuesta de mejora y seguimiento.",
+      "repreguntas": [
+        "¿Cómo reaccionó la otra persona?",
+        "¿Qué habrías hecho si no aceptaba el cambio?"
+      ],
+      "senales_de_alerta": [
+        "Lo corrige sin avisar",
+        "Comentario personal en vez de técnico"
+      ],
+      "fuentes": [
+        "CPD",
+        "DER"
+      ]
+    },
+    {
+      "id": "ITC-007",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Error propio",
+      "question_text": "Cuéntame de un error que hayas cometido en un proyecto, por ejemplo un bug que subiste o algo que rompiste. ¿Qué hiciste cuando te diste cuenta?",
+      "expected_star_focus": "Reconoce el error como propio, lo comunica a tiempo, lo corrige y pone algo en marcha para que no se repita (prueba, checklist, revisión).",
+      "repreguntas": [
+        "¿Quién se enteró y cómo?",
+        "¿Qué cambiaste para que no vuelva a pasar?"
+      ],
+      "senales_de_alerta": [
+        "El error es de otro",
+        "Falso error que en realidad es una virtud"
+      ],
+      "fuentes": [
+        "BLT",
+        "TIO"
+      ]
+    },
+    {
+      "id": "ITC-008",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Fracaso y aprendizaje",
+      "question_text": "Platícame de un proyecto que no salió como esperabas. ¿Qué pasó, qué parte fue responsabilidad tuya y qué aprendiste?",
+      "expected_star_focus": "Honestidad sobre lo que salió mal, responsabilidad propia sin culpar, una lección concreta y evidencia de que la aplicó después.",
+      "repreguntas": [
+        "¿En qué momento te diste cuenta de que iba mal?",
+        "¿Dónde aplicaste lo aprendido?"
+      ],
+      "senales_de_alerta": [
+        "Culpa a factores externos",
+        "No hay lección concreta"
+      ],
+      "fuentes": [
+        "IKS",
+        "BLT",
+        "AMZ"
+      ]
+    },
+    {
+      "id": "ITC-009",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Entrega con tiempo muy limitado",
+      "question_text": "Cuéntame de una entrega con muy poco tiempo. ¿Cómo decidiste qué hacer primero y qué dejar fuera?",
+      "expected_star_focus": "Criterio explícito de priorización (impacto, riesgo, lo mínimo funcional), comunicación del recorte y entrega a tiempo con calidad aceptable.",
+      "repreguntas": [
+        "¿Qué dejaste fuera y cómo lo comunicaste?",
+        "¿Qué deuda técnica quedó?"
+      ],
+      "senales_de_alerta": [
+        "'Me desvelé' como única estrategia",
+        "No explica cómo priorizó"
+      ],
+      "fuentes": [
+        "TIH",
+        "LVL"
+      ]
+    },
+    {
+      "id": "ITC-010",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Fecha de entrega incumplida",
+      "question_text": "Háblame de una vez que no llegaste a una fecha de entrega. ¿Cuándo te diste cuenta y cómo lo comunicaste?",
+      "expected_star_focus": "Detecta el riesgo temprano, avisa con anticipación, propone un plan alternativo y extrae una lección de estimación.",
+      "repreguntas": [
+        "¿Qué señal te hubiera avisado antes?",
+        "¿Cómo estimas ahora?"
+      ],
+      "senales_de_alerta": [
+        "Avisa el mismo día de la entrega",
+        "Culpa a otros"
+      ],
+      "fuentes": [
+        "LVL",
+        "BLT"
+      ]
+    },
+    {
+      "id": "ITC-011",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Prioridades en competencia",
+      "question_text": "Platícame de un momento en que tenías varias tareas o materias urgentes al mismo tiempo. ¿Cómo decidiste el orden?",
+      "expected_star_focus": "Un método claro de priorización (urgencia e impacto, dependencias), negociación de plazos cuando hizo falta y resultado de la decisión.",
+      "repreguntas": [
+        "¿Qué sacrificaste?",
+        "¿A quién tuviste que avisar?"
+      ],
+      "senales_de_alerta": [
+        "'Hago todo al mismo tiempo'",
+        "Sin criterio"
+      ],
+      "fuentes": [
+        "CPD",
+        "BLT"
+      ]
+    },
+    {
+      "id": "ITC-012",
+      "career_code": "ITC",
+      "category": "resolucion_problemas",
+      "seniority_level": "Junior / Intern",
+      "competency": "Depuración de un bug difícil",
+      "question_text": "¿Cuál es el bug más difícil que has resuelto? Cuéntame cómo lo encontraste, paso a paso.",
+      "expected_star_focus": "Método de depuración (reproducir, aislar, hipótesis, herramientas como logs o depurador), causa raíz identificada y prueba que evita la regresión.",
+      "repreguntas": [
+        "¿Cuál fue tu primera hipótesis?",
+        "¿Agregaste alguna prueba después?"
+      ],
+      "senales_de_alerta": [
+        "'Lo reinicié y ya'",
+        "No sabe cuál fue la causa"
+      ],
+      "fuentes": [
+        "TIH"
+      ]
+    },
+    {
+      "id": "ITC-013",
+      "career_code": "ITC",
+      "category": "resolucion_problemas",
+      "seniority_level": "Junior / Intern",
+      "competency": "Atorarse sin saber la solución",
+      "question_text": "Cuéntame de una vez que te atoraste con un problema técnico que no sabías resolver. ¿Qué hiciste para salir adelante?",
+      "expected_star_focus": "Intenta primero por su cuenta con un límite de tiempo, investiga en documentación y fuentes confiables y pide ayuda con una pregunta bien planteada.",
+      "repreguntas": [
+        "¿Cuánto tiempo esperaste antes de pedir ayuda?",
+        "¿Qué aprendiste de cómo investigar?"
+      ],
+      "senales_de_alerta": [
+        "Copia una solución sin entenderla",
+        "Se queda atorado días sin avisar"
+      ],
+      "fuentes": [
+        "BLT"
+      ]
+    },
+    {
+      "id": "ITC-014",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Explicar algo técnico a alguien no técnico",
+      "question_text": "Cuéntame de una vez que tuviste que explicar algo técnico a alguien sin conocimientos técnicos. ¿Cómo te aseguraste de que lo entendiera?",
+      "expected_star_focus": "Adapta el lenguaje (analogías, ejemplos, visuales), verifica la comprensión y logra que la otra persona tome una decisión o actúe.",
+      "repreguntas": [
+        "¿Qué analogía usaste?",
+        "¿Cómo supiste que lo entendió?"
+      ],
+      "senales_de_alerta": [
+        "Jerga técnica sin traducir",
+        "No verifica comprensión"
+      ],
+      "fuentes": [
+        "LVL",
+        "CPD"
+      ]
+    },
+    {
+      "id": "ITC-015",
+      "career_code": "ITC",
+      "category": "resolucion_problemas",
+      "seniority_level": "Junior / Intern",
+      "competency": "Decisión técnica con trade-offs",
+      "question_text": "Platícame de una decisión técnica difícil que hayas tomado, como elegir una tecnología o un diseño. ¿Qué opciones consideraste y por qué elegiste esa?",
+      "expected_star_focus": "Al menos dos alternativas comparadas con criterios explícitos (tiempo, costo, mantenimiento, rendimiento), la elección justificada y el resultado.",
+      "repreguntas": [
+        "¿Qué riesgo aceptaste?",
+        "¿Qué te haría cambiar de decisión?"
+      ],
+      "senales_de_alerta": [
+        "'Era la que conocía' sin más",
+        "No menciona alternativas"
+      ],
+      "fuentes": [
+        "LVL",
+        "TIO"
+      ]
+    },
+    {
+      "id": "ITC-016",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Decidir con información incompleta",
+      "question_text": "Cuéntame de una vez que tuviste que decidir algo sin tener toda la información. ¿Cómo lo resolviste?",
+      "expected_star_focus": "Identifica qué sabía y qué no, hace supuestos explícitos, decide de forma reversible cuando se puede y valida después.",
+      "repreguntas": [
+        "¿Qué supuestos hiciste?",
+        "¿Cómo los validaste?"
+      ],
+      "senales_de_alerta": [
+        "Decide al azar",
+        "Espera indefinidamente"
+      ],
+      "fuentes": [
+        "CPD",
+        "AMZ"
+      ]
+    },
+    {
+      "id": "ITC-017",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Requisitos ambiguos",
+      "question_text": "Háblame de un proyecto en el que no estaba claro qué había que construir. ¿Cómo definiste el alcance?",
+      "expected_star_focus": "Hace preguntas para aclarar, documenta supuestos, entrega un prototipo temprano para validar y ajusta con la retroalimentación.",
+      "repreguntas": [
+        "¿A quién le preguntaste?",
+        "¿Qué cambió después del primer prototipo?"
+      ],
+      "senales_de_alerta": [
+        "Construye todo sin validar",
+        "Culpa al cliente por no saber"
+      ],
+      "fuentes": [
+        "CPD",
+        "YRD"
+      ]
+    },
+    {
+      "id": "ITC-018",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Iniciativa",
+      "question_text": "Cuéntame de una vez que hiciste algo que nadie te pidió, pero que mejoró el proyecto o al equipo.",
+      "expected_star_focus": "Detecta una necesidad, actúa sin que se lo pidan, involucra a quien corresponde y muestra el beneficio concreto.",
+      "repreguntas": [
+        "¿Cómo supiste que valía la pena?",
+        "¿Cómo reaccionó el equipo?"
+      ],
+      "senales_de_alerta": [
+        "La iniciativa no tuvo impacto",
+        "Lo hizo sin coordinar y causó problemas"
+      ],
+      "fuentes": [
+        "LVL",
+        "AMZ"
+      ]
+    },
+    {
+      "id": "ITC-019",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Perseverancia",
+      "question_text": "Platícame de algo en lo que tuviste que perseverar durante semanas o meses. ¿Qué te hizo seguir?",
+      "expected_star_focus": "Un objetivo de largo plazo, obstáculos reales, ajustes de estrategia en el camino y un resultado alcanzado o un aprendizaje claro.",
+      "repreguntas": [
+        "¿Cuándo pensaste en rendirte?",
+        "¿Qué cambiaste a la mitad?"
+      ],
+      "senales_de_alerta": [
+        "Sin obstáculos reales",
+        "Sin resultado"
+      ],
+      "fuentes": [
+        "TIH"
+      ]
+    },
+    {
+      "id": "ITC-020",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Liderazgo sin autoridad formal",
+      "question_text": "Cuéntame de una vez que tuviste que coordinar a tu equipo sin ser el líder formal. ¿Cómo lograste que todos avanzaran?",
+      "expected_star_focus": "Organiza el trabajo (tareas, seguimiento, acuerdos), influye con el ejemplo y la comunicación, y el equipo logra el objetivo.",
+      "repreguntas": [
+        "¿Cómo repartieron el trabajo?",
+        "¿Qué hiciste cuando alguien se atrasó?"
+      ],
+      "senales_de_alerta": [
+        "Hace todo él o ella sin delegar",
+        "Se atribuye todo el crédito"
+      ],
+      "fuentes": [
+        "CPD",
+        "BLT"
+      ]
+    },
+    {
+      "id": "ITC-021",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Compañero que no cumple",
+      "question_text": "Platícame de un proyecto en equipo donde alguien no estaba cumpliendo con su parte. ¿Qué hiciste?",
+      "expected_star_focus": "Habla directamente y con empatía con la persona, busca la causa, acuerda un plan y escala solo si hace falta; protege la entrega.",
+      "repreguntas": [
+        "¿Hablaste con esa persona? ¿Qué te dijo?",
+        "¿Qué pasó con la calificación o la entrega?"
+      ],
+      "senales_de_alerta": [
+        "Hace el trabajo del otro sin decir nada",
+        "Lo acusa sin hablar primero"
+      ],
+      "fuentes": [
+        "IKS"
+      ]
+    },
+    {
+      "id": "ITC-022",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Influir en una decisión técnica",
+      "question_text": "Cuéntame de una vez que convenciste a tu equipo de cambiar de enfoque técnico. ¿Cómo lo lograste?",
+      "expected_star_focus": "Presenta evidencia (prototipo, medición, comparación), escucha objeciones, consigue el acuerdo y muestra el resultado del cambio.",
+      "repreguntas": [
+        "¿Quién se opuso y por qué?",
+        "¿Cómo midieron si fue buena idea?"
+      ],
+      "senales_de_alerta": [
+        "Impone su idea",
+        "No hay evidencia"
+      ],
+      "fuentes": [
+        "TIH"
+      ]
+    },
+    {
+      "id": "ITC-023",
+      "career_code": "ITC",
+      "category": "resolucion_problemas",
+      "seniority_level": "Junior / Intern",
+      "competency": "Velocidad contra calidad",
+      "question_text": "Háblame de una vez que tuviste que elegir entre entregar rápido o hacerlo bien. ¿Qué decidiste y por qué?",
+      "expected_star_focus": "Reconoce el trade-off, decide con criterio (riesgo, usuarios afectados), comunica lo que queda pendiente y da seguimiento.",
+      "repreguntas": [
+        "¿Qué quedó pendiente y lo terminaste?",
+        "¿Quién estuvo de acuerdo con la decisión?"
+      ],
+      "senales_de_alerta": [
+        "Siempre elige lo mismo sin pensar",
+        "No da seguimiento"
+      ],
+      "fuentes": [
+        "AVD"
+      ]
+    },
+    {
+      "id": "ITC-024",
+      "career_code": "ITC",
+      "category": "tecnica_aplicada",
+      "seniority_level": "Junior / Intern",
+      "competency": "Mantenibilidad y escalabilidad",
+      "question_text": "Cuéntame de un proyecto en el que hiciste algo para que el código fuera más fácil de mantener o de crecer.",
+      "expected_star_focus": "Prácticas concretas (pruebas, modularidad, documentación, convenciones) aplicadas por una razón clara y con beneficio observable.",
+      "repreguntas": [
+        "¿Cómo lo notó el resto del equipo?",
+        "¿Qué costo tuvo hacerlo?"
+      ],
+      "senales_de_alerta": [
+        "Solo teoría",
+        "Sin ejemplo propio"
+      ],
+      "fuentes": [
+        "CPD"
+      ]
+    },
+    {
+      "id": "ITC-025",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Cliente o usuario inconforme",
+      "question_text": "Platícame de una vez que trabajaste con un cliente o usuario que cambiaba de opinión o no estaba conforme. ¿Cómo lo manejaste?",
+      "expected_star_focus": "Entiende la necesidad real detrás de la queja, acuerda expectativas por escrito, propone opciones y conserva la relación.",
+      "repreguntas": [
+        "¿Qué acuerdos dejaron por escrito?",
+        "¿Cómo terminó la relación con esa persona?"
+      ],
+      "senales_de_alerta": [
+        "Culpa al cliente",
+        "Acepta todo sin negociar"
+      ],
+      "fuentes": [
+        "IKS"
+      ]
+    },
+    {
+      "id": "ITC-026",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Detectar un riesgo a tiempo",
+      "question_text": "Cuéntame de una vez que detectaste un problema antes de que afectara a los demás. ¿Cómo lo identificaste y qué hiciste?",
+      "expected_star_focus": "Señal concreta que lo alertó, verificación, aviso oportuno a las personas correctas y mitigación.",
+      "repreguntas": [
+        "¿Qué habría pasado si no lo detectabas?",
+        "¿Dejaste algo para detectarlo en automático?"
+      ],
+      "senales_de_alerta": [
+        "Se enteró por casualidad y no hizo nada",
+        "Lo resolvió en silencio sin avisar"
+      ],
+      "fuentes": [
+        "AVD"
+      ]
+    },
+    {
+      "id": "ITC-027",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Mejora de un proceso del equipo",
+      "question_text": "Háblame de un proceso de tu equipo que mejoraste, por ejemplo cómo entregaban, revisaban código o se comunicaban. ¿Qué cambió?",
+      "expected_star_focus": "Identifica el problema del proceso, propone y prueba un cambio, logra adopción y mide el efecto.",
+      "repreguntas": [
+        "¿Cómo convenciste al equipo de adoptarlo?",
+        "¿Cómo supiste que funcionó?"
+      ],
+      "senales_de_alerta": [
+        "Cambio sin adopción",
+        "Sin efecto observable"
+      ],
+      "fuentes": [
+        "BLT",
+        "AVD"
+      ]
+    },
+    {
+      "id": "ITC-028",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Ética, seguridad y privacidad",
+      "question_text": "Cuéntame de una vez que notaste un riesgo de seguridad o de privacidad en un proyecto. ¿Qué hiciste?",
+      "expected_star_focus": "Reconoce el riesgo, no lo ignora aunque retrase, lo comunica, propone una solución y prioriza proteger a los usuarios.",
+      "repreguntas": [
+        "¿Alguien quería ignorarlo?",
+        "¿Qué medida quedó implementada?"
+      ],
+      "senales_de_alerta": [
+        "Lo ignora para cumplir la fecha",
+        "No identifica el riesgo real"
+      ],
+      "fuentes": [
+        "DER"
+      ]
+    },
+    {
+      "id": "ITC-029",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Colaboración a distancia",
+      "question_text": "Platícame de un proyecto con personas que trabajaban a distancia o en otros horarios. ¿Cómo se coordinaron?",
+      "expected_star_focus": "Canales y hábitos concretos (documentación, acuerdos asíncronos, reuniones cortas), manejo de malentendidos y entrega lograda.",
+      "repreguntas": [
+        "¿Qué herramienta o hábito les funcionó mejor?",
+        "¿Qué malentendido tuvieron?"
+      ],
+      "senales_de_alerta": [
+        "Sin métodos concretos",
+        "Dice que no hubo ningún problema"
+      ],
+      "fuentes": [
+        "CPD"
+      ]
+    },
+    {
+      "id": "ITC-030",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Crédito compartido",
+      "question_text": "Cuéntame de un logro de equipo. ¿Qué parte hiciste tú y qué hicieron los demás?",
+      "expected_star_focus": "Distingue con claridad su aporte del de otros, reconoce a sus compañeros y muestra el resultado conjunto.",
+      "repreguntas": [
+        "¿Qué parte no habría salido sin ti?",
+        "¿Qué aprendiste de alguien del equipo?"
+      ],
+      "senales_de_alerta": [
+        "Se atribuye todo",
+        "No puede decir qué hizo"
+      ],
+      "fuentes": [
+        "ARC",
+        "AMZ"
+      ]
+    },
+    {
+      "id": "ITC-031",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Reconocer que estabas equivocado",
+      "question_text": "Háblame de una vez que te diste cuenta de que estabas equivocado en algo técnico. ¿Cómo lo reconociste?",
+      "expected_star_focus": "Identifica la evidencia que le hizo cambiar de opinión, lo admite abiertamente y corrige el rumbo.",
+      "repreguntas": [
+        "¿Qué te hizo cambiar de opinión?",
+        "¿Cómo se lo dijiste al equipo?"
+      ],
+      "senales_de_alerta": [
+        "Nunca se ha equivocado",
+        "Lo admite solo en privado"
+      ],
+      "fuentes": [
+        "BLT"
+      ]
+    },
+    {
+      "id": "ITC-032",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Trabajo bajo presión",
+      "question_text": "Platícame de una hackatón, competencia o entrega de última hora en la que algo salió mal. ¿Cómo reaccionaste?",
+      "expected_star_focus": "Mantiene la calma, prioriza, se reorganiza con el equipo y aprende algo concreto del momento de presión.",
+      "repreguntas": [
+        "¿Qué hiciste en los primeros minutos?",
+        "¿Qué harías distinto?"
+      ],
+      "senales_de_alerta": [
+        "Pánico sin acción",
+        "Culpa a otros"
+      ],
+      "fuentes": [
+        "BLT",
+        "DER"
+      ]
+    },
+    {
+      "id": "ITC-033",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Negociar alcance o decir que no",
+      "question_text": "Cuéntame de una vez que tuviste que decir que no a una petición o negociar el alcance de una tarea. ¿Cómo lo planteaste?",
+      "expected_star_focus": "Explica el impacto de aceptar, ofrece alternativas (otra fecha, menos alcance) y llega a un acuerdo sin dañar la relación.",
+      "repreguntas": [
+        "¿Qué alternativa ofreciste?",
+        "¿Cómo lo tomó la otra persona?"
+      ],
+      "senales_de_alerta": [
+        "Acepta todo y no cumple",
+        "Dice que no sin alternativa"
+      ],
+      "fuentes": [
+        "ARC",
+        "BLT"
+      ]
+    },
+    {
+      "id": "ITC-034",
+      "career_code": "ITC",
+      "category": "tecnica_aplicada",
+      "seniority_level": "Junior / Intern",
+      "competency": "Documentación",
+      "question_text": "Háblame de una vez que la falta de documentación te frenó a ti o a tu equipo. ¿Qué hiciste al respecto?",
+      "expected_star_focus": "Reconoce el costo de no documentar, crea documentación útil (README, diagramas, comentarios) y otros la usan.",
+      "repreguntas": [
+        "¿Quién usó lo que documentaste?",
+        "¿Cómo lo mantienen actualizado?"
+      ],
+      "senales_de_alerta": [
+        "Se queja sin actuar",
+        "Documentación que nadie usa"
+      ],
+      "fuentes": [
+        "CPD",
+        "DER"
+      ]
+    },
+    {
+      "id": "ITC-035",
+      "career_code": "ITC",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Adaptarse a un cambio grande",
+      "question_text": "Platícame de un cambio grande a mitad de un proyecto, de tecnología, de equipo o de objetivo. ¿Cómo te adaptaste?",
+      "expected_star_focus": "Acepta el cambio, replanifica, aprende lo necesario y mantiene la entrega; muestra flexibilidad sin perder el rumbo.",
+      "repreguntas": [
+        "¿Qué fue lo más difícil del cambio?",
+        "¿Qué aprendiste para el siguiente?"
+      ],
+      "senales_de_alerta": [
+        "Se resiste sin propuesta",
+        "No hay resultado"
+      ],
+      "fuentes": [
+        "IKS",
+        "AVD"
+      ]
+    },
+    {
+      "id": "ITC-036",
+      "career_code": "ITC",
+      "category": "tecnica_aplicada",
+      "seniority_level": "Junior / Intern",
+      "competency": "Uso responsable de asistentes de IA",
+      "question_text": "Cuéntame de una vez que usaste herramientas de IA, como asistentes de código, en un proyecto. ¿Cómo verificaste que lo que generaban era correcto?",
+      "expected_star_focus": "Usa la IA como apoyo, revisa y entiende el código generado, lo prueba, detecta errores y cuida licencias y datos sensibles.",
+      "repreguntas": [
+        "¿Qué error encontraste en lo que generó?",
+        "¿Qué no le compartirías a una IA?"
+      ],
+      "senales_de_alerta": [
+        "Copia sin revisar",
+        "No entiende el código que entregó"
+      ],
+      "fuentes": [
+        "DER"
+      ]
+    },
+    {
+      "id": "ISD-037",
+      "career_code": "ISD",
+      "category": "apertura",
+      "seniority_level": "Junior / Intern",
+      "competency": "Proyecto de datos destacado",
+      "question_text": "Platícame del proyecto de datos o de IA del que estás más orgulloso. ¿Qué decisiones tomaste tú?",
+      "expected_star_focus": "Problema claro, decisiones propias sobre datos y modelo, cómo midió el éxito y qué impacto tuvo.",
+      "repreguntas": [
+        "¿Cómo definiste la métrica de éxito?",
+        "¿Qué harías distinto hoy?"
+      ],
+      "senales_de_alerta": [
+        "Solo nombra algoritmos",
+        "No separa su aporte"
+      ],
+      "fuentes": [
+        "AVD",
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-038",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Calidad de datos con otro equipo",
+      "question_text": "Cuéntame de un problema de calidad de datos cuyo origen estaba en otro sistema o equipo. ¿Cómo lo resolvieron juntos?",
+      "expected_star_focus": "Investiga la causa raíz, la documenta con evidencia, colabora con quien genera los datos y mide la mejora.",
+      "repreguntas": [
+        "¿Cómo demostraste que el problema venía de ahí?",
+        "¿Quedó algún control para detectarlo?"
+      ],
+      "senales_de_alerta": [
+        "Lo parcha solo en su notebook",
+        "Culpa al otro equipo"
+      ],
+      "fuentes": [
+        "AVD"
+      ]
+    },
+    {
+      "id": "ISD-039",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Trabajo con otras áreas",
+      "question_text": "Platícame de un proyecto donde trabajaste con personas de otras áreas, como negocio, desarrollo o diseño. ¿Cómo convertiste lo que necesitaban en un problema de datos?",
+      "expected_star_focus": "Traduce objetivos de negocio a requisitos de datos y métricas, mantiene comunicación frecuente y entrega algo que el área usa.",
+      "repreguntas": [
+        "¿Qué malentendido tuvieron?",
+        "¿Cómo validaste que era lo que necesitaban?"
+      ],
+      "senales_de_alerta": [
+        "No habla con usuarios",
+        "Entrega algo que nadie usa"
+      ],
+      "fuentes": [
+        "AVD",
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-040",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Cambio de prioridades",
+      "question_text": "Cuéntame de una vez que cambiaron las prioridades a mitad de un análisis. ¿Cómo reorganizaste tu trabajo?",
+      "expected_star_focus": "Re-prioriza rápido, comunica qué se pospone, rescata lo reutilizable y entrega lo nuevo.",
+      "repreguntas": [
+        "¿Qué trabajo se perdió?",
+        "¿Cómo lo comunicaste?"
+      ],
+      "senales_de_alerta": [
+        "Se queja sin adaptarse",
+        "Sin entrega"
+      ],
+      "fuentes": [
+        "AVD"
+      ]
+    },
+    {
+      "id": "ISD-041",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Desacuerdo sobre el método",
+      "question_text": "Háblame de un desacuerdo con un compañero sobre qué modelo o método usar. ¿Cómo decidieron?",
+      "expected_star_focus": "Convierte la discusión en una comparación justa con datos (validación, métricas acordadas) y acepta el resultado.",
+      "repreguntas": [
+        "¿Qué métrica acordaron para comparar?",
+        "¿Quién tenía razón al final?"
+      ],
+      "senales_de_alerta": [
+        "Gana quien insiste más",
+        "No hubo comparación"
+      ],
+      "fuentes": [
+        "AVD",
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-042",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Entrega de análisis con poco tiempo",
+      "question_text": "Platícame de un análisis o modelo que tenías que entregar con muy poco tiempo. ¿Qué sacrificaste y qué no?",
+      "expected_star_focus": "Define un mínimo útil, protege la validez (no se salta la validación), comunica limitaciones y entrega a tiempo.",
+      "repreguntas": [
+        "¿Qué limitaciones dejaste por escrito?",
+        "¿Lo mejoraste después?"
+      ],
+      "senales_de_alerta": [
+        "Sacrifica la validación",
+        "No comunica limitaciones"
+      ],
+      "fuentes": [
+        "AVD"
+      ]
+    },
+    {
+      "id": "ISD-043",
+      "career_code": "ISD",
+      "category": "resolucion_problemas",
+      "seniority_level": "Junior / Intern",
+      "competency": "Modelo que no funcionó",
+      "question_text": "Cuéntame de un modelo o análisis que no funcionó como esperabas. ¿Cómo encontraste la causa?",
+      "expected_star_focus": "Diagnóstico sistemático (datos, fuga, deriva, métricas mal elegidas), hipótesis probadas, corrección y lección aplicada.",
+      "repreguntas": [
+        "¿Cuál fue tu primera hipótesis?",
+        "¿Qué revisas ahora desde el inicio?"
+      ],
+      "senales_de_alerta": [
+        "'Probé otro algoritmo y ya'",
+        "No identifica la causa"
+      ],
+      "fuentes": [
+        "AVD",
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-044",
+      "career_code": "ISD",
+      "category": "resolucion_problemas",
+      "seniority_level": "Junior / Intern",
+      "competency": "Pocos datos o datos incompletos",
+      "question_text": "Platícame de un proyecto con muy pocos datos o datos incompletos. ¿Cómo ajustaste lo que se podía prometer?",
+      "expected_star_focus": "Evalúa qué se puede concluir con esos datos, usa métodos adecuados, fija expectativas realistas y propone cómo conseguir mejores datos.",
+      "repreguntas": [
+        "¿Qué le dijiste a quien esperaba más?",
+        "¿Qué dato adicional pediste?"
+      ],
+      "senales_de_alerta": [
+        "Promete resultados que los datos no soportan",
+        "Ignora el sesgo"
+      ],
+      "fuentes": [
+        "AVD",
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-045",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Convencer con datos",
+      "question_text": "Cuéntame de una vez que usaste datos para convencer a alguien de cambiar una decisión. ¿Cómo manejaste el escepticismo?",
+      "expected_star_focus": "Presenta evidencia sólida (experimento, análisis comparativo), anticipa objeciones y logra un cambio de decisión medible.",
+      "repreguntas": [
+        "¿Cuál fue la objeción más fuerte?",
+        "¿Qué pasó después de la decisión?"
+      ],
+      "senales_de_alerta": [
+        "Datos sin contexto",
+        "No hubo decisión"
+      ],
+      "fuentes": [
+        "AVD"
+      ]
+    },
+    {
+      "id": "ISD-046",
+      "career_code": "ISD",
+      "category": "tecnica_aplicada",
+      "seniority_level": "Junior / Intern",
+      "competency": "Automatizar un proceso de datos",
+      "question_text": "Háblame de un proceso manual con datos que automatizaste. ¿Cuánto tiempo o cuántos errores se ahorraron?",
+      "expected_star_focus": "Identifica el cuello de botella, automatiza con herramientas adecuadas, valida el resultado y cuantifica el ahorro.",
+      "repreguntas": [
+        "¿Cómo validaste que el proceso automático daba lo mismo?",
+        "¿Quién lo usa ahora?"
+      ],
+      "senales_de_alerta": [
+        "Sin validación",
+        "Sin ahorro medible"
+      ],
+      "fuentes": [
+        "AVD"
+      ]
+    },
+    {
+      "id": "ISD-047",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Cuestionamiento de resultados",
+      "question_text": "Cuéntame de una vez que alguien cuestionó tus resultados. ¿Qué hiciste?",
+      "expected_star_focus": "Escucha, revisa con honestidad, explica la metodología o corrige si había un error, y muestra el resultado final.",
+      "repreguntas": [
+        "¿Tenían razón en algo?",
+        "¿Qué cambiaste en tu forma de presentar?"
+      ],
+      "senales_de_alerta": [
+        "Se pone a la defensiva",
+        "Ignora la crítica"
+      ],
+      "fuentes": [
+        "AVD"
+      ]
+    },
+    {
+      "id": "ISD-048",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Detectar algo raro antes que nadie",
+      "question_text": "Platícame de una vez que notaste algo raro en los datos o en un modelo antes que los demás. ¿Qué hiciste?",
+      "expected_star_focus": "Señal concreta, verificación, aviso claro a las personas adecuadas y solución o monitoreo.",
+      "repreguntas": [
+        "¿Cómo lo confirmaste?",
+        "¿Dejaste una alerta o revisión automática?"
+      ],
+      "senales_de_alerta": [
+        "Lo deja pasar",
+        "Avisa sin verificar"
+      ],
+      "fuentes": [
+        "AVD"
+      ]
+    },
+    {
+      "id": "ISD-049",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Versión preliminar con limitaciones",
+      "question_text": "Háblame de una vez que tuviste que entregar una versión preliminar de un modelo o análisis. ¿Cómo comunicaste sus limitaciones?",
+      "expected_star_focus": "Decide un alcance acotado, documenta limitaciones y riesgos, acuerda un plan de mejora y le da seguimiento.",
+      "repreguntas": [
+        "¿Qué limitación era la más importante?",
+        "¿Se cumplió el plan de mejora?"
+      ],
+      "senales_de_alerta": [
+        "Oculta limitaciones",
+        "Nunca mejora la versión"
+      ],
+      "fuentes": [
+        "AVD"
+      ]
+    },
+    {
+      "id": "ISD-050",
+      "career_code": "ISD",
+      "category": "tecnica_aplicada",
+      "seniority_level": "Junior / Intern",
+      "competency": "Del notebook a producción",
+      "question_text": "Cuéntame de una vez que preparaste un modelo o análisis para que lo usaran otras personas o sistemas. ¿Qué tuviste que cambiar respecto a tu notebook?",
+      "expected_star_focus": "Reproducibilidad, empaquetado, pruebas, métricas de operación (latencia, costo) y monitoreo después de entregarlo.",
+      "repreguntas": [
+        "¿Qué falló cuando otra persona lo corrió?",
+        "¿Cómo lo monitorearon después?"
+      ],
+      "senales_de_alerta": [
+        "Entrega el notebook tal cual",
+        "Sin monitoreo"
+      ],
+      "fuentes": [
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-051",
+      "career_code": "ISD",
+      "category": "resolucion_problemas",
+      "seniority_level": "Junior / Intern",
+      "competency": "Elegir entre enfoques",
+      "question_text": "Platícame de una vez que tuviste que elegir entre varios modelos o métodos. ¿Cómo compararon las opciones?",
+      "expected_star_focus": "Criterios explícitos (métrica, interpretabilidad, costo), validación justa contra una línea base y decisión justificada.",
+      "repreguntas": [
+        "¿Cuál era tu línea base?",
+        "¿Qué opción descartaste y por qué?"
+      ],
+      "senales_de_alerta": [
+        "Elige el más complejo por moda",
+        "Sin línea base"
+      ],
+      "fuentes": [
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-052",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Cuando no hacía falta ML",
+      "question_text": "Cuéntame de una vez que concluiste que una solución sencilla bastaba y no hacía falta un modelo de machine learning.",
+      "expected_star_focus": "Evalúa el problema y los datos con honestidad, compara contra reglas o estadística simple y convence a quien quería ML.",
+      "repreguntas": [
+        "¿Quién quería usar ML y cómo lo convenciste?",
+        "¿Cómo mediste que lo simple bastaba?"
+      ],
+      "senales_de_alerta": [
+        "Usa ML siempre",
+        "No compara contra algo simple"
+      ],
+      "fuentes": [
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-053",
+      "career_code": "ISD",
+      "category": "resolucion_problemas",
+      "seniority_level": "Junior / Intern",
+      "competency": "Restricciones de cómputo, tiempo o datos",
+      "question_text": "Háblame de una vez que tuviste poco cómputo, tiempo o datos para un proyecto. ¿Qué compromisos hiciste?",
+      "expected_star_focus": "Cuantifica el trade-off, elige técnicas acordes a la restricción, comunica la decisión y dice qué revisaría si cambian las condiciones.",
+      "repreguntas": [
+        "¿Qué perdiste en calidad?",
+        "¿Qué harías con más recursos?"
+      ],
+      "senales_de_alerta": [
+        "No reconoce el compromiso",
+        "Sin resultado"
+      ],
+      "fuentes": [
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-054",
+      "career_code": "ISD",
+      "category": "resolucion_problemas",
+      "seniority_level": "Junior / Intern",
+      "competency": "Falla en un pipeline de datos",
+      "question_text": "Cuéntame de una vez que un pipeline o proceso de datos falló. ¿Cómo encontraste el problema y qué hiciste para que no se repitiera?",
+      "expected_star_focus": "Prioriza la investigación, usa logs o monitoreo, encuentra la causa raíz, corrige, valida y agrega prevención.",
+      "repreguntas": [
+        "¿Cómo te enteraste de la falla?",
+        "¿Qué alerta agregaste?"
+      ],
+      "senales_de_alerta": [
+        "Corre de nuevo y ya",
+        "Sin causa raíz"
+      ],
+      "fuentes": [
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-055",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Aprender una técnica nueva rápido",
+      "question_text": "Platícame de una técnica o herramienta de datos que tuviste que aprender rápido para un proyecto. ¿Cómo lo hiciste?",
+      "expected_star_focus": "Aprendizaje autodirigido con fuentes confiables, verificación de lo aprendido y aplicación en una entrega real.",
+      "repreguntas": [
+        "¿Cómo comprobaste que la estabas usando bien?",
+        "¿Qué recurso te sirvió más?"
+      ],
+      "senales_de_alerta": [
+        "Sin aplicación real",
+        "Aprendió 'viendo un video' y ya"
+      ],
+      "fuentes": [
+        "AVD",
+        "YRD"
+      ]
+    },
+    {
+      "id": "ISD-056",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Datos personales o sensibles",
+      "question_text": "Cuéntame de un proyecto con datos personales o sensibles. ¿Qué hiciste para protegerlos?",
+      "expected_star_focus": "Minimiza y anonimiza datos, controla accesos, considera regulación y consentimiento, y lo documenta.",
+      "repreguntas": [
+        "¿Qué dato decidiste no usar?",
+        "¿Quién podía ver los datos?"
+      ],
+      "senales_de_alerta": [
+        "No considera la privacidad",
+        "Comparte datos sin control"
+      ],
+      "fuentes": [
+        "YRD",
+        "DER"
+      ]
+    },
+    {
+      "id": "ISD-057",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Visualización o métrica engañosa",
+      "question_text": "Háblame de una vez que una gráfica o una métrica estaba dando una impresión equivocada. ¿Cómo lo corregiste?",
+      "expected_star_focus": "Detecta el engaño (escala, agregación, promedio que oculta segmentos), lo explica y propone una visualización o métrica honesta.",
+      "repreguntas": [
+        "¿Quién iba a tomar una decisión con eso?",
+        "¿Qué métrica propusiste?"
+      ],
+      "senales_de_alerta": [
+        "Lo deja así porque 'se ve bien'",
+        "No explica el problema"
+      ],
+      "fuentes": [
+        "AVD",
+        "DER"
+      ]
+    },
+    {
+      "id": "ISD-058",
+      "career_code": "ISD",
+      "category": "conductual_star",
+      "seniority_level": "Junior / Intern",
+      "competency": "Enseñar un concepto de datos",
+      "question_text": "Cuéntame de una vez que le enseñaste a alguien un concepto de datos o de machine learning. ¿Cómo supiste que lo aprendió?",
+      "expected_star_focus": "Adapta la explicación a la persona, usa ejemplos prácticos, verifica el aprendizaje y deja recursos para después.",
+      "repreguntas": [
+        "¿Qué fue lo que más le costó?",
+        "¿Qué hizo esa persona después?"
+      ],
+      "senales_de_alerta": [
+        "Explica con jerga",
+        "No verifica"
+      ],
+      "fuentes": [
+        "YRD"
+      ]
+    }
+  ]
+}

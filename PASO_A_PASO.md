@@ -23,6 +23,19 @@ El script levanta todo, instala la protección anti-secretos de git, te dice qu�
 
 ---
 
+## Entrenar y medir a los agentes (v0.6.0)
+
+Lee primero `research/metodo_star.md`. Luego:
+
+1. **Mide al agente real con tus llaves** (≈ 24 llamadas, centavos):
+   ```bash
+   python scripts/evaluar_evaluador.py --modo llm --rubrica indicadores
+   python scripts/evaluar_evaluador.py --modo llm --rubrica holistico   # para comparar con el método anterior
+   ```
+2. **Consigue calificaciones humanas:** sigue `datos/golden/LEEME.md` (2 o 3 personas calificando con la misma rúbrica).
+3. **Vuelve a medir** con `--golden tu_archivo.csv`. La meta (RN-07) es kappa ≥ 0.75.
+4. Revisa las respuestas con más diferencia (el script las lista) y ajusta la rúbrica o los ejemplos de `backend/app/data/`. Repite.
+
 ## Si algo falla
 
 | Lo que ves | Qué hacer |

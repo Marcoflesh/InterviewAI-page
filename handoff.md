@@ -83,7 +83,14 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - **Parámetros** (`.env` opcional): `QUESTION_PREFETCH_AHEAD=2`, `FIRST_QUESTION_WAIT_SECONDS=4`, `NEXT_QUESTION_WAIT_SECONDS=2`, `REPORT_EVALUATION_WAIT_SECONDS=30`.
 - **Repreguntas** (`allow_followups`): siguen por el grafo de LangGraph de forma síncrona porque dependen de la evaluación.
 
-## 11. Próximos pasos inmediatos
+## 11. `v0.6.0` — Investigación y calibración de agentes (30/10/2026)
+
+- **Investigación**: `research/metodo_star.md`. Reddit, Stack Exchange, Hacker News y el sitio original del Tech Interview Handbook estaban bloqueados desde el entorno; se usaron compilaciones citadas.
+- **Datos** (en `backend/app/data/`, entran a la imagen de Docker): `preguntas_software.json` (58), `rubrica_star.json` (30 indicadores), `ejemplos_fewshot.json` (3), `calibracion_star.jsonl` (24, sintético).
+- **Evaluador**: modo `indicadores` por defecto; acepta también el JSON anterior (`star_*`). En modo indicadores el tope "analizador + 2" está desactivado porque el analizador subestima respuestas excelentes; el bloqueo de inyección sigue activo.
+- **Siguiente paso de mayor impacto**: golden dataset humano (`datos/golden/LEEME.md`) y correr el arnés con IA real.
+
+## 12. Próximos pasos inmediatos
 
 1. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
 2. Pegar los resultados reales de `stress_test_agents.py` en `PRUEBAS.md` §5 y decidir viabilidad con los criterios ahí definidos.

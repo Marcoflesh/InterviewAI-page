@@ -4,6 +4,16 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.6.0] - 2026-10-30 — Investigación STAR, banco de preguntas y calibración de agentes`
+
+* **`research/metodo_star.md` (nuevo)**: origen (entrevista conductual, DDI Targeted Selection), evidencia de validez (McDaniel et al. 1994; escalas ancladas), estructura STAR/STARR/CAR, señales de respuestas excelentes y de alerta, y prácticas de LLM-as-judge (Zheng et al. 2023; Arize). Fuentes citadas.
+* **`backend/app/data/preguntas_software.json` (nuevo)**: 58 preguntas conductuales nuevas (36 ITC y 22 ISD) con competencia, qué muestra una buena respuesta, repreguntas, señales de alerta y fuentes. **`services/question_seed.py`**: se cargan solas al arrancar, sin duplicar. **`question_selector.py`**: cada entrevista abre con una pregunta amplia y mezcla ~50 % conductuales y ~50 % técnicas sin repetir competencia.
+* **`backend/app/data/rubrica_star.json` y `agents/rubric.py` (nuevos)**: rúbrica analítica de 30 indicadores sí/no (5 por dimensión); la calificación es el número de indicadores cumplidos; el modelo cita evidencia antes de decidir; 3 ejemplos resueltos en el prompt (`ejemplos_fewshot.json`). `EVALUATOR_RUBRIC_MODE=indicadores|holistico`.
+* **`backend/app/data/calibracion_star.jsonl` (nuevo)**: 24 respuestas sintéticas etiquetadas por indicador (excelente a nula y 7 trampas), marcadas como no validadas por humanos.
+* **`scripts/evaluar_evaluador.py` (nuevo)**: QWK, MAE y % dentro de ±1 por dimensión, acuerdo entre humanos y casos con mayor diferencia. **`datos/golden/`**: plantilla y guía para calificación humana.
+* **Hallazgo medido**: el analizador local no cumple la meta (QWK 0.36–0.74, MAE 0.99; subestima excelentes y sobrevalora relleno). En modo rúbrica ya no limita a la IA; se conserva el bloqueo de inyección.
+* **Pruebas**: 49 pytest (10 nuevas). Vinculado a **RN-07**, **RN-08**, **RF-08 a RF-10**.
+
 ### `[v0.5.0] - 2026-10-30 — Respuesta inmediata del entrevistador, sin emojis y preguntas humanizadas`
 
 * **Causa de la lentitud**: cada turno llamaba en serie al Agente Evaluador (Gemini) y luego al Entrevistador (GPT) antes de responder: 4–8 s por turno.

@@ -78,6 +78,14 @@ def _report_database_state() -> None:
     state = check_database()
     if state["ok"]:
         logger.info("Base de datos lista.")
+        try:
+            from app.database import SessionLocal
+            from app.services.question_seed import seed_question_bank
+
+            with SessionLocal() as db:
+                seed_question_bank(db)
+        except Exception:
+            logger.exception("No se pudo cargar el banco de preguntas investigado")
     else:
         logger.error("PROBLEMA CON LA BASE DE DATOS [%s]: %s", state["code"], state["detail"])
 

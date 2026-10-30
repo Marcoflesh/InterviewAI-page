@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 import logging
 
 from app import llm
+from app.agents import rubric
 from app.config import settings
 from app.agents.state import InterviewGraphState
 
@@ -405,7 +406,13 @@ def _parse_llm_json(raw: str) -> Optional[Dict[str, Any]]:
             data = json.loads(match.group(0))
         except Exception:
             return None
-    if not isinstance(data, dict) or not set(_DIMENSIONS).issubset(data.keys()):
+    if not isinstance(data, dict):
+        return None
+    # Formato nuevo: indicadores de la rúbrica analítica -> calificación = indicadores cumplidos
+    from_rubric = rubric.parse_indicator_payload(data)
+    if from_rubric is not None:
+        return from_rubric
+    if not set(_DIMENSIONS).issubset(data.keys()):
         return None
     try:
         out = {k: max(0, min(5, int(round(float(data[k]))))) for k in _DIMENSIONS}
@@ -421,12 +428,16 @@ def _call_configured_llm_agent(user_prompt: str) -> Optional[Dict[str, Any]]:
     Agente Evaluador: usa EVALUATOR_PROVIDER (gemini por defecto -> gemini-3.8-flash) y,
     si falla, los demás proveedores configurados. Devuelve el JSON validado o None.
     """
+    if (settings.EVALUATOR_RUBRIC_MODE or "indicadores").lower() == "indicadores":
+        system, max_tokens = rubric.build_system_prompt() + INJECTION_GUARD, 2000
+    else:
+        system, max_tokens = EVALUATOR_SYSTEM_PROMPT + INJECTION_GUARD, 1200
     result = llm.complete(
         user_prompt,
         preferred=settings.EVALUATOR_PROVIDER,
-        system=EVALUATOR_SYSTEM_PROMPT + INJECTION_GUARD,
+        system=system,
         json_mode=True,
-        max_tokens=1200,
+        max_tokens=max_tokens,
     )
     if not result:
         return None
@@ -448,7 +459,8 @@ INJECTION_PATTERNS = re.compile(
 )
 
 
-def _apply_guardrail(llm_eval: Dict[str, Any], baseline: Dict[str, Any], response_text: str = "") -> bool:
+def _apply_guardrail(llm_eval: Dict[str, Any], baseline: Dict[str, Any], response_text: str = "",
+                     cap_with_baseline: bool = True) -> bool:
     """
     Calibra la calificación del LLM con el analizador determinista:
     1) Si la respuesta intenta dar órdenes al evaluador (inyección), cada dimensión queda en máximo 1.
@@ -462,7 +474,7 @@ def _apply_guardrail(llm_eval: Dict[str, Any], baseline: Dict[str, Any], respons
         if injected and llm_eval[k] > 1:
             llm_eval[k] = 1
             applied = True
-        elif llm_eval[k] >= base + 3:
+        elif cap_with_baseline and llm_eval[k] >= base + 3:
             llm_eval[k] = base + 2
             applied = True
     return applied
@@ -504,7 +516,11 @@ def evaluate_candidate_turn_node(state: InterviewGraphState) -> Dict[str, Any]:
     parsed = _call_configured_llm_agent(user_prompt)
     if parsed and not parsed.get("_invalid_json"):
         source = parsed.pop("_source")
-        guardrail = _apply_guardrail(parsed, baseline, candidate_response)
+        # Con la rúbrica de indicadores NO se limita con el analizador local: en la calibración
+        # (scripts/evaluar_evaluador.py) subestima respuestas excelentes (5 -> ~2.8). Solo se
+        # conserva el bloqueo de inyección de prompt.
+        holistic = (settings.EVALUATOR_RUBRIC_MODE or "indicadores").lower() != "indicadores"
+        guardrail = _apply_guardrail(parsed, baseline, candidate_response, cap_with_baseline=holistic)
         eval_data = parsed
     elif parsed and parsed.get("_invalid_json"):
         json_valid = False

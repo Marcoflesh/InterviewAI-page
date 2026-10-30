@@ -26,6 +26,7 @@ El workflow `.github/workflows/pages.yml` publica `frontend/` en `https://marcof
 | [`PASO_A_PASO.md`](./PASO_A_PASO.md) | Lo que tienes que hacer tú: llaves, Google Sign-In, Docker, pruebas y Pages. |
 | [`GUIA_CONFIGURACION_APIS.md`](./GUIA_CONFIGURACION_APIS.md) | Qué modelo usa cada agente y dónde se configura. |
 | [`SEGURIDAD.md`](./SEGURIDAD.md) | Auditoría de seguridad y anonimato. |
+| [`research/metodo_star.md`](./research/metodo_star.md) | Investigación del método STAR, banco de preguntas y cómo se calibra a los agentes. |
 | [`PRUEBAS.md`](./PRUEBAS.md) | Resultados de pruebas automáticas, de navegador, de carga y de los agentes. |
 | [`roadmap.md`](./roadmap.md) · [`handoff.md`](./handoff.md) · [`traceability.md`](./traceability.md) | Evolución, continuidad técnica y trazabilidad con el SRS. |
 

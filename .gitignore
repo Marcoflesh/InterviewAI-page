@@ -25,3 +25,4 @@ ollamadata/
 .vscode/
 *.zip
 stress_results*.json
+resultados_evaluador_*.json

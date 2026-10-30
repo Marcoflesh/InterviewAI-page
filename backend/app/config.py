@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     EVALUATOR_PROVIDER: str = "gemini"      # gemini | openai | ollama
     INTERVIEWER_PROVIDER: str = "openai"    # openai | gemini | ollama
     LLM_TIMEOUT_SECONDS: float = 20.0
+    # indicadores = rúbrica analítica de 30 criterios (recomendado) | holistico = 0-5 directo (v0.4)
+    EVALUATOR_RUBRIC_MODE: str = "indicadores"
     # Cuánto esperar a que el Agente Entrevistador termine de redactar una pregunta
     # antes de mostrar la del banco (que ya está bien escrita).
     FIRST_QUESTION_WAIT_SECONDS: float = 4.0
