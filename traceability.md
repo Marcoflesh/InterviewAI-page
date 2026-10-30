@@ -4,6 +4,14 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.11.0] - 2026-10-30 — Pages sin alerta de phishing y guía de Google OAuth`
+
+* **Incidentes**: (1) Chrome mostraba "Dangerous site" en `marcoflesh.github.io/InterviewAI-page/` para otras personas; (2) Google Sign-In respondía `Error 400: origin_mismatch`.
+* **Causa probable de (1)**: sitio `github.io` nuevo cuya primera pantalla pedía correo y contraseña junto a un botón "Iniciar sesión con Google" **dibujado a mano con el logo de Google** (patrón típico de phishing).
+* **`frontend/index.html` / `app.js`**: se eliminó el botón de Google hecho a mano (solo queda el oficial de Google Identity Services); la versión pública sin servidor entra **como invitado solo con el nombre** (sin contraseña ni correo); los formularios de cuenta van en `<template>` y solo se insertan con servidor (localhost o `?local=1`); texto de presentación, `meta description` y pie con enlace al código. **`pages.yml`**: variable opcional `GOOGLE_SITE_VERIFICATION` para verificar el sitio en Search Console y pedir la revisión.
+* **(2)**: se documenta que los orígenes OAuth solo se editan en la consola (no hay `gcloud`), con enlaces directos, y la publicación de la pantalla de consentimiento.
+* **Pruebas**: simulación de Pages (HTML sin campos de contraseña fuera de `<template>`, sin logo de Google), modo invitado y `?local=1` completos, Docker local completo, 0 errores JS; 67 pytest.
+
 ### `[v0.10.0] - 2026-10-30 — Listo para GitHub Pages`
 
 * **Ollama confirmado en la máquina del usuario** (`ollama 0.40.13`, `qwen3.5:4b` descargado).

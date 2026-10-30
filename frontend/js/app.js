@@ -1092,7 +1092,7 @@ function setLoggedInUser(userObj) {
   const badge = document.getElementById("user-badge");
   const avatar = document.getElementById("user-avatar-chip");
   if (badge) {
-    badge.textContent = `${userObj.full_name} (${userObj.email})`;
+    badge.textContent = userLabel(userObj);
   }
   if (avatar) {
     const initials = (userObj.full_name || "U")
@@ -1105,6 +1105,8 @@ function setLoggedInUser(userObj) {
   }
 
   // Limpiar campos de login/registro
+  const guestInput = document.getElementById("guest-name");
+  if (guestInput) guestInput.value = "";
   ["login-email", "login-password", "login-name", "reg-email", "reg-university", "reg-password"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";
@@ -1299,10 +1301,36 @@ async function initOfficialGoogleVerifier() {
         text: "signin_with",
         locale: "es"
       });
-      const fallbackBtn = document.getElementById("btn-google-login");
-      if (fallbackBtn) fallbackBtn.classList.add("hidden");
     }
   }
+}
+
+// Nombre visible del usuario (los invitados no tienen correo real).
+function userLabel(u) {
+  if (!u) return "";
+  return u.guest ? `${u.full_name} (invitado)` : `${u.full_name} (${u.email})`;
+}
+
+// Versión pública sin servidor: entra solo con el nombre, sin contraseña ni correo.
+function handleGuestStart() {
+  const name = (document.getElementById("guest-name").value || "").trim().replace(/\s+/g, " ").slice(0, 60);
+  if (name.length < 2) {
+    showAuthFeedback("Escribe tu nombre para empezar.");
+    return;
+  }
+  const slug = normalizeStr(name).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "invitado";
+  setLoggedInUser({ full_name: name, email: `invitado-${slug}@este-navegador`, university: "", guest: true });
+}
+
+// Con servidor se muestran las cuentas reales (registro, contraseña y Google).
+function showAccountForms() {
+  const slot = document.getElementById("account-forms-slot");
+  const tpl = document.getElementById("tpl-account-forms");
+  if (slot && tpl && !slot.firstElementChild) slot.appendChild(tpl.content.cloneNode(true));
+  const guest = document.getElementById("guest-panel");
+  if (guest) guest.classList.add("hidden");
+  const google = document.getElementById("google-signin-block");
+  if (google) google.classList.remove("hidden");
 }
 
 function handleGoogleLoginButtonClick() {
@@ -1862,7 +1890,7 @@ function downloadReportPdf() {
       };
 
       writeWrapped("InterviewAI — Reporte Critico de Entrevista y Plan de Accion", 16, true, [24, 24, 27]);
-      writeWrapped(`Candidato: ${userName} (${(appState.user && appState.user.email) || ""})`, 10, false, [107, 114, 128]);
+      writeWrapped(`Candidato: ${userLabel(appState.user)}`, 10, false, [107, 114, 128]);
       writeWrapped(`Puesto y Carrera: ${roleText}`, 10, false, [107, 114, 128]);
       writeWrapped(`Calificacion Global (Escala 0-5): ${scoreText} (${evoText})`, 12, true, [24, 24, 27]);
       y += 8;
@@ -1934,7 +1962,7 @@ async function renderHistoryView() {
   const tbody = document.getElementById("history-tbody");
   const ownerLabel = document.getElementById("history-owner-label");
   if (ownerLabel && appState.user) {
-    ownerLabel.textContent = `Cuenta activa: ${appState.user.full_name} (${appState.user.email})`;
+    ownerLabel.textContent = `Cuenta activa: ${userLabel(appState.user)}`;
   }
   if (!tbody) return;
   showView("view-history");
@@ -2032,14 +2060,19 @@ window.addEventListener("DOMContentLoaded", async () => {
   await migrateLegacyDemoUsers();
   populateCareers();
   await detectBackend();
-  initOfficialGoogleVerifier();
+  if (appState.backendOnline) {
+    showAccountForms();
+    initOfficialGoogleVerifier();
+  }
 
   // Pestañas de autenticación
-  document.getElementById("tab-login").addEventListener("click", () => setAuthTab("login"));
-  document.getElementById("tab-register").addEventListener("click", () => setAuthTab("register"));
-  document.getElementById("btn-submit-login").addEventListener("click", handleLocalLogin);
-  document.getElementById("btn-submit-register").addEventListener("click", handleLocalRegister);
-  document.getElementById("btn-google-login").addEventListener("click", handleGoogleLoginButtonClick);
+  const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+  on("tab-login", "click", () => setAuthTab("login"));
+  on("tab-register", "click", () => setAuthTab("register"));
+  on("btn-submit-login", "click", handleLocalLogin);
+  on("btn-submit-register", "click", handleLocalRegister);
+  on("btn-guest-start", "click", handleGuestStart);
+  on("guest-name", "keydown", (e) => { if (e.key === "Enter") handleGuestStart(); });
 
   // Configuración y Chat
   document.getElementById("btn-start-interview").addEventListener("click", startInterview);

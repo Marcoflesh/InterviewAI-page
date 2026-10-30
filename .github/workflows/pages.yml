@@ -3,6 +3,8 @@
 # Variables opcionales (Settings > Secrets and variables > Actions > Variables):
 #   API_BASE_URL     -> URL https de tu backend desplegado (vacío = "Modo demo")
 #   GOOGLE_CLIENT_ID -> Client ID público de Google Sign-In
+#   GOOGLE_SITE_VERIFICATION -> código de Search Console (método "Etiqueta HTML"), para pedir
+#                               la revisión si Chrome marca el sitio como peligroso
 # Nunca pongas OPENAI_API_KEY ni GEMINI_API_KEY aquí: el navegador las expondría.
 name: Deploy frontend to GitHub Pages
 
@@ -33,6 +35,7 @@ jobs:
         env:
           API_BASE_URL: ${{ vars.API_BASE_URL }}
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
         run: |
           python3 - <<'PY'
           import json, os
@@ -44,6 +47,11 @@ jobs:
           open("frontend/js/config.js", "w").write(
               "// Generado por pages.yml (configuración pública, sin secretos)\n"
               f"window.INTERVIEWAI_CONFIG = {json.dumps(cfg)};\n")
+          code = re.sub(r"[^A-Za-z0-9_-]", "", os.environ.get("GOOGLE_SITE_VERIFICATION", ""))
+          if code:
+              html = open("frontend/index.html", encoding="utf-8").read()
+              tag = f'<meta name="google-site-verification" content="{code}" />'
+              open("frontend/index.html", "w", encoding="utf-8").write(html.replace("<head>", "<head>\n  " + tag, 1))
           PY
           rm -f frontend/nginx.conf
       - uses: actions/configure-pages@v5

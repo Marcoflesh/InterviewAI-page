@@ -148,7 +148,13 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - `main.py` `security_headers`: `Access-Control-Allow-Private-Network: true` en OPTIONS de orígenes permitidos (Chrome Local Network Access).
 - Pages sigue sin activarse: es el único paso pendiente y solo lo puede hacer el dueño del repo.
 
-## 22. Próximos pasos inmediatos
+## 22. `v0.11.0` — Safe Browsing y OAuth (30/10/2026)
+
+- Pages quedó publicado por el usuario y Chrome lo marcó como peligroso para otras personas. Se quitó todo lo que parece phishing en la versión pública (contraseñas, logo de Google dibujado). Falta la revisión de Google (`report_error` y/o Search Console con `GOOGLE_SITE_VERIFICATION`).
+- `origin_mismatch`: falta `https://marcoflesh.github.io` en el cliente OAuth; solo se puede en la consola.
+- Invitados: `appState.user.guest = true`, correo interno `invitado-<nombre>@este-navegador` solo como llave del historial local; `userLabel()` lo oculta.
+
+## 23. Próximos pasos inmediatos
 
 1. Usuario: seguir "Actualizar a la versión con Ollama + Gemini" de `PASO_A_PASO.md` y pegar la salida de `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web`.
 2. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).

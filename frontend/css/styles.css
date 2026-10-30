@@ -442,3 +442,9 @@ button:disabled { opacity: 0.55; cursor: progress; }
 }
 @keyframes typing-pulse { 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .msg-typing { animation: none; } }
+
+/* Pantalla de entrada */
+.intro { font-size: 0.88rem; color: var(--muted); margin: -0.6rem 0 1.1rem; line-height: 1.45; }
+.note { font-size: 0.76rem; color: var(--muted); margin-top: 0.6rem; }
+.site-footer { text-align: center; font-size: 0.75rem; color: var(--muted); padding: 1.5rem 1rem 2rem; }
+.site-footer a { color: inherit; }

@@ -1,4 +1,4 @@
-# Paso a Paso — InterviewAI (`v0.10.0`)
+# Paso a Paso — InterviewAI (`v0.11.0`)
 
 ## Ver tus entrevistas pasadas (v0.8.0)
 
@@ -132,16 +132,16 @@ Formatos: OpenAI `sk-…` (no `key_…`, que es solo el ID), Gemini `AQ.…` o `
 
 ## Paso 3 — Arreglar "Iniciar sesión con Google"
 
-Estas eran las causas del error. Revisa todas:
+Estas eran las causas del error. Revisa todas. **No se puede hacer desde Cloud Shell ni `gcloud`**: Google solo deja editar los orígenes de un cliente OAuth web desde la consola.
 
-1. **Orígenes autorizados.** Google Cloud Console → *APIs y servicios → Credenciales* → tu cliente OAuth tipo **Aplicación web** → *Orígenes autorizados de JavaScript*. Agrega **los tres**:
+1. **Orígenes autorizados** (corrige `Error 400: origin_mismatch`). https://console.cloud.google.com/auth/clients → elige el proyecto → clic en el cliente que termina en `…avobo5kt8llvuo7tsopufgn27ejfunb9.apps.googleusercontent.com` → *Orígenes autorizados de JavaScript* → **Agregar URI**. Agrega **los tres**, sin `/` al final y sin `/InterviewAI-page`:
    - `http://localhost`
    - `http://localhost:3000`
    - `https://marcoflesh.github.io`
 
    Google exige `http://localhost` **además** del que lleva puerto. Los cambios tardan de 5 minutos a unas horas.
 2. **Abre la página siempre en `http://localhost:3000`.** No funciona con doble clic sobre `index.html` (`file://`), ni con Live Server de VS Code (`:5500`), ni con `127.0.0.1` (salvo que también lo agregues).
-3. **Pantalla de consentimiento.** Si la app está en modo *Prueba*, agrega tu correo en *Usuarios de prueba* o publícala.
+3. **Pantalla de consentimiento.** https://console.cloud.google.com/auth/audience → si dice *Prueba*, solo entran los correos de *Usuarios de prueba*. Para que entre cualquiera, **Publicar app** (con permisos básicos de nombre y correo no requiere verificación de Google). Las cuentas `@tec.mx` dependen además de lo que permita el administrador del Tec; si las bloquea, usa una cuenta Gmail.
 4. **Mismo Client ID en todos lados.** El `GOOGLE_CLIENT_ID` de `.env` es el que usa el backend para validar y el que recibe el frontend. Si cambias de cliente, reinicia Docker.
 5. **Reloj sincronizado.** Si el error dice "hora desfasada", sincroniza la hora de Windows/Mac y reinicia Docker Desktop.
 
@@ -181,6 +181,14 @@ python scripts/load_test_backend.py --users 20 --turns 5   # con Docker encendid
 
 Copia la salida en `PRUEBAS.md` (sección 5) y compárala con los criterios de viabilidad que están ahí.
 
+## Si Chrome dice "Dangerous site" / "Sitio peligroso" (v0.11.0)
+
+Google Safe Browsing marcó la página como posible phishing: era un sitio `github.io` nuevo que pedía correo, contraseña y tenía un botón de Google dibujado a mano. Desde `v0.11.0` la versión pública **no pide contraseñas** (se entra solo con el nombre) y solo usa el botón oficial de Google cuando hay servidor. Falta que Google lo revise:
+
+1. **Reporte rápido (sin cuenta extra):** https://safebrowsing.google.com/safebrowsing/report_error/?hl=es → URL `https://marcoflesh.github.io/InterviewAI-page/` → explica: *"Proyecto escolar de código abierto (github.com/Marcoflesh/InterviewAI-page). Simulador de entrevistas; no pide contraseñas ni datos de pago. Se quitó el formulario de acceso de la versión pública."*
+2. **Revisión oficial (recomendada):** https://search.google.com/search-console → *Agregar propiedad* → **Prefijo de URL** `https://marcoflesh.github.io/InterviewAI-page/` → método **Etiqueta HTML** → copia solo el código de `content="…"` → en GitHub: *Settings → Secrets and variables → Actions → Variables → New variable* `GOOGLE_SITE_VERIFICATION` = ese código → *Actions → Deploy frontend to GitHub Pages → Run workflow* → en Search Console **Verificar** → *Seguridad y acciones manuales → Problemas de seguridad* → **Solicitar una revisión**.
+3. Google tarda alrededor de un día en revisar phishing y hasta 72 h en quitar la alerta.
+
 ## Paso 7 — Publicar en GitHub Pages
 
 **Una sola vez (solo tú puedes, GitHub no deja hacerlo desde fuera):**
@@ -188,7 +196,7 @@ Copia la salida en `PRUEBAS.md` (sección 5) y compárala con los criterios de v
 1. https://github.com/Marcoflesh/InterviewAI-page/settings/pages → *Build and deployment → Source:* **GitHub Actions**.
 2. https://github.com/Marcoflesh/InterviewAI-page/actions/workflows/pages.yml → **Run workflow** → *main* → **Run workflow**. En 1–2 minutos queda en verde.
 3. Abre **https://marcoflesh.github.io/InterviewAI-page/**.
-4. Para Google Sign-In en Pages: en Google Cloud Console (Paso 3) agrega el origen `https://marcoflesh.github.io` si no está.
+4. Para Google Sign-In con `?local=1`: en Google Cloud Console (Paso 3) agrega el origen `https://marcoflesh.github.io`. Si no, Google responde **Error 400: origin_mismatch**. En la versión pública sin servidor no aparece el botón de Google (se entra como invitado).
 
 Desde ahí, cada push que cambie `frontend/` vuelve a publicar solo.
 

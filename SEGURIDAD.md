@@ -27,6 +27,7 @@ Leyenda de severidad: 🔴 Crítica · 🟠 Alta · 🟡 Media · 🟢 Baja
 | 15 | 🟠 | Las llaves nuevas de Gemini (`AQ.…`) se habrían rechazado por formato, y en `v0.3.0` se enviaban en la URL, donde Google responde 404. | `v0.4.1` acepta `AQ.` y `AIza`, siempre por header. `check_apis.py` detecta también cuando se pega el ID de OpenAI (`key_…`) en lugar de la llave. |
 | 16 | 🟡 | Nada impedía commitear el `.env` localmente si se modificaba el `.gitignore`. | `scripts/install_git_hooks.sh` (pre-commit) y `push_to_github.sh` bloquean `.env` y patrones de llaves; regla de gitleaks para `AQ.`. `.env` con permisos `600`. |
 | 17 | 🟡 | El historial guardaba en `localStorage` la misma entrevista varias veces y, en modo demo, el texto completo de las respuestas. (`v0.8.0`) | Con servidor, el navegador solo guarda el resumen (fecha, puesto, puntaje); la conversación se pide a `GET /api/sessions/{id}/detail`, que exige token y responde 404 si la entrevista es de otra persona. Duplicados eliminados. |
+| 19 | 🟠 | La versión pública en GitHub Pages pedía correo y contraseña y tenía un botón de Google dibujado a mano: Chrome la marcó como sitio peligroso (phishing). (`v0.11.0`) | La versión pública entra como invitado (solo nombre); el botón de Google es solo el oficial y solo aparece con servidor; formularios de cuenta en `<template>` fuera de la versión pública. |
 | 18 | 🟡 | La página (puerto 3000) quedaba abierta a toda la red local. (`v0.8.0`) | Ligada a `127.0.0.1` como la BD, el backend y Ollama. |
 
 ## 2. Anonimato y datos personales

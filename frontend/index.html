@@ -6,6 +6,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.googleusercontent.com; frame-src https://accounts.google.com/gsi/; connect-src 'self' https: http://localhost:8000 http://127.0.0.1:8000; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <title>InterviewAI — Simulador de Entrevistas</title>
+  <meta name="description" content="Simulador de entrevistas de trabajo para estudiantes con retroalimentación basada en el método STAR. Proyecto escolar de código abierto." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -38,6 +39,21 @@
     <div class="card login-card">
       <h1 style="font-size: 1.35rem; font-weight: 600; margin-bottom: 1.2rem;">Bienvenido a InterviewAI</h1>
 
+      <p class="intro">Practica entrevistas de trabajo por escrito y recibe retroalimentación con el método STAR. Proyecto escolar de código abierto.</p>
+
+      <!-- Versión pública (sin servidor): sin cuentas ni contraseñas; todo se queda en este navegador. -->
+      <div id="guest-panel">
+        <div class="field">
+          <label for="guest-name">¿Cómo te llamas?</label>
+          <input id="guest-name" type="text" value="" placeholder="Tu nombre" autocomplete="off" maxlength="60" />
+        </div>
+        <button id="btn-guest-start" type="button" class="btn btn-primary" style="width: 100%; padding: 0.7rem;">Empezar práctica</button>
+        <p class="note">Versión de prueba: no se piden contraseñas y tus respuestas se quedan en tu navegador.</p>
+      </div>
+
+      <!-- Con servidor (localhost o ?local=1): cuentas reales. Se insertan desde esta plantilla. -->
+      <div id="account-forms-slot"></div>
+      <template id="tpl-account-forms">
       <!-- Pestañas: Iniciar Sesión vs. Registrar -->
       <div class="auth-tabs" role="tablist">
         <button id="tab-login" type="button" class="auth-tab active">Iniciar sesión</button>
@@ -82,21 +98,15 @@
         </button>
       </div>
 
+      </template>
+
       <p id="auth-feedback" class="hidden" style="font-size: 0.8rem; margin-top: 0.75rem;"></p>
 
-      <div class="divider">o</div>
-
-      <!-- Contenedor oficial de Google Identity Services + Botón OAuth 2.0 de Google -->
-      <div id="google-gsi-button-container" style="display: flex; justify-content: center; margin-bottom: 0.35rem;"></div>
-      <button id="btn-google-login" type="button" class="btn btn-google">
-        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </svg>
-        <span>Iniciar sesión con Google</span>
-      </button>
+      <div id="google-signin-block" class="hidden">
+        <div class="divider">o</div>
+        <!-- Botón oficial de Google Identity Services (lo dibuja Google, no esta página) -->
+        <div id="google-gsi-button-container" style="display: flex; justify-content: center; margin-bottom: 0.35rem;"></div>
+      </div>
     </div>
   </main>
 
@@ -277,6 +287,11 @@
       </table>
     </div>
   </section>
+
+  <footer class="site-footer no-print">
+    InterviewAI · proyecto escolar de código abierto ·
+    <a href="https://github.com/Marcoflesh/InterviewAI-page" rel="noopener noreferrer" target="_blank">código en GitHub</a>
+  </footer>
 
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>

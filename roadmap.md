@@ -41,7 +41,8 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 - [x] **`v0.8.4`**: Ollama `latest` + reintento automático ante el error 412.
 - [x] **`v0.9.0`**: calificación según lo que pide cada pregunta (no siempre STAR completo), retroalimentación enfocada y detección de respuestas hipotéticas; set `pruebas_enfoque.json`.
 - [x] **`v0.10.0`**: listo para GitHub Pages (modo demo para todos y `?local=1` con el backend de tu computadora); verificado con simulación de Pages.
-- [ ] **Usuario**: activar Pages (Settings → Pages → GitHub Actions) y correr el workflow.
+- [x] **`v0.11.0`**: versión pública sin contraseñas ni botón de Google imitado (alerta "Dangerous site"); guía de `origin_mismatch`.
+- [ ] **Usuario**: pedir revisión de Safe Browsing y agregar `https://marcoflesh.github.io` a los orígenes OAuth.
 - [ ] **Siguiente**: correr `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web` y `--conjunto bd --guardar-en-bd` con Gemini en la computadora del usuario y registrar los resultados aquí.
 
 ---
