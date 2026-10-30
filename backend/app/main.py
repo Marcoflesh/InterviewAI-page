@@ -11,7 +11,9 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import get_db
+from sqlalchemy.exc import DBAPIError
+
+from app.database import HINTS, check_database, classify_db_error, get_db
 from app.models import (
     Career,
     InterviewSession,
@@ -69,6 +71,15 @@ def _more_worker_threads() -> None:
     anyio.to_thread.current_default_thread_limiter().total_tokens = 100
 
 
+@app.on_event("startup")
+def _report_database_state() -> None:
+    state = check_database()
+    if state["ok"]:
+        logger.info("Base de datos lista.")
+    else:
+        logger.error("PROBLEMA CON LA BASE DE DATOS [%s]: %s", state["code"], state["detail"])
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -78,10 +89,22 @@ async def security_headers(request: Request, call_next):
     return response
 
 
+@app.exception_handler(DBAPIError)
+async def database_error(request: Request, exc: DBAPIError):
+    # Errores de base de datos: explica la causa real y cómo arreglarla (antes: "Error interno").
+    # Manejador específico (no el genérico) para que la respuesta conserve las cabeceras CORS.
+    code = classify_db_error(exc)
+    logger.error("Error de base de datos en %s [%s]: %s", request.url.path, code, getattr(exc, "orig", exc))
+    return JSONResponse(status_code=503, content={"detail": HINTS[code], "code": code})
+
+
 @app.exception_handler(Exception)
 async def unhandled_error(request: Request, exc: Exception):
     logger.exception("Error no controlado en %s", request.url.path)
-    return JSONResponse(status_code=500, content={"detail": "Error interno del servidor."})
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor. Revisa: docker compose logs backend --tail 50"},
+    )
 
 
 def _profile(user: User) -> UserProfileResponse:
@@ -126,9 +149,11 @@ def _get_user(db: Session, user_id: str) -> User:
 
 @app.get("/api/health")
 def health_check():
-    # Solo booleanos: nunca se devuelve ninguna llave.
-    return {
-        "status": "ok",
+    # Solo booleanos y diagnósticos: nunca se devuelve ninguna llave.
+    db_state = check_database()
+    body = {
+        "status": "ok" if db_state["ok"] else "error",
+        "database": db_state,
         "service": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "interviewer": {"provider": settings.INTERVIEWER_PROVIDER, "model": settings.OPENAI_CHAT_MODEL},
@@ -140,6 +165,7 @@ def health_check():
             "ollama": settings.OLLAMA_ENABLED,
         },
     }
+    return body if db_state["ok"] else JSONResponse(status_code=503, content=body)
 
 
 @app.get("/api/auth/google-config")

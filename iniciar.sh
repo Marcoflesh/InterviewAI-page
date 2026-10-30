@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # InterviewAI — arranque "plug and play" (macOS / Linux)
-#   ./iniciar.sh            levanta todo y abre http://localhost:3000
+#   ./iniciar.sh            levanta todo, repara la base de datos si hace falta y abre http://localhost:3000
 #   ./iniciar.sh --reset    borra la base de datos local y empieza limpio
-set -euo pipefail
+set -uo pipefail
 cd "$(dirname "$0")"
 
 command -v docker >/dev/null || { echo "✗ Instala Docker Desktop: https://docs.docker.com/get-docker/"; exit 1; }
@@ -16,31 +16,57 @@ fi
 chmod 600 .env 2>/dev/null || true
 [ -d .git ] && [ ! -f .git/hooks/pre-commit ] && bash scripts/install_git_hooks.sh >/dev/null && echo "✓ Protección anti-secretos para git instalada"
 
+HEALTH=/tmp/interviewai_health.json
+
+levantar() {
+  echo "→ Construyendo y levantando contenedores (la primera vez tarda unos minutos)…"
+  docker compose up --build -d >/dev/null 2>&1 || true   # si la BD falla, se diagnostica abajo
+}
+
+# Devuelve el código de estado de la base de datos: ok | contrasena | esquema_desactualizado | sin_tablas | sin_conexion | sin_backend
+estado_bd() {
+  for _ in $(seq 1 40); do
+    if curl -s -m 5 http://localhost:8000/api/health -o "$HEALTH" 2>/dev/null && [ -s "$HEALTH" ]; then
+      python3 -c "import json;print(json.load(open('$HEALTH')).get('database',{}).get('code','ok'))" 2>/dev/null \
+        || sed -n 's/.*"code":"\([a-z_]*\)".*/\1/p' "$HEALTH"
+      return
+    fi
+    sleep 3
+  done
+  echo "sin_backend"
+}
+
 if [ "${1:-}" = "--reset" ]; then docker compose down -v; fi
+levantar
 
-echo "→ Construyendo y levantando contenedores (la primera vez tarda unos minutos)…"
-docker compose up --build -d
-
-echo -n "→ Esperando al backend"
-for _ in $(seq 1 60); do
-  if curl -fsS http://localhost:8000/api/health >/tmp/interviewai_health.json 2>/dev/null; then
-    echo " ✓"
-    python3 - <<'PY' 2>/dev/null || cat /tmp/interviewai_health.json
-import json
-c = json.load(open("/tmp/interviewai_health.json"))["configured"]
+for intento in 1 2 3; do
+  echo -n "→ Revisando el backend y la base de datos… "
+  codigo="$(estado_bd)"
+  echo "$codigo"
+  case "$codigo" in
+    ok)
+      docker compose up -d >/dev/null 2>&1   # asegura que el frontend también esté arriba
+      python3 - "$HEALTH" <<'PY' 2>/dev/null || true
+import json, sys
+c = json.load(open(sys.argv[1]))["configured"]
 m = lambda b: "✓" if b else "✗"
 print(f"  OpenAI {m(c['openai_key'])} · Gemini {m(c['gemini_key'])} · Google Sign-In {m(c['google_sign_in'])}")
 PY
-    echo "✓ Listo: http://localhost:3000"
-    (open http://localhost:3000 || xdg-open http://localhost:3000) >/dev/null 2>&1 || true
-    exit 0
-  fi
-  echo -n "."; sleep 3
+      echo "✓ Listo: http://localhost:3000"
+      (open http://localhost:3000 || xdg-open http://localhost:3000) >/dev/null 2>&1 || true
+      exit 0 ;;
+    contrasena)
+      echo "→ La base de datos guarda una contraseña anterior. Sincronizándola con tu .env (sin borrar datos)…"
+      docker compose exec -T db sh -s < scripts/db_sync_password.sh && docker compose up -d >/dev/null 2>&1 ;;
+    esquema_desactualizado|sin_tablas)
+      echo "→ La base de datos local se creó con una versión anterior de InterviewAI."
+      read -r -p "  ¿Reiniciarla? Se borran solo las cuentas y entrevistas de prueba locales (s/n): " r
+      if [[ "$r" =~ ^[sSyY] ]]; then docker compose down -v && levantar; else echo "Sin reiniciar no puede funcionar. Saliendo."; exit 1; fi ;;
+    *)
+      echo "✗ El backend no respondió. Últimos logs:"
+      docker compose logs backend --tail 30
+      exit 1 ;;
+  esac
 done
-
-echo " ✗ El backend no respondió. Últimos logs:"
-docker compose logs backend --tail 25
-if docker compose logs backend 2>&1 | grep -q "password authentication failed"; then
-  echo "→ La base de datos tiene una contraseña vieja. Corre: ./iniciar.sh --reset"
-fi
+echo "✗ No se pudo dejar lista la base de datos. Prueba: ./iniciar.sh --reset"
 exit 1

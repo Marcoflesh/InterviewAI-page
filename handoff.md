@@ -61,7 +61,13 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - Arranque en un paso: `iniciar.bat` (Windows) / `iniciar.sh` (macOS/Linux).
 - GitHub Pages: el workflow falla en `configure-pages` hasta que el dueño active *Settings → Pages → Source: GitHub Actions*; la API de GitHub para activarlo no está disponible desde esta sesión.
 
-## 7. Próximos pasos inmediatos
+## 7. Incidente 30/10/2026: "Error interno del servidor" al iniciar sesión (`v0.4.3`)
+
+- **Causa raíz**: volumen `pgdata` creado antes del `.env` nuevo → contraseña desalineada (`password authentication failed`) y/o esquema viejo (sin `users.password_hash`). Reproducido con PostgreSQL 16 en modo scram.
+- **Corrección**: `check_database()` + `/api/health` 503 con diagnóstico + manejador `DBAPIError` + autorreparación en `iniciar.*` vía `scripts/db_sync_password.sh`.
+- **Lección**: el healthcheck debe tocar la base de datos; los errores de BD necesitan un manejador específico para no perder CORS.
+
+## 8. Próximos pasos inmediatos
 
 1. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
 2. Pegar los resultados reales de `stress_test_agents.py` en `PRUEBAS.md` §5 y decidir viabilidad con los criterios ahí definidos.

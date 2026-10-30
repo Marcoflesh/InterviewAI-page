@@ -66,9 +66,14 @@ function apiErrorMessage(result, fallback) {
 
 async function detectBackend() {
   const r = await apiFetch("/api/health", { method: "GET" }, 5000);
-  appState.backendOnline = r.ok && r.data && r.data.status === "ok";
+  // Si el servidor responde (aunque sea con error de base de datos) NO se pasa a modo demo:
+  // se muestra la causa real para que se pueda arreglar.
+  appState.backendOnline = !!(r.data && r.data.service);
   const badge = document.getElementById("mode-badge");
   if (badge) badge.classList.toggle("hidden", appState.backendOnline);
+  if (appState.backendOnline && r.data.database && !r.data.database.ok) {
+    showAuthFeedback("Servidor con problema: " + r.data.database.detail);
+  }
   return appState.backendOnline;
 }
 

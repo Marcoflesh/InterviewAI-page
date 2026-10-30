@@ -1,7 +1,7 @@
 # InterviewAI - arranque "plug and play" (Windows)
 #   Doble clic en iniciar.bat   (o:  powershell -ExecutionPolicy Bypass -File iniciar.ps1 [-Reset])
 param([switch]$Reset)
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 Set-Location $PSScriptRoot
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
@@ -19,28 +19,69 @@ try { icacls .env /inheritance:r /grant:r "$($env:USERNAME):(R,W)" *> $null } ca
 if ((Test-Path .git) -and -not (Test-Path .git\hooks\pre-commit) -and (Get-Command bash -ErrorAction SilentlyContinue)) {
   bash scripts/install_git_hooks.sh *> $null; Write-Host "OK Proteccion anti-secretos para git instalada" }
 
+function Levantar {
+  Write-Host "-> Construyendo y levantando contenedores (la primera vez tarda unos minutos)..."
+  docker compose up --build -d *> $null   # si la BD falla, se diagnostica abajo
+}
+
+# Devuelve: ok | contrasena | esquema_desactualizado | sin_tablas | sin_conexion | sin_backend  (y el JSON de salud)
+function Estado-BD {
+  for ($i = 0; $i -lt 40; $i++) {
+    try {
+      $resp = Invoke-WebRequest -Uri "http://localhost:8000/api/health" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
+      $json = $resp.Content | ConvertFrom-Json
+    } catch {
+      $json = $null
+      # 503 = backend vivo pero con problema en la BD: leer el cuerpo (PowerShell 5.1 y 7)
+      $body = $_.ErrorDetails.Message
+      if (-not $body -and $_.Exception.Response -and ($_.Exception.Response | Get-Member -Name GetResponseStream)) {
+        try { $body = (New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())).ReadToEnd() } catch {}
+      }
+      if ($body) { try { $json = $body | ConvertFrom-Json } catch {} }
+    }
+    if ($json) {
+      $code = "ok"; if ($json.database) { $code = $json.database.code }
+      return @($code, $json)
+    }
+    Start-Sleep -Seconds 3
+  }
+  return @("sin_backend", $null)
+}
+
 if ($Reset) { docker compose down -v }
+Levantar
 
-Write-Host "-> Construyendo y levantando contenedores (la primera vez tarda unos minutos)..."
-docker compose up --build -d
-if ($LASTEXITCODE -ne 0) { exit 1 }
-
-Write-Host -NoNewline "-> Esperando al backend"
-for ($i = 0; $i -lt 60; $i++) {
-  try {
-    $h = Invoke-RestMethod -Uri "http://localhost:8000/api/health" -TimeoutSec 3
-    Write-Host " OK" -ForegroundColor Green
-    $c = $h.configured
-    Write-Host ("  OpenAI {0} | Gemini {1} | Google Sign-In {2}" -f `
-      ($(if ($c.openai_key) {"OK"} else {"X"})), ($(if ($c.gemini_key) {"OK"} else {"X"})), ($(if ($c.google_sign_in) {"OK"} else {"X"})))
-    Write-Host "Listo: http://localhost:3000" -ForegroundColor Green
-    Start-Process "http://localhost:3000"
-    exit 0
-  } catch { Write-Host -NoNewline "."; Start-Sleep -Seconds 3 }
+for ($intento = 1; $intento -le 3; $intento++) {
+  Write-Host -NoNewline "-> Revisando el backend y la base de datos... "
+  $r = Estado-BD; $code = $r[0]; $health = $r[1]
+  Write-Host $code
+  switch ($code) {
+    "ok" {
+      docker compose up -d *> $null   # asegura que el frontend tambien este arriba
+      $c = $health.configured
+      Write-Host ("  OpenAI {0} | Gemini {1} | Google Sign-In {2}" -f `
+        ($(if ($c.openai_key) {"OK"} else {"X"})), ($(if ($c.gemini_key) {"OK"} else {"X"})), ($(if ($c.google_sign_in) {"OK"} else {"X"})))
+      Write-Host "Listo: http://localhost:3000" -ForegroundColor Green
+      Start-Process "http://localhost:3000"
+      exit 0
+    }
+    "contrasena" {
+      Write-Host "-> La base de datos guarda una contrasena anterior. Sincronizandola con tu .env (sin borrar datos)..." -ForegroundColor Yellow
+      ((Get-Content scripts\db_sync_password.sh -Raw) -replace "`r", "") | docker compose exec -T db sh -s
+      docker compose up -d *> $null
+    }
+    { $_ -in @("esquema_desactualizado", "sin_tablas") } {
+      Write-Host "-> La base de datos local se creo con una version anterior de InterviewAI." -ForegroundColor Yellow
+      $ans = Read-Host "   Reiniciarla? Se borran solo las cuentas y entrevistas de prueba locales (s/n)"
+      if ($ans -match '^[sSyY]') { docker compose down -v; Levantar }
+      else { Write-Host "Sin reiniciar no puede funcionar. Saliendo." -ForegroundColor Red; exit 1 }
+    }
+    default {
+      Write-Host "X El backend no respondio. Ultimos logs:" -ForegroundColor Red
+      docker compose logs backend --tail 30
+      exit 1
+    }
+  }
 }
-Write-Host " X El backend no respondio. Ultimos logs:" -ForegroundColor Red
-docker compose logs backend --tail 25
-if ((docker compose logs backend 2>&1 | Out-String) -match "password authentication failed") {
-  Write-Host "-> La base de datos tiene una contrasena vieja. Ejecuta: powershell -ExecutionPolicy Bypass -File iniciar.ps1 -Reset" -ForegroundColor Yellow
-}
+Write-Host "X No se pudo dejar lista la base de datos. Prueba: iniciar.bat -Reset" -ForegroundColor Red
 exit 1

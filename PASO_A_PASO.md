@@ -23,6 +23,14 @@ El script levanta todo, instala la protección anti-secretos de git, te dice qu�
 
 ---
 
+## Si algo falla
+
+| Lo que ves | Qué hacer |
+|---|---|
+| "La base de datos de Docker guarda una contraseña anterior…" | Vuelve a abrir `iniciar.bat` / `./iniciar.sh`: la sincroniza sola sin borrar datos. |
+| "La base de datos se creó con una versión anterior…" | Abre `iniciar` y responde `s` cuando pregunte si reiniciarla. |
+| Cualquier otro error | `docker compose logs backend --tail 50` y mándame lo que salga. |
+
 ## Paso 0 — Proteger tus cuentas
 
 1. **Revoca el token de GitHub `ghp_…`** que estaba en `GEMINI_API_KEY` del `.env` viejo: GitHub → *Settings → Developer settings → Personal access tokens* → bórralo.

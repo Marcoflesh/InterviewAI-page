@@ -4,6 +4,15 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.4.3] - 2026-10-30 — Corrección del "Error interno" al iniciar sesión`
+
+* **Causa**: el volumen `pgdata` de Docker conservaba (A) la contraseña de PostgreSQL anterior al `.env` nuevo y/o (B) un esquema creado por una versión vieja de `init.sql`. Toda consulta fallaba y el backend respondía 500 genérico. `/api/health` respondía 200 porque no revisaba la base de datos, así que `iniciar` no lo detectaba.
+* **`backend/app/database.py`**: `check_database()` diagnostica `ok | contrasena | esquema_desactualizado | sin_tablas | sin_conexion` con instrucciones; `connect_timeout`.
+* **`backend/app/main.py`**: `/api/health` incluye `database` y responde 503 si falla; manejador específico `DBAPIError` → 503 con la causa (conserva cabeceras CORS); diagnóstico en el arranque visible en `docker compose logs backend`.
+* **`scripts/db_sync_password.sh` (nuevo), `iniciar.sh`, `iniciar.ps1`**: reparan solos la contraseña desalineada **sin borrar datos** (`ALTER USER` dentro del contenedor) y, si el esquema es viejo, preguntan antes de reiniciar la base.
+* **`frontend/js/app.js`**: si el servidor responde con la base de datos rota, ya no cae a modo demo; muestra la causa en la pantalla de inicio de sesión.
+* **`backend/tests/test_database_health.py` (nuevo)**: 5 pruebas de regresión (contraseña vieja con autenticación scram real, esquema viejo, login 503 explicativo, health 503). Total: 37 pytest + 17 E2E.
+
 ### `[v0.4.2] - 2026-10-29 — Plug & Play`
 
 * **`iniciar.bat`, `iniciar.ps1`, `iniciar.sh` (nuevos)**: verifican Docker y `.env`, protegen `.env` (permisos), instalan el pre-commit, levantan los contenedores, esperan `/api/health`, muestran qué llaves están activas y abren el navegador; opción de reinicio limpio de la base de datos.
