@@ -24,6 +24,7 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 - [x] **`v0.4.1`**: llave de Gemini `AQ.` y Client ID configurados en `.env` seguro; soporte del formato `AQ.`; pre-commit anti-secretos.
 - [x] **`v0.4.2`**: llave de OpenAI `sk-svcacct-…` en `.env`; scripts plug & play `iniciar.bat` / `iniciar.sh`.
 - [x] **`v0.4.3`**: "Error interno" al iniciar sesión corregido (diagnóstico de base de datos + autorreparación en `iniciar`).
+- [x] **`v0.4.4`**: el registro ya indica "mínimo 8 caracteres" (coincide con la validación real).
 - [ ] **Pendiente del usuario**: activar GitHub Pages (Settings → Pages → GitHub Actions), agregar orígenes en Google Cloud, revocar el token `ghp_` y la llave `sk-proj-` vieja, y correr `stress_test_agents.py` en su computadora.
 
 ---

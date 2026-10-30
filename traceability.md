@@ -4,6 +4,10 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.4.4] - 2026-10-30 — Texto de contraseña mínima`
+
+* **`frontend/index.html`**: el campo de registro decía "mínimo 6 caracteres" aunque el frontend y el backend exigen 8 desde `v0.4.0`. Ahora dice 8 y tiene `minlength="8"`.
+
 ### `[v0.4.3] - 2026-10-30 — Corrección del "Error interno" al iniciar sesión`
 
 * **Causa**: el volumen `pgdata` de Docker conservaba (A) la contraseña de PostgreSQL anterior al `.env` nuevo y/o (B) un esquema creado por una versión vieja de `init.sql`. Toda consulta fallaba y el backend respondía 500 genérico. `/api/health` respondía 200 porque no revisaba la base de datos, así que `iniciar` no lo detectaba.

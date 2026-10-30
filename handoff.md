@@ -67,7 +67,11 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - **Corrección**: `check_database()` + `/api/health` 503 con diagnóstico + manejador `DBAPIError` + autorreparación en `iniciar.*` vía `scripts/db_sync_password.sh`.
 - **Lección**: el healthcheck debe tocar la base de datos; los errores de BD necesitan un manejador específico para no perder CORS.
 
-## 8. Próximos pasos inmediatos
+## 8. `v0.4.4` (30/10/2026)
+
+- Texto del campo de contraseña en el registro corregido de 6 a 8 caracteres para coincidir con la validación (`app.js` y `schemas.py` ya exigían 8).
+
+## 9. Próximos pasos inmediatos
 
 1. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
 2. Pegar los resultados reales de `stress_test_agents.py` en `PRUEBAS.md` §5 y decidir viabilidad con los criterios ahí definidos.
