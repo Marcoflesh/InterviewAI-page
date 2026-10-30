@@ -1,32 +1,87 @@
 // =============================================================================
-// InterviewAI v0.3.0
-// - Agentes de IA: GPT-4o mini (Chat/Entrevistador) y Gemini 3.8 Flash (Evaluador)
-// - Escala Crítica de Evaluación: 0 a 5 (0 = sin habilidad / respuesta sin sentido)
-// - Validador de Correos Reales con verificación DNS MX en vivo
-// - Verificador Oficial de Google Identity Services (accounts.google.com/gsi/client)
-// - Aislamiento estricto de historial y reinicio de formulario por cada usuario
+// InterviewAI v0.4.0
+// - Agentes de IA: GPT-4o mini (Entrevistador) y Gemini 3.8 Flash (Evaluador),
+//   ejecutados SOLO en el backend. Ninguna API key vive en el navegador.
+// - Escala crítica de evaluación 0 a 5 y aislamiento de historial por usuario.
+// - Sin backend (GitHub Pages sin API) la página funciona en "modo demo" con el
+//   analizador local; con backend usa los agentes de IA.
 // =============================================================================
 
-// =============================================================================
-// >>> CONFIGURACIÓN DE CREDENCIALES Y MODELOS EN EL FRONTEND (OPCIONAL) <<<
-// Por arquitectura de producción, las API Keys se configuran en el archivo `.env`
-// para que el contenedor backend (FastAPI + LangGraph) las consuma de forma segura.
-// Si deseas probar directamente desde el navegador sin levantar el backend, puedes
-// colocar tus llaves aquí abajo:
-// =============================================================================
-const AGENT_CONFIG = {
-  // 1) Client ID oficial de Google Cloud Console (OAuth 2.0 Web Client ID):
-  // También se carga automáticamente desde `/api/auth/google-config` (archivo .env)
-  GOOGLE_CLIENT_ID: "", // <-- PON AQUÍ TU GOOGLE_CLIENT_ID.apps.googleusercontent.com (o en .env)
+// Configuración pública (frontend/js/config.js). Aquí NO van llaves secretas.
+const PUBLIC_CONFIG = Object.assign(
+  { API_BASE_URL: "", GOOGLE_CLIENT_ID: "" },
+  window.INTERVIEWAI_CONFIG || {}
+);
+const API_BASE = String(PUBLIC_CONFIG.API_BASE_URL || "").replace(/\/+$/, "");
+const TOKEN_KEY = "interviewai_token";
 
-  // 2) Agente de Chat / Entrevistador (OpenAI GPT-4o mini):
-  OPENAI_API_KEY: "",   // <-- PON AQUÍ TU OPENAI_API_KEY EN .env (o aquí para modo navegador)
-  OPENAI_CHAT_MODEL: "gpt-4o-mini",
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
-  // 3) Agente Evaluador Crítico (Google Gemini 3.8 Flash):
-  GEMINI_API_KEY: "",   // <-- PON AQUÍ TU GEMINI_API_KEY EN .env (o aquí para modo navegador)
-  GEMINI_MODEL: "gemini-3.8-flash"
-};
+function getToken() {
+  try { return sessionStorage.getItem(TOKEN_KEY) || ""; } catch (_) { return ""; }
+}
+
+function setToken(token) {
+  try {
+    if (token) sessionStorage.setItem(TOKEN_KEY, token);
+    else sessionStorage.removeItem(TOKEN_KEY);
+  } catch (_) {}
+}
+
+// Llama al backend. Devuelve { ok, status, data, offline }.
+// offline = true solo cuando no hubo respuesta del servidor (red caída o sin backend).
+async function apiFetch(path, options = {}, timeoutMs = 45000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const headers = Object.assign({ "Content-Type": "application/json" }, options.headers || {});
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  try {
+    const resp = await fetch(API_BASE + path, Object.assign({}, options, { headers, signal: controller.signal }));
+    let data = null;
+    try { data = await resp.json(); } catch (_) {}
+    // Un 404 de un hosting estático (sin /api) equivale a "no hay backend".
+    const looksStatic = resp.status === 404 && (!data || !("detail" in data));
+    return { ok: resp.ok, status: resp.status, data, offline: looksStatic };
+  } catch (_) {
+    return { ok: false, status: 0, data: null, offline: true };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function apiErrorMessage(result, fallback) {
+  const d = result && result.data && result.data.detail;
+  if (typeof d === "string") return d;
+  if (Array.isArray(d) && d.length) return "Revisa los datos: " + d.map((e) => e.msg).join("; ");
+  return fallback;
+}
+
+async function detectBackend() {
+  const r = await apiFetch("/api/health", { method: "GET" }, 5000);
+  appState.backendOnline = r.ok && r.data && r.data.status === "ok";
+  const badge = document.getElementById("mode-badge");
+  if (badge) badge.classList.toggle("hidden", appState.backendOnline);
+  return appState.backendOnline;
+}
+
+// Contraseñas del modo demo: se guardan con PBKDF2 (nunca en texto plano).
+async function hashDemoPassword(password, saltHex) {
+  const salt = saltHex || Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map((b) => b.toString(16).padStart(2, "0")).join("");
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: new TextEncoder().encode(salt), iterations: 210000, hash: "SHA-256" }, key, 256);
+  const hex = Array.from(new Uint8Array(bits)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${salt}$${hex}`;
+}
 
 const CAREER_CATALOG = [
   {
@@ -398,9 +453,8 @@ const VERIFIED_EMAIL_DOMAINS = new Set([
   "javeriana.edu.co", "uniandes.edu.co", "unal.edu.co", "udea.edu.co"
 ]);
 
-const CANONICAL_PROVIDERS = [
-  "gmail.com", "hotmail.com", "outlook.com", "icloud.com", "yahoo.com", "live.com", "proton.me", "tec.mx", "itesm.mx", "unam.mx", "ipn.mx"
-];
+// Solo se buscan errores de dedo contra proveedores largos y muy usados
+const CANONICAL_PROVIDERS = ["gmail.com", "hotmail.com", "outlook.com", "yahoo.com", "icloud.com"];
 
 function computeEditDistance(a, b) {
   const m = a.length;
@@ -412,6 +466,9 @@ function computeEditDistance(a, b) {
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
       dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + 1);
+      }
     }
   }
   return dp[m][n];
@@ -432,7 +489,9 @@ const appState = {
   currentIndex: 0,
   turns: [],
   turnStartTime: Date.now(),
-  googleClientId: AGENT_CONFIG.GOOGLE_CLIENT_ID
+  googleClientId: PUBLIC_CONFIG.GOOGLE_CLIENT_ID,
+  backendOnline: false,
+  serverSession: false
 };
 
 function loadSavedState() {
@@ -452,6 +511,19 @@ function loadSavedState() {
       }
     }
   } catch (_) {}
+}
+
+// v0.3.0 guardaba contraseñas en texto plano: se convierten a hash y se borra el texto plano.
+async function migrateLegacyDemoUsers() {
+  let changed = false;
+  for (const u of appState.registeredUsers) {
+    if (typeof u.password === "string") {
+      try { u.password_hash = await hashDemoPassword(u.password); } catch (_) {}
+      delete u.password;
+      changed = true;
+    }
+  }
+  if (changed) saveRegisteredUsers();
 }
 
 function saveRegisteredUsers() {
@@ -496,25 +568,29 @@ async function validateRealEmailAccount(email) {
     return { valid: false, reason: `El usuario '${localPart}@...' no es válido. Ingresa tu correo personal o institucional.` };
   }
 
-  // 1. Detectar typos como @gnial.com, @gmal.com, @hotmial.com, @outlok.com
-  const domainRoot = domain.split(".")[0];
-  for (const canonical of CANONICAL_PROVIDERS) {
-    const canonRoot = canonical.split(".")[0];
-    if (domain !== canonical && (computeEditDistance(domain, canonical) <= 2 || computeEditDistance(domainRoot, canonRoot) <= 2)) {
-      return {
-        valid: false,
-        reason: `El dominio '@${domain}' no existe o está mal escrito (¿quisiste escribir '@${canonical}'?).`
-      };
-    }
-  }
-
   if (BLOCKED_FAKE_EMAIL_DOMAINS.has(domain)) {
     return { valid: false, reason: `El dominio '@${domain}' no es un proveedor de correo válido.` };
   }
 
-  // 2. Aceptar proveedores oficiales verificados o dominios académicos oficiales (.edu, .edu.mx, .edu.co, .ac.uk, .gob.mx)
+  // 1. Aceptar proveedores verificados o dominios académicos oficiales (.edu, .edu.mx, .edu.co, .ac.uk, .gob.mx)
   const isOfficialAcademic = /\.(edu|edu\.[a-z]{2}|ac\.[a-z]{2}|gob\.[a-z]{2})$/.test(domain);
   if (VERIFIED_EMAIL_DOMAINS.has(domain) || isOfficialAcademic) {
+    return { valid: true, email: clean };
+  }
+
+  // 2. Detectar errores de dedo como @gnial.com, @gmal.com, @hotmial.com, @outlok.com
+  for (const canonical of CANONICAL_PROVIDERS) {
+    const dist = computeEditDistance(domain, canonical);
+    if (dist > 0 && dist <= 2) {
+      return {
+        valid: false,
+        reason: `El dominio '@${domain}' parece mal escrito (¿quisiste escribir '@${canonical}'?).`
+      };
+    }
+  }
+
+  // Con backend activo, el servidor hace la verificación de registros MX.
+  if (appState.backendOnline) {
     return { valid: true, email: clean };
   }
 
@@ -817,99 +893,16 @@ function buildQuestionSpecificStarExample(questionText, careerCode, role) {
   const careerObj = CAREER_CATALOG.find((c) => c.code === careerCode) || CAREER_CATALOG[0];
   const sampleTools = careerObj.lexicon.slice(0, 4).join(", ");
   const shortTopic = questionText.split(".")[0].replace(/^¿/, "");
-  return `Ante el reto de "${shortTopic}" para el puesto de ${role} (Situación), mi objetivo era resolver la falla cumpliendo los requerimientos técnicos y el tiempo límite (Tarea). Diagnosticué la causa raíz e implementé directamente la solución utilizando ${sampleTools}, validando cada cambio con pruebas controladas (Acción). Como resultado, reduje la tasa de incidentes en un 38% y optimicé el tiempo de respuesta en un 45% (Resultado).`;
+  return `Ante el reto de "${shortTopic}" para el puesto de ${role} (Situación), mi objetivo era resolver la falla cumpliendo los requerimientos técnicos y el tiempo límite (Tarea). Diagnosticué la causa raíz e implementé directamente la solución utilizando ${sampleTools}, validando cada cambio con pruebas controladas (Acción). Como resultado, reduje la tasa de incidentes en un [X %] y optimicé el tiempo de respuesta en un [Y %] (Resultado; usa tus cifras reales).`;
 }
 
 // =============================================================================
-// LLAMADA A AGENTES DE IA (GEMINI 3.8 FLASH Y GPT-4o MINI) SI HAY LLAVES
+// EVALUACIÓN LOCAL INMEDIATA (los agentes de IA corren en el backend)
+// La evaluación de gemini-3.8-flash / gpt-4o-mini llega desde /api/sessions/turn
+// y reemplaza a esta. Sin backend (modo demo) se usa solo esta evaluación local.
 // =============================================================================
 async function evaluateTurnWithConfiguredAgents(questionText, cleanResponse) {
-  const localCriticalEval = evaluateResponseCritical(questionText, cleanResponse, appState.careerCode, appState.targetRole);
-
-  const sysPrompt = `Eres un evaluador técnico crítico de entrevistas laborales (escala 0 a 5, donde 0 significa nulo o respuesta sin sentido). Está prohibido ser complaciente. Devuelve SOLO JSON válido con: star_situation, star_task, star_action, star_result, technical_clarity, relevance, strengths, improvement_areas.`;
-  const usrPrompt = `Carrera: ${appState.careerCode}\nPuesto: ${appState.targetRole}\nContexto de la vacante: ${appState.vacancyContext}\nPregunta: ${questionText}\nRespuesta: ${cleanResponse}`;
-
-  // 1) Si GEMINI_API_KEY fue colocada en AGENT_CONFIG (gemini-3.8-flash)
-  if (AGENT_CONFIG.GEMINI_API_KEY && !AGENT_CONFIG.GEMINI_API_KEY.startsWith("PON_AQUI")) {
-    const models = [AGENT_CONFIG.GEMINI_MODEL || "gemini-3.8-flash", "gemini-2.5-flash"];
-    for (const mdl of models) {
-      try {
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent?key=${encodeURIComponent(AGENT_CONFIG.GEMINI_API_KEY)}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: sysPrompt }] },
-            contents: [{ parts: [{ text: usrPrompt }] }],
-            generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
-          })
-        });
-        if (r.ok) {
-          const d = await r.json();
-          const raw = d.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (raw) {
-            return mergeAgentEvaluation(JSON.parse(raw), localCriticalEval);
-          }
-        }
-      } catch (_) {}
-    }
-  }
-
-  // 2) Si OPENAI_API_KEY fue colocada en AGENT_CONFIG (gpt-4o-mini)
-  if (AGENT_CONFIG.OPENAI_API_KEY && !AGENT_CONFIG.OPENAI_API_KEY.startsWith("PON_AQUI")) {
-    try {
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${AGENT_CONFIG.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: AGENT_CONFIG.OPENAI_CHAT_MODEL || "gpt-4o-mini",
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: usrPrompt }
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.1
-        })
-      });
-      if (r.ok) {
-        const d = await r.json();
-        const raw = d.choices?.[0]?.message?.content;
-        if (raw) {
-          return mergeAgentEvaluation(JSON.parse(raw), localCriticalEval);
-        }
-      }
-    } catch (_) {}
-  }
-
-  return localCriticalEval;
-}
-
-function mergeAgentEvaluation(parsed, fallbackEval) {
-  const clamp = (v, def) => {
-    const n = parseInt(v, 10);
-    return Number.isNaN(n) ? def : Math.max(0, Math.min(5, n));
-  };
-  const s = clamp(parsed.star_situation, fallbackEval.star_situation);
-  const t = clamp(parsed.star_task, fallbackEval.star_task);
-  const a = clamp(parsed.star_action, fallbackEval.star_action);
-  const r = clamp(parsed.star_result, fallbackEval.star_result);
-  const tech = clamp(parsed.technical_clarity, fallbackEval.technical_clarity);
-  const rel = clamp(parsed.relevance, fallbackEval.relevance);
-  const avg = Number(((s + t + a + r + tech + rel) / 6).toFixed(2));
-  return {
-    ...fallbackEval,
-    star_situation: s,
-    star_task: t,
-    star_action: a,
-    star_result: r,
-    technical_clarity: tech,
-    relevance: rel,
-    turn_average_score: avg,
-    strengths: parsed.strengths || fallbackEval.strengths,
-    improvement_areas: parsed.improvement_areas || fallbackEval.improvement_areas
-  };
+  return evaluateResponseCritical(questionText, cleanResponse, appState.careerCode, appState.targetRole);
 }
 
 function getRandomQuestionCount() {
@@ -1024,39 +1017,29 @@ async function handleLocalLogin() {
     showAuthFeedback("Ingresa tu correo electrónico y tu contraseña.");
     return;
   }
-  const emailCheck = await validateRealEmailAccount(email);
-  if (!emailCheck.valid) {
-    showAuthFeedback(emailCheck.reason, true);
-    return;
-  }
 
-  try {
-    const resp = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      setLoggedInUser(data);
-      return;
-    } else if (resp.status === 401 || resp.status === 400) {
-      const err = await resp.json();
-      showAuthFeedback(err.detail || "Credenciales inválidas.");
+  if (appState.backendOnline) {
+    const r = await apiFetch("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+    if (r.ok) {
+      setToken(r.data.access_token);
+      setLoggedInUser(r.data);
       return;
     }
-  } catch (_) {}
+    if (!r.offline) {
+      showAuthFeedback(apiErrorMessage(r, "No se pudo iniciar sesión."));
+      return;
+    }
+    appState.backendOnline = false;
+  }
 
+  // Modo demo (sin servidor): cuentas guardadas solo en este navegador
   const found = appState.registeredUsers.find((u) => u.email.toLowerCase() === email);
-  if (!found) {
-    showAuthFeedback("No existe ninguna cuenta registrada con ese correo. Regístrate primero en la pestaña 'Registrar'.");
+  const ok = found && found.password_hash
+    && (await hashDemoPassword(password, found.password_hash.split("$")[0])) === found.password_hash;
+  if (!ok) {
+    showAuthFeedback("Correo o contraseña incorrectos.");
     return;
   }
-  if (found.password !== password) {
-    showAuthFeedback("Contraseña incorrecta. Verifica tus datos.");
-    return;
-  }
-
   setLoggedInUser(found);
 }
 
@@ -1076,54 +1059,48 @@ async function handleLocalRegister() {
     return;
   }
 
-  if (!password || password.length < 6) {
-    showAuthFeedback("La contraseña debe tener al menos 6 caracteres.");
+  if (!password || password.length < 8) {
+    showAuthFeedback("La contraseña debe tener al menos 8 caracteres.");
     return;
   }
 
-  showAuthFeedback("Verificando existencia y servidores de correo (MX)...", false);
+  showAuthFeedback("Verificando tu correo...", false);
   const emailValidation = await validateRealEmailAccount(email);
   if (!emailValidation.valid) {
     showAuthFeedback(emailValidation.reason, true);
     return;
   }
 
-  const existsLocal = appState.registeredUsers.some((u) => u.email.toLowerCase() === emailValidation.email);
-  if (existsLocal) {
+  if (appState.backendOnline) {
+    const r = await apiFetch("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ full_name: fullName, email: emailValidation.email, password, university })
+    });
+    if (r.ok) {
+      setToken(r.data.access_token);
+      setLoggedInUser(r.data);
+      return;
+    }
+    if (!r.offline) {
+      showAuthFeedback(apiErrorMessage(r, "No se pudo registrar la cuenta."));
+      return;
+    }
+    appState.backendOnline = false;
+  }
+
+  // Modo demo (sin servidor)
+  if (appState.registeredUsers.some((u) => u.email.toLowerCase() === emailValidation.email)) {
     showAuthFeedback("Ya existe una cuenta con este correo electrónico. Inicia sesión en la primera pestaña.");
     return;
   }
-
   const newUser = {
-    user_id: "usr-" + Math.random().toString(36).substring(2, 9),
+    user_id: "demo-" + crypto.getRandomValues(new Uint32Array(2)).join(""),
     full_name: fullName,
     email: emailValidation.email,
-    password,
+    password_hash: await hashDemoPassword(password),
     university,
     auth_provider: "local"
   };
-
-  try {
-    const resp = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        full_name: fullName,
-        email: emailValidation.email,
-        password,
-        university
-      })
-    });
-    if (resp.ok) {
-      const serverUser = await resp.json();
-      newUser.user_id = serverUser.user_id;
-    } else if (resp.status === 400 || resp.status === 409) {
-      const err = await resp.json();
-      showAuthFeedback(err.detail || "No se pudo registrar el correo.");
-      return;
-    }
-  } catch (_) {}
-
   appState.registeredUsers.push(newUser);
   saveRegisteredUsers();
   setLoggedInUser(newUser);
@@ -1150,60 +1127,64 @@ function decodeJwtPayload(token) {
 
 async function handleGoogleCredentialResponse(response) {
   if (!response || !response.credential) {
-    showAuthFeedback("No se recibió credencial de Google Identity Services.");
+    showAuthFeedback("Google no entregó una credencial. Intenta de nuevo.");
     return;
   }
 
-  // 1) Intentar verificación criptográfica en el backend (/api/auth/google)
-  try {
-    const resp = await fetch("/api/auth/google", {
+  if (appState.backendOnline) {
+    // Verificación criptográfica en el servidor (firma, emisor, expiración y Client ID)
+    const r = await apiFetch("/api/auth/google", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ credential: response.credential })
     });
-    if (resp.ok) {
-      const verifiedUser = await resp.json();
-      setLoggedInUser(verifiedUser);
+    if (r.ok) {
+      setToken(r.data.access_token);
+      setLoggedInUser(r.data);
       return;
     }
-  } catch (_) {}
-
-  // 2) Decodificar el JWT firmado por Google Identity Services en el cliente
-  const payload = decodeJwtPayload(response.credential);
-  if (!payload || !payload.email || !payload.email_verified) {
-    showAuthFeedback("La credencial de Google no pudo ser verificada.");
-    return;
+    if (!r.offline) {
+      showAuthFeedback(apiErrorMessage(r, "Google rechazó la credencial."));
+      return;
+    }
+    appState.backendOnline = false;
   }
 
-  const googleUser = {
+  // Modo demo (sin servidor): solo identifica al usuario en ESTE navegador.
+  const payload = decodeJwtPayload(response.credential);
+  if (!payload || !payload.email || !payload.email_verified) {
+    showAuthFeedback("La credencial de Google no pudo leerse.");
+    return;
+  }
+  setLoggedInUser({
     user_id: "google-" + payload.sub,
     full_name: payload.name || payload.email.split("@")[0],
     email: payload.email.toLowerCase(),
     avatar_url: payload.picture || null,
-    university: payload.hd || "Cuenta de Google Verificada",
+    university: payload.hd || "Cuenta de Google",
     auth_provider: "google"
-  };
-
-  setLoggedInUser(googleUser);
+  });
 }
 
 async function initOfficialGoogleVerifier() {
-  // Consultar si el backend tiene GOOGLE_CLIENT_ID configurado en .env
-  try {
-    const resp = await fetch("/api/auth/google-config");
-    if (resp.ok) {
-      const cfg = await resp.json();
-      if (cfg.is_configured && cfg.google_client_id) {
-        appState.googleClientId = cfg.google_client_id;
-      }
+  // El Client ID del backend (.env) tiene prioridad sobre config.js
+  if (appState.backendOnline) {
+    const r = await apiFetch("/api/auth/google-config", { method: "GET" }, 5000);
+    if (r.ok && r.data && r.data.is_configured && r.data.google_client_id) {
+      appState.googleClientId = r.data.google_client_id;
     }
-  } catch (_) {}
+  }
+
+  // El script de Google carga con async: esperarlo hasta 5 s
+  for (let i = 0; i < 25 && !(window.google && window.google.accounts && window.google.accounts.id); i++) {
+    await new Promise((res) => setTimeout(res, 200));
+  }
 
   if (appState.googleClientId && window.google && window.google.accounts && window.google.accounts.id) {
     window.google.accounts.id.initialize({
       client_id: appState.googleClientId,
       callback: handleGoogleCredentialResponse,
-      auto_select: false
+      auto_select: false,
+      use_fedcm_for_prompt: true
     });
     const container = document.getElementById("google-gsi-button-container");
     if (container) {
@@ -1221,52 +1202,19 @@ async function initOfficialGoogleVerifier() {
 }
 
 function handleGoogleLoginButtonClick() {
-  if (!appState.googleClientId || appState.googleClientId.startsWith("PON_AQUI")) {
-    showAuthFeedback(
-      "Para lanzar el verificador oficial de Google OAuth 2.0, coloca tu GOOGLE_CLIENT_ID en el archivo .env (consulta GUIA_CONFIGURACION_APIS.md). Mientras tanto, puedes usar 'Registrar' e 'Iniciar sesión'.",
-      true
-    );
+  if (location.protocol === "file:") {
+    showAuthFeedback("Google no funciona abriendo el archivo directamente. Abre la página desde http://localhost:3000.");
     return;
   }
-
-  if (window.google && window.google.accounts) {
-    if (window.google.accounts.oauth2) {
-      const tokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: appState.googleClientId,
-        scope: "openid email profile",
-        callback: async (tokenResponse) => {
-          if (tokenResponse && tokenResponse.access_token) {
-            try {
-              const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-                headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
-              });
-              if (r.ok) {
-                const info = await r.json();
-                setLoggedInUser({
-                  user_id: "google-" + info.sub,
-                  full_name: info.name || info.email,
-                  email: info.email.toLowerCase(),
-                  avatar_url: info.picture || null,
-                  university: info.hd || "Cuenta de Google Verificada",
-                  auth_provider: "google"
-                });
-              }
-            } catch (_) {
-              showAuthFeedback("Error al obtener el perfil desde Google OAuth 2.0.");
-            }
-          }
-        }
-      });
-      tokenClient.requestAccessToken();
-      return;
-    }
-    if (window.google.accounts.id) {
-      window.google.accounts.id.prompt();
-      return;
-    }
+  if (!appState.googleClientId) {
+    showAuthFeedback("El inicio con Google aún no está configurado (falta GOOGLE_CLIENT_ID). Puedes usar 'Registrar' e 'Iniciar sesión'.");
+    return;
   }
-
-  showAuthFeedback("El script oficial de Google Identity Services (accounts.google.com) aún está cargando.");
+  if (window.google && window.google.accounts && window.google.accounts.id) {
+    window.google.accounts.id.prompt();
+    return;
+  }
+  showAuthFeedback("No se pudo cargar el script de Google (revisa tu conexión o el bloqueador de anuncios).");
 }
 
 function populateCareers() {
@@ -1311,12 +1259,14 @@ async function startInterview() {
     randomTotal
   );
 
-  try {
-    const resp = await fetch("/api/sessions/start", {
+  appState.sessionId = null;
+  appState.serverSession = false;
+  if (appState.backendOnline && getToken()) {
+    const btn = document.getElementById("btn-start-interview");
+    if (btn) btn.disabled = true;
+    const r = await apiFetch("/api/sessions/start", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        user_id: appState.user.user_id,
         career_code: careerCode,
         target_role: targetRole,
         seniority_level: "Junior / Intern",
@@ -1326,16 +1276,25 @@ async function startInterview() {
         allow_followups: false
       })
     });
-    if (resp.ok) {
-      const data = await resp.json();
-      appState.sessionId = data.session_id;
-      appState.totalQuestions = data.total_questions || randomTotal;
-      if (data.question_text) {
-        appState.questionsPool[0] = data.question_text;
+    if (btn) btn.disabled = false;
+    if (r.ok) {
+      appState.sessionId = r.data.session_id;
+      appState.serverSession = true;
+      appState.totalQuestions = r.data.total_questions || randomTotal;
+      if (r.data.question_text) {
+        appState.questionsPool[0] = r.data.question_text;
       }
+    } else if (r.status === 401) {
+      setToken("");
+      appState.user = null;
+      showView("view-login");
+      showAuthFeedback("Tu sesión expiró. Inicia sesión de nuevo.");
+      return;
+    } else if (!r.offline && statusEl) {
+      statusEl.textContent = apiErrorMessage(r, "No se pudo iniciar la entrevista en el servidor.");
+      statusEl.classList.remove("hidden");
+      return;
     }
-  } catch (_) {
-    appState.sessionId = "ses-" + Date.now();
   }
 
   renderChatInitial();
@@ -1429,7 +1388,7 @@ function updateStarMeters(evalObj) {
   if (mTags) {
     const mList = evalObj.metrics_detected || [];
     mTags.innerHTML = mList.length > 0
-      ? mList.map((m) => `<span class="tag-pill">${m}</span>`).join("")
+      ? mList.map((m) => `<span class="tag-pill">${escapeHtml(m)}</span>`).join("")
       : "0 métricas cuantitativas";
   }
 
@@ -1437,7 +1396,7 @@ function updateStarMeters(evalObj) {
   if (tTags) {
     const tList = evalObj.tech_terms_detected || [];
     tTags.innerHTML = tList.length > 0
-      ? tList.map((t) => `<span class="tag-pill">${t}</span>`).join("")
+      ? tList.map((t) => `<span class="tag-pill">${escapeHtml(t)}</span>`).join("")
       : "Sin términos técnicos detectados";
   }
 
@@ -1461,30 +1420,28 @@ async function sendChatResponse() {
   let evalObj = await evaluateTurnWithConfiguredAgents(currentQ, cleanResponse);
   let nextQuestionFromServer = null;
 
-  try {
-    const resp = await fetch("/api/sessions/turn", {
+  if (appState.serverSession) {
+    const sendBtn = document.getElementById("btn-send-chat");
+    if (sendBtn) sendBtn.disabled = true;
+    const r = await apiFetch("/api/sessions/turn", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         session_id: appState.sessionId,
-        candidate_response: cleanResponse,
+        candidate_response: cleanResponse.slice(0, 4000),
         response_time_seconds: elapsedSec,
         allow_followups: false
       })
     });
-    if (resp.ok) {
-      const data = await resp.json();
-      if (data.evaluation) {
-        evalObj = {
-          ...evalObj,
-          ...data.evaluation
-        };
+    if (sendBtn) sendBtn.disabled = false;
+    if (r.ok && r.data) {
+      if (r.data.evaluation) {
+        evalObj = { ...evalObj, ...r.data.evaluation };
       }
-      if (data.next_interviewer_message && !data.is_completed) {
-        nextQuestionFromServer = data.next_interviewer_message;
+      if (r.data.next_interviewer_message && !r.data.is_completed) {
+        nextQuestionFromServer = r.data.next_interviewer_message;
       }
     }
-  } catch (_) {}
+  }
 
   appState.turns.push({
     questionNumber: appState.currentIndex + 1,
@@ -1521,8 +1478,19 @@ function finishInterviewEarly() {
   buildAndShowReport();
 }
 
-function buildAndShowReport() {
+async function buildAndShowReport() {
   const turns = appState.turns;
+
+  // Ejemplos STAR redactados por el Agente Sintetizador (backend), si hay sesión en servidor
+  if (appState.serverSession && appState.sessionId) {
+    const r = await apiFetch(`/api/sessions/${encodeURIComponent(appState.sessionId)}/report`, { method: "GET" }, 60000);
+    if (r.ok && r.data && Array.isArray(r.data.weakest_responses)) {
+      r.data.weakest_responses.forEach((w) => {
+        const t = turns.find((x) => x.questionNumber === w.question_number);
+        if (t && w.improved_star_example) t.evaluation.improved_example_star = w.improved_star_example;
+      });
+    }
+  }
   const avgScore = turns.length
     ? Number((turns.reduce((acc, t) => acc + t.evaluation.turn_average_score, 0) / turns.length).toFixed(2))
     : 0.0;
@@ -1568,15 +1536,15 @@ function buildAndShowReport() {
           Pregunta ${item.questionNumber} · Puntaje obtenido: <strong>${item.evaluation.turn_average_score} / 5.0</strong>
           (S:${item.evaluation.star_situation} · T:${item.evaluation.star_task} · A:${item.evaluation.star_action} · R:${item.evaluation.star_result} · Tec:${item.evaluation.technical_clarity} · Pert:${item.evaluation.relevance})
         </div>
-        <div style="font-weight: 500; font-size: 0.92rem; margin-bottom: 0.55rem;">${item.questionText}</div>
+        <div style="font-weight: 500; font-size: 0.92rem; margin-bottom: 0.55rem;">${escapeHtml(item.questionText)}</div>
         <div style="font-size: 0.84rem; color: var(--muted); margin-bottom: 0.45rem;">
-          <strong>Tu respuesta:</strong> "${item.responseText}"
+          <strong>Tu respuesta:</strong> "${escapeHtml(item.responseText)}"
         </div>
         <div style="font-size: 0.82rem; color: var(--red); margin-bottom: 0.55rem;">
-          <strong>${item.evaluation.improvement_areas}</strong>
+          <strong>${escapeHtml(item.evaluation.improvement_areas)}</strong>
         </div>
         <div style="font-size: 0.84rem; background: #f9fafb; border-left: 3px solid var(--text); padding: 0.65rem 0.8rem; border-radius: 4px;">
-          <strong>Ejemplo de respuesta nivel 5/5 bajo método STAR:</strong> ${item.evaluation.improved_example_star}
+          <strong>Ejemplo de respuesta nivel 5/5 bajo método STAR:</strong> ${escapeHtml(item.evaluation.improved_example_star)}
         </div>
       </div>`
     )
@@ -1750,9 +1718,9 @@ function renderHistoryView() {
       .map(
         (h) => `
         <tr style="border-bottom: 1px solid var(--border);">
-          <td style="padding: 0.75rem;">${h.date}</td>
-          <td style="padding: 0.75rem;">${h.careerCode} — ${h.targetRole}</td>
-          <td style="padding: 0.75rem; font-weight: 600;">${h.overallScore} / 5.0</td>
+          <td style="padding: 0.75rem;">${escapeHtml(h.date)}</td>
+          <td style="padding: 0.75rem;">${escapeHtml(h.careerCode)} — ${escapeHtml(h.targetRole)}</td>
+          <td style="padding: 0.75rem; font-weight: 600;">${escapeHtml(h.overallScore)} / 5.0</td>
           <td style="padding: 0.75rem; color: var(--muted);">${h.evolutionRate >= 0 ? "+" + h.evolutionRate + "%" : h.evolutionRate + "%"}</td>
         </tr>`
       )
@@ -1761,7 +1729,13 @@ function renderHistoryView() {
   showView("view-history");
 }
 
-function submitCsatRating(score) {
+async function submitCsatRating(score) {
+  if (appState.serverSession && appState.sessionId) {
+    await apiFetch("/api/sessions/csat", {
+      method: "POST",
+      body: JSON.stringify({ session_id: appState.sessionId, csat_score: Number(score) })
+    });
+  }
   const msg = document.getElementById("csat-thanks");
   if (msg) {
     msg.textContent = `Calificación registrada (${score}/5).`;
@@ -1769,9 +1743,11 @@ function submitCsatRating(score) {
   }
 }
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
   loadSavedState();
+  await migrateLegacyDemoUsers();
   populateCareers();
+  await detectBackend();
   initOfficialGoogleVerifier();
 
   // Pestañas de autenticación
@@ -1799,7 +1775,11 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("nav-history").addEventListener("click", renderHistoryView);
   document.getElementById("btn-logout").addEventListener("click", () => {
+    setToken("");
     appState.user = null;
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      window.google.accounts.id.disableAutoSelect();
+    }
     resetPracticeFormAndSession();
     showView("view-login");
   });

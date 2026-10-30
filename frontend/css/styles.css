@@ -418,3 +418,15 @@ body {
     padding: 0;
   }
 }
+
+/* Indicador discreto de modo demo (sin backend) */
+.mode-badge {
+  margin-left: 0.6rem;
+  padding: 0.12rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+button:disabled { opacity: 0.55; cursor: progress; }
