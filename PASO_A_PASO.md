@@ -1,4 +1,54 @@
-# Paso a Paso — InterviewAI (`v0.7.0`)
+# Paso a Paso — InterviewAI (`v0.7.1`)
+
+## Actualizar a la versión con Ollama + Gemini (v0.7.1)
+
+Quién hace qué: **Entrevistador = Ollama** (`qwen3.5:4b`, local y gratis) · **Evaluador y Sintetizador = Gemini** (`gemini-3.8-flash`) · OpenAI apagado.
+
+1. **Abre Docker Desktop** y espera a que diga *Engine running*. Deja libres ~6 GB de disco para el modelo.
+2. **Baja el código nuevo.** En la carpeta `InterviewAI-page/`:
+   ```bash
+   git pull
+   ```
+   (Si la descargaste como ZIP, vuelve a descargarla de GitHub y copia ahí tu `.env`.)
+3. **Pon el `.env` nuevo** en `InterviewAI-page/`, reemplazando el anterior. Si el navegador lo guardó como `env` o `env.txt`, renómbralo exactamente a `.env`. Para revisarlo, en la sección 2 deben aparecer estas líneas:
+   ```ini
+   INTERVIEWER_PROVIDER=ollama
+   EVALUATOR_PROVIDER=gemini
+   GEMINI_API_KEY=AQ.…        # tu llave, sin espacios
+   OPENAI_API_KEY=            # vacío
+   ```
+   y en la sección 5: `OLLAMA_ENABLED=true` y `OLLAMA_MODEL=qwen3.5:4b`.
+4. **Arranca y reconstruye** (hace falta porque el backend cambió):
+   - Windows: doble clic en `iniciar.bat`
+   - macOS/Linux: `./iniciar.sh`
+   - A mano: `docker compose up --build -d`
+
+   Al final debe imprimir: `Entrevistador: ollama (qwen3.5:4b) | Evaluador: gemini (gemini-3.8-flash)`.
+5. **Espera la descarga del modelo** (solo la primera vez, 5–20 min según tu internet):
+   ```bash
+   docker compose logs -f ollama-init
+   ```
+   Cuando diga `success`, sal con `Ctrl + C`. Mientras se descarga, la página funciona con las preguntas del banco.
+6. **Comprueba que ambas IAs responden** (no necesitas instalar Python, corre dentro de Docker):
+   ```bash
+   docker compose exec backend python scripts/probar_ia.py
+   ```
+   Debe salir ✓ en Ollama y en Gemini. También puedes abrir http://localhost:8000/api/health y buscar `"agentes"`.
+7. **Abre http://localhost:3000** y haz una entrevista de prueba.
+8. **Mide al evaluador con las respuestas de internet** y guarda la calificación en la base de datos:
+   ```bash
+   docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web
+   docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto bd --guardar-en-bd
+   ```
+   Copia lo que imprima y compártelo.
+
+| Si ves esto | Haz esto |
+|---|---|
+| `Entrevistador: openai` o `gemini` | Tu `.env` sigue siendo el viejo o el backend no se reconstruyó: repite los pasos 3 y 4. |
+| Ollama ✗ "modelo no descargado" | Espera el paso 5, o fuerza la descarga: `docker compose exec ollama ollama pull qwen3.5:4b` |
+| Gemini ✗ 401/403 | La llave está mal copiada o restringida a otra API: revísala en https://aistudio.google.com/apikey |
+| Las preguntas tardan mucho | Sin tarjeta de video el modelo corre en CPU. Cierra programas pesados o usa GPU NVIDIA: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d` |
+| "contraseña anterior" de la base de datos | Vuelve a correr `iniciar`: la corrige sola sin borrar datos. |
 
 ## Plug & Play (lo único que necesitas para verlo funcionando)
 
@@ -29,9 +79,9 @@ El script levanta todo, instala la protección anti-secretos de git, te dice qu�
 Con Docker encendido (`iniciar` ya llenó la base de datos):
 
 ```bash
-python scripts/probar_ia.py                                            # Ollama y Gemini responden
-python scripts/evaluar_evaluador.py --modo llm --conjunto web          # 26 respuestas fuertes/débiles de 7 sitios
-python scripts/evaluar_evaluador.py --modo llm --conjunto bd --guardar-en-bd   # todo golden_dataset; guarda model_score
+docker compose exec backend python scripts/probar_ia.py                 # Ollama y Gemini responden
+docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web   # 26 respuestas fuertes/débiles de 7 sitios
+docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto bd --guardar-en-bd   # todo golden_dataset; guarda model_score
 ```
 
 La meta propuesta es AUC ≥ 0.90 y exactitud ≥ 85 %. El script lista las respuestas mal clasificadas para revisarlas a mano. El analizador local (sin IA) saca AUC 0.93 y 81 %.

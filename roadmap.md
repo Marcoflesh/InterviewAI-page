@@ -33,7 +33,8 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 ---
 
 - [x] **`v0.7.0`**: Entrevistador local gratuito (Ollama `qwen3.5:4b`), `golden_dataset` lleno (50 respuestas de referencia) y prueba externa con 26 respuestas de internet etiquetadas por sus autores (línea base local: AUC 0.93, exactitud 81 %).
-- [ ] **Siguiente**: correr `evaluar_evaluador.py --modo llm --conjunto web` y `--conjunto bd --guardar-en-bd` con Gemini en la computadora del usuario y registrar los resultados aquí.
+- [x] **`v0.7.1`**: `.env` explícito (Entrevistador = Ollama, Evaluador = Gemini), roles visibles en `/api/health` y scripts de medición dentro de Docker.
+- [ ] **Siguiente**: correr `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web` y `--conjunto bd --guardar-en-bd` con Gemini en la computadora del usuario y registrar los resultados aquí.
 
 ---
 

@@ -50,6 +50,8 @@ for intento in 1 2 3; do
 import json, sys
 c = json.load(open(sys.argv[1]))["configured"]
 m = lambda b: "✓" if b else "✗"
+h = json.load(open(sys.argv[1])); a = h.get("agentes", {})
+print(f"  Entrevistador: {a.get('entrevistador')} ({a.get('modelo_ollama')}) · Evaluador: {a.get('evaluador')} ({a.get('modelo_gemini')})")
 print(f"  Gemini {m(c['gemini_key'])} · Google Sign-In {m(c['google_sign_in'])} · OpenAI (opcional) {'✓' if c['openai_key'] else '-'}")
 PY
       modelo="$(grep -E '^OLLAMA_MODEL=' .env | cut -d= -f2)"; modelo="${modelo:-qwen3.5:4b}"

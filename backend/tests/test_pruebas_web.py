@@ -45,3 +45,11 @@ def test_auc_del_arnes():
     assert mod.auc([4, 5], [1, 2]) == 1.0
     assert mod.auc([1], [4]) == 0.0
     assert mod.auc([3], [3]) == 0.5
+
+
+def test_health_dice_quien_hace_cada_rol(client):
+    from app.config import settings
+    a = client.get("/api/health").json()["agentes"]
+    assert a["entrevistador"] == settings.INTERVIEWER_PROVIDER
+    assert a["evaluador"] == settings.EVALUATOR_PROVIDER
+    assert a["modelo_ollama"] and a["modelo_gemini"]

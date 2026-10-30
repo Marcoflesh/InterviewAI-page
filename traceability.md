@@ -4,6 +4,15 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.7.1] - 2026-10-30 — .env claro y actualización paso a paso`
+
+* **Reporte del usuario**: el `.env` no dejaba claro que el Entrevistador es Ollama y el Evaluador Gemini (los comentarios seguían diciendo "OpenAI (Agente Entrevistador)").
+* **`.env.example` y `.env` del usuario**: la sección 2 abre con "Quién hace qué", `INTERVIEWER_PROVIDER=ollama` y `EVALUATOR_PROVIDER=gemini` al inicio; OpenAI marcado como respaldo opcional. Se quitó la contraseña real que aparecía en un comentario de `DATABASE_URL`.
+* **`/api/health`**: nuevo campo `agentes` (entrevistador, evaluador y modelos). `iniciar.sh` / `iniciar.ps1` lo imprimen al arrancar.
+* **`Dockerfile.backend`**: incluye `scripts/probar_ia.py` y `scripts/evaluar_evaluador.py`; se corren con `docker compose exec backend python scripts/…` sin instalar Python en la computadora. Los scripts detectan si están dentro del contenedor.
+* **`PASO_A_PASO.md`**: sección "Actualizar a la versión con Ollama + Gemini" (8 pasos y tabla de problemas).
+* **Pruebas**: 61 pytest (1 nueva para `agentes`).
+
 ### `[v0.7.0] - 2026-10-30 — Entrevistador local con Ollama, base de datos llena y prueba con respuestas de internet`
 
 * **Solicitud**: cambiar ChatGPT por el mejor modelo local gratuito de Ollama, dejar Gemini igual, llenar la base de datos y empezar a evaluar con pruebas de internet.

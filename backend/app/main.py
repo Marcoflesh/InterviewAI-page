@@ -181,6 +181,12 @@ def health_check():
             "google_sign_in": settings.google_signin_ready,
             "ollama": settings.OLLAMA_ENABLED,
         },
+        "agentes": {
+            "entrevistador": settings.INTERVIEWER_PROVIDER,
+            "evaluador": settings.EVALUATOR_PROVIDER,
+            "modelo_ollama": settings.OLLAMA_MODEL,
+            "modelo_gemini": settings.GEMINI_MODEL,
+        },
         "ia": llm_status(),
     }
     return body if db_state["ok"] else JSONResponse(status_code=503, content=body)

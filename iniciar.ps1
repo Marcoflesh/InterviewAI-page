@@ -59,6 +59,8 @@ for ($intento = 1; $intento -le 3; $intento++) {
     "ok" {
       docker compose up -d *> $null   # asegura que el frontend tambien este arriba
       $c = $health.configured
+      $a = $health.agentes
+      if ($a) { Write-Host ("  Entrevistador: {0} ({1}) | Evaluador: {2} ({3})" -f $a.entrevistador, $a.modelo_ollama, $a.evaluador, $a.modelo_gemini) }
       Write-Host ("  Gemini {0} | Google Sign-In {1} | OpenAI (opcional) {2}" -f `
         ($(if ($c.gemini_key) {"OK"} else {"X"})), ($(if ($c.google_sign_in) {"OK"} else {"X"})), ($(if ($c.openai_key) {"OK"} else {"-"})))
       $modelo = (Select-String -Path .env -Pattern '^OLLAMA_MODEL=(.+)$' | Select-Object -First 1).Matches.Groups[1].Value

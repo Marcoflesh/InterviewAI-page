@@ -15,7 +15,10 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "backend"))
+# En tu computadora el código está en backend/; dentro del contenedor está en /app.
+BACKEND = ROOT / "backend" if (ROOT / "backend" / "app").exists() else ROOT
+IN_DOCKER = Path("/.dockerenv").exists() or BACKEND == ROOT
+sys.path.insert(0, str(BACKEND))
 logging.basicConfig(level=logging.INFO, format="    · %(message)s")
 
 from app import llm  # noqa: E402
@@ -23,7 +26,7 @@ from app.agents import rubric  # noqa: E402
 from app.config import settings  # noqa: E402
 
 # Desde tu computadora, Ollama de Docker se alcanza en localhost (dentro de Docker se llama "ollama")
-if "//ollama:" in settings.OLLAMA_BASE_URL:
+if not IN_DOCKER and "//ollama:" in settings.OLLAMA_BASE_URL:
     settings.OLLAMA_BASE_URL = "http://localhost:11434"
 
 
@@ -54,7 +57,7 @@ print("   (la primera vez tarda más porque carga el modelo en memoria)\n")
 print("1) Gemini, texto corto:")
 probar("gemini", llm.call_gemini, prompt="Responde solo: 'listo'.", max_tokens=50)
 print("\n2) Gemini, evaluación real con la rúbrica (JSON):")
-item = json.loads((ROOT / "backend/app/data/calibracion_star.jsonl").read_text(encoding="utf-8").splitlines()[0])
+item = json.loads((BACKEND / "app/data/calibracion_star.jsonl").read_text(encoding="utf-8").splitlines()[0])
 out = probar("gemini", llm.call_gemini,
              prompt=f"Pregunta actual: {item['pregunta']}\n<respuesta_candidato>\n{item['respuesta']}\n</respuesta_candidato>",
              system=rubric.build_system_prompt(), json_mode=True, max_tokens=2000)

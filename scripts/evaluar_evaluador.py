@@ -40,7 +40,10 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "backend"))
+# En tu computadora el código está en backend/; dentro del contenedor está en /app.
+BACKEND = ROOT / "backend" if (ROOT / "backend" / "app").exists() else ROOT
+IN_DOCKER = Path("/.dockerenv").exists() or BACKEND == ROOT
+sys.path.insert(0, str(BACKEND))
 
 DIMS = ["star_situation", "star_task", "star_action", "star_result", "technical_clarity", "relevance"]
 SHORT = {"star_situation": "S", "star_task": "T", "star_action": "A", "star_result": "R",
@@ -86,7 +89,7 @@ def load_reference(args):
                 "calificadores": raters,
             })
     else:
-        path = ROOT / "backend" / "app" / "data" / "calibracion_star.jsonl"
+        path = BACKEND / "app" / "data" / "calibracion_star.jsonl"
         items = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     return items
 
@@ -150,7 +153,7 @@ def load_binary_items():
     """Conjuntos con etiqueta fuerte/débil (web) o con puntaje global (bd)."""
     import re
     if ARGS.conjunto == "web":
-        data = json.loads((ROOT / "backend/app/data/pruebas_web_star.json").read_text(encoding="utf-8"))
+        data = json.loads((BACKEND / "app/data/pruebas_web_star.json").read_text(encoding="utf-8"))
         return [{"id": it["id"], "career_code": it["career_code"], "pregunta": it["pregunta"], "vacante": "",
                  "respuesta": it["respuesta"], "etiqueta": it["etiqueta"], "ref": None,
                  "fuente": data["fuentes"][it["fuente"]]["nombre"]} for it in data["items"]]
@@ -244,7 +247,7 @@ def _prepare_llm():
     settings.EVALUATOR_RUBRIC_MODE = ARGS.rubrica  # se aplica antes de evaluar
     if not (settings.gemini_ready or settings.openai_ready or settings.OLLAMA_ENABLED):
         sys.exit("No hay ningún proveedor de IA configurado en .env (corre scripts/probar_ia.py).")
-    if "//ollama:" in settings.OLLAMA_BASE_URL:
+    if not IN_DOCKER and "//ollama:" in settings.OLLAMA_BASE_URL:
         settings.OLLAMA_BASE_URL = "http://localhost:11434"
     print(f"Evaluador: {settings.EVALUATOR_PROVIDER} · Gemini {settings.GEMINI_MODEL} (listo={settings.gemini_ready}) · "
           f"rúbrica {ARGS.rubrica}\n")

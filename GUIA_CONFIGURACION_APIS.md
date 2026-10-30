@@ -1,4 +1,4 @@
-# Guía de Configuración de API Keys y Agentes de IA (`v0.7.0`)
+# Guía de Configuración de API Keys y Agentes de IA (`v0.7.1`)
 
 **Regla única:** las llaves secretas viven **solo** en `.env` (raíz del proyecto). Nunca en el código, nunca en el frontend, nunca en GitHub. El paso a paso completo está en [`PASO_A_PASO.md`](./PASO_A_PASO.md).
 
@@ -39,9 +39,9 @@ Si el proveedor principal falla (error, límite de uso o llave inválida), el ba
 ## Comprobar que todo está bien
 
 ```bash
-python scripts/probar_ia.py                    # llamada real a cada IA: dice exactamente por qué falla (centavos)
+docker compose exec backend python scripts/probar_ia.py   # llamada real a cada IA (Ollama gratis, Gemini centavos)
 python scripts/check_apis.py                   # valida llaves sin gastar saldo
-curl http://localhost:8000/api/health          # con Docker encendido: qué está configurado
+curl http://localhost:8000/api/health          # "agentes": quién es Entrevistador y Evaluador
 docker compose logs -f backend | grep llm      # proveedor, modelo, código HTTP y latencia de cada llamada
 ```
 

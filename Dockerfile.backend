@@ -10,9 +10,11 @@ COPY backend/requirements.txt /app/requirements.txt
 RUN pip install -r /app/requirements.txt
 
 COPY backend/app /app/app
+# Scripts de diagnóstico y medición: docker compose exec backend python scripts/probar_ia.py
+COPY scripts/probar_ia.py scripts/evaluar_evaluador.py /app/scripts/
 
 # Ejecutar sin privilegios de root
-RUN useradd --create-home --uid 10001 appuser
+RUN useradd --create-home --uid 10001 appuser && chown appuser /app
 USER appuser
 
 EXPOSE 8000

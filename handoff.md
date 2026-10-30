@@ -1,4 +1,4 @@
-# Documento de Handoff y Continuidad Técnica — InterviewAI (`v0.7.0`)
+# Documento de Handoff y Continuidad Técnica — InterviewAI (`v0.7.1`)
 
 **Fecha de actualización:** 29 de octubre de 2026
 **Repositorio:** `https://github.com/Marcoflesh/InterviewAI-page.git`
@@ -106,9 +106,15 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - **Medición**: `scripts/evaluar_evaluador.py --conjunto web|bd`. Analizador local: AUC 0.93 / exactitud 81 %. Falta la medición con Gemini (este entorno no tiene salida a Google ni a Ollama).
 - **Elección de modelo**: `qwen3.5:4b` sobre `ministral-3:3b` (español) y Gemma 4 (razonamiento no desactivable, más lento). Alternativa si hay ≥ 16 GB de RAM o GPU: `OLLAMA_MODEL=qwen3.5:9b`.
 
-## 14. Próximos pasos inmediatos
+## 14. `v0.7.1` — `.env` claro y scripts dentro de Docker (30/10/2026)
 
-1. Usuario: `./iniciar.sh` (descarga el modelo), `python scripts/probar_ia.py` y `python scripts/evaluar_evaluador.py --modo llm --conjunto web`; pegar los resultados.
+- El usuario no veía en el `.env` quién hacía cada rol: la sección 2 ahora lo dice explícitamente. `/api/health` → `agentes` y `iniciar` lo imprimen.
+- `probar_ia.py` y `evaluar_evaluador.py` viven también en la imagen del backend (`/app/scripts`); dentro del contenedor usan `ollama:11434` y `db:5432`, fuera usan `localhost`.
+- Guía de actualización: `PASO_A_PASO.md` → "Actualizar a la versión con Ollama + Gemini".
+
+## 15. Próximos pasos inmediatos
+
+1. Usuario: seguir "Actualizar a la versión con Ollama + Gemini" de `PASO_A_PASO.md` y pegar la salida de `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web`.
 2. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
 3. Pegar los resultados reales de `stress_test_agents.py` en `PRUEBAS.md` §5 y decidir viabilidad con los criterios ahí definidos.
 4. Elegir hosting del backend para la versión pública en GitHub Pages.
