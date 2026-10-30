@@ -668,7 +668,6 @@ function extractKeywords(text) {
 // =============================================================================
 function buildVacancyTailoredQuestions(careerObj, targetRole, cvText, vacancyContext, totalCount) {
   const contextTokens = extractKeywords(`${targetRole} ${vacancyContext} ${cvText}`);
-  const cleanVacancySnippet = (vacancyContext || "").trim().split(/[.\n]/)[0].trim().substring(0, 95);
 
   // Calificar cada pregunta del banco según su afinidad con el contexto de la vacante + factor aleatorio
   const scoredQuestions = careerObj.questions.map((qText) => {
@@ -688,18 +687,16 @@ function buildVacancyTailoredQuestions(careerObj, targetRole, cvText, vacancyCon
   scoredQuestions.sort((a, b) => b.score - a.score);
   const selectedRaw = scoredQuestions.slice(0, totalCount).map((item) => item.qText);
 
-  // Contextualizar las preguntas seleccionadas con el puesto objetivo y el contexto de la vacante
+  // Transiciones naturales y neutras (sin elogiar ni juzgar la respuesta anterior)
+  const acks = ["Gracias.", "Entiendo, gracias.", "Gracias por contarme.", "De acuerdo.",
+    "Muy bien, sigamos.", "Ok, pasemos a otro tema.", "Gracias por el detalle.", "Va, cambiemos de tema."];
+  let lastAck = "";
   return selectedRaw.map((baseQ, idx) => {
-    if (idx === 0 && cleanVacancySnippet.length > 12) {
-      return `Para la vacante de ${targetRole} (enfocada en "${cleanVacancySnippet}"): ${baseQ}`;
-    }
-    if (idx % 3 === 1 && targetRole) {
-      return `En relación con las responsabilidades del puesto de ${targetRole}: ${baseQ}`;
-    }
-    if (idx % 4 === 2 && cleanVacancySnippet.length > 12) {
-      return `Tomando en cuenta los retos descritos en el contexto de la vacante: ${baseQ}`;
-    }
-    return baseQ;
+    if (idx === 0) return `Hola, gracias por tu tiempo. Empecemos. ${baseQ}`;
+    const options = acks.filter((a) => a !== lastAck);
+    lastAck = options[Math.floor(Math.random() * options.length)];
+    if (idx === selectedRaw.length - 1) return `${lastAck} Vamos con la última pregunta. ${baseQ}`;
+    return `${lastAck} ${baseQ}`;
   });
 }
 
@@ -1411,6 +1408,44 @@ function updateStarMeters(evalObj) {
   }
 }
 
+function showTypingIndicator() {
+  const list = document.getElementById("chat-messages");
+  const div = document.createElement("div");
+  div.className = "msg msg-typing";
+  div.id = "typing-indicator";
+  div.setAttribute("aria-live", "polite");
+  div.textContent = "Escribiendo…";
+  list.appendChild(div);
+  list.scrollTop = list.scrollHeight;
+}
+
+function hideTypingIndicator() {
+  const el = document.getElementById("typing-indicator");
+  if (el) el.remove();
+}
+
+// La evaluación de la IA llega unos segundos después (se calcula en segundo plano).
+async function pollTurnEvaluation(turn, turnId) {
+  const sessionId = appState.sessionId;
+  for (let i = 0; i < 40; i++) {
+    await new Promise((res) => setTimeout(res, i < 5 ? 1000 : 2000));
+    if (appState.sessionId !== sessionId) return; // el usuario cambió de sesión
+    const r = await apiFetch(
+      `/api/sessions/${encodeURIComponent(sessionId)}/turns/${encodeURIComponent(turnId)}/evaluation`,
+      { method: "GET" }, 8000
+    );
+    if (r.ok && r.data && r.data.ready) {
+      turn.evaluation = { ...turn.evaluation, ...r.data.evaluation };
+      // Solo actualiza el panel si sigue siendo la respuesta más reciente
+      if (appState.turns[appState.turns.length - 1] === turn) {
+        updateStarMeters(turn.evaluation);
+      }
+      return;
+    }
+    if (r.status === 401 || r.status === 404) return;
+  }
+}
+
 async function sendChatResponse() {
   const input = document.getElementById("chat-input");
   const text = input.value.trim();
@@ -1422,12 +1457,15 @@ async function sendChatResponse() {
   appendChatMessage("user", cleanResponse);
 
   const elapsedSec = Number(((Date.now() - appState.turnStartTime) / 1000).toFixed(1));
+  // Evaluación local inmediata; la del agente de IA la reemplaza al llegar.
   let evalObj = await evaluateTurnWithConfiguredAgents(currentQ, cleanResponse);
-  let nextQuestionFromServer = null;
+  let nextMessageFromServer = null;
+  let pendingTurnId = null;
 
   if (appState.serverSession) {
     const sendBtn = document.getElementById("btn-send-chat");
     if (sendBtn) sendBtn.disabled = true;
+    showTypingIndicator();
     const r = await apiFetch("/api/sessions/turn", {
       method: "POST",
       body: JSON.stringify({
@@ -1437,41 +1475,43 @@ async function sendChatResponse() {
         allow_followups: false
       })
     });
+    hideTypingIndicator();
     if (sendBtn) sendBtn.disabled = false;
     if (r.ok && r.data) {
       if (r.data.evaluation) {
         evalObj = { ...evalObj, ...r.data.evaluation };
       }
-      if (r.data.next_interviewer_message && !r.data.is_completed) {
-        nextQuestionFromServer = r.data.next_interviewer_message;
+      if (r.data.evaluation_pending && r.data.turn_id) {
+        pendingTurnId = r.data.turn_id;
       }
+      nextMessageFromServer = r.data.next_interviewer_message || null;
     }
   }
 
-  appState.turns.push({
+  const turn = {
     questionNumber: appState.currentIndex + 1,
     questionText: currentQ,
     responseText: cleanResponse,
     evaluation: evalObj
-  });
-
+  };
+  appState.turns.push(turn);
   updateStarMeters(evalObj);
+  if (pendingTurnId) pollTurnEvaluation(turn, pendingTurnId);
   appState.currentIndex += 1;
 
   if (appState.currentIndex >= appState.totalQuestions) {
-    appendChatMessage("ai", "Has completado las preguntas de la sesión. Generando tu evaluación final crítica...");
+    appendChatMessage("ai", nextMessageFromServer ||
+      "Eso es todo por hoy, gracias por tus respuestas. Dame un momento y te muestro tu evaluación con recomendaciones.");
     setTimeout(() => {
       buildAndShowReport();
     }, 400);
   } else {
-    if (nextQuestionFromServer) {
-      appState.questionsPool[appState.currentIndex] = nextQuestionFromServer;
+    if (nextMessageFromServer) {
+      appState.questionsPool[appState.currentIndex] = nextMessageFromServer;
     }
     updateProgressCounter();
-    setTimeout(() => {
-      appendChatMessage("ai", appState.questionsPool[appState.currentIndex]);
-      appState.turnStartTime = Date.now();
-    }, 260);
+    appendChatMessage("ai", appState.questionsPool[appState.currentIndex]);
+    appState.turnStartTime = Date.now();
   }
 }
 
@@ -1489,6 +1529,12 @@ async function buildAndShowReport() {
   // Ejemplos STAR redactados por el Agente Sintetizador (backend), si hay sesión en servidor
   if (appState.serverSession && appState.sessionId) {
     const r = await apiFetch(`/api/sessions/${encodeURIComponent(appState.sessionId)}/report`, { method: "GET" }, 60000);
+    if (r.ok && r.data && Array.isArray(r.data.turn_evaluations)) {
+      r.data.turn_evaluations.forEach((ev) => {
+        const t = turns.find((x) => x.questionNumber === ev.question_number);
+        if (t) t.evaluation = { ...t.evaluation, ...ev };
+      });
+    }
     if (r.ok && r.data && Array.isArray(r.data.weakest_responses)) {
       r.data.weakest_responses.forEach((w) => {
         const t = turns.find((x) => x.questionNumber === w.question_number);

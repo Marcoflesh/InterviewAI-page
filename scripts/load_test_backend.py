@@ -26,7 +26,7 @@ ANSWERS = [
 ]
 
 
-def user_flow(base: str, turns: int, timings: dict, errors: list):
+def user_flow(base: str, turns: int, timings: dict, errors: list, think: float = 0.0):
     c = httpx.Client(base_url=base, timeout=120)
     tag = "".join(random.choices(string.ascii_lowercase, k=10))
     def timed(name, fn):
@@ -50,6 +50,7 @@ def user_flow(base: str, turns: int, timings: dict, errors: list):
         return
     sid = r.json()["session_id"]
     for _ in range(turns):
+        time.sleep(think)  # tiempo que la persona tarda en escribir
         timed("turn", lambda: c.post("/api/sessions/turn", json={"session_id": sid,
                                                                   "candidate_response": random.choice(ANSWERS)}))
     timed("report", lambda: c.get(f"/api/sessions/{sid}/report"))
@@ -60,12 +61,14 @@ def main():
     ap.add_argument("--base", default="http://localhost:8000")
     ap.add_argument("--users", type=int, default=20)
     ap.add_argument("--turns", type=int, default=5)
+    ap.add_argument("--think", type=float, default=0.0,
+                    help="segundos que cada usuario tarda en escribir su respuesta (realista: 20-60)")
     a = ap.parse_args()
     timings, errors = {}, []
     t0 = time.perf_counter()
     with ThreadPoolExecutor(max_workers=a.users) as pool:
         for _ in range(a.users):
-            pool.submit(user_flow, a.base, a.turns, timings, errors)
+            pool.submit(user_flow, a.base, a.turns, timings, errors, a.think)
     wall = time.perf_counter() - t0
     total = sum(len(v) for v in timings.values())
     print(f"{a.users} usuarios simultáneos · {total} peticiones en {wall:.1f} s ({total / wall:.1f} req/s)")

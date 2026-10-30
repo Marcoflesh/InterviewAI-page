@@ -25,11 +25,23 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 - [x] **`v0.4.2`**: llave de OpenAI `sk-svcacct-…` en `.env`; scripts plug & play `iniciar.bat` / `iniciar.sh`.
 - [x] **`v0.4.3`**: "Error interno" al iniciar sesión corregido (diagnóstico de base de datos + autorreparación en `iniciar`).
 - [x] **`v0.4.4`**: el registro ya indica "mínimo 8 caracteres" (coincide con la validación real).
+- [x] **`v0.5.0`**: el entrevistador responde al instante (preguntas preparadas por adelantado y evaluación en segundo plano), sin emojis y con preguntas humanizadas.
 - [ ] **Pendiente del usuario**: activar GitHub Pages (Settings → Pages → GitHub Actions), agregar orígenes en Google Cloud, revocar el token `ghp_` y la llave `sk-proj-` vieja, y correr `stress_test_agents.py` en su computadora.
 
 ---
 
-## 3. Siguientes Funcionalidades (Fase 2 y Fase 3)
+## 3. Plan de Calidad de los Agentes de IA (propuesto 30/10/2026, sin código aún)
+
+Estado actual: los agentes **no están entrenados**; son modelos generales (`gpt-4o-mini`, `gemini-3.8-flash`) guiados por prompts, más un analizador determinista y un *guardrail*. Aún no hay medición contra calificaciones humanas (`golden_dataset` vacío, RN-07).
+
+- [ ] **Fase A — Rúbrica con anclas**: definir qué significa 0, 1, 2, 3, 4 y 5 en cada dimensión STAR, con un ejemplo real por nivel y ajustes por carrera.
+- [ ] **Fase B — Golden dataset**: 150–200 respuestas reales anonimizadas y con consentimiento, calificadas por 2–3 personas (profesores/reclutadores). Medir el acuerdo entre humanos primero.
+- [ ] **Fase C — Arnés de evaluación**: comparar modelo vs. humanos (kappa ponderado, error medio, % de coincidencia ±1) en cada cambio de prompt, como pruebas automáticas.
+- [ ] **Fase D — Mejoras de prompt**: rúbrica con anclas, ejemplos *few-shot* del golden set, citar evidencia antes de calificar, salida con esquema JSON, mediana de 3 evaluaciones o de ambos modelos.
+- [ ] **Fase E — Ciclo con usuarios**: botón "esta retroalimentación no me sirvió", revisión humana y alimentación del golden set; pruebas de sesgo (misma respuesta, distinto perfil).
+- [ ] **Fase F — Fine-tuning (opcional)**: solo con 500–1000 ejemplos de calidad y si el prompt ya no mejora; no sobre `gpt-4o-mini` (se retira el 14/01/2027 junto con sus versiones afinadas).
+
+## 4. Siguientes Funcionalidades (Fase 2 y Fase 3)
 
 - [ ] **Backend público para GitHub Pages**: desplegar `Dockerfile.backend` (Render / Cloud Run) con PostgreSQL administrado y configurar `API_BASE_URL`.
 - [ ] **Migrar `OPENAI_CHAT_MODEL`** antes del 14/01/2027 (retiro de `gpt-4o-mini`) y repetir la prueba de estrés.

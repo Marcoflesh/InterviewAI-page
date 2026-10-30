@@ -43,7 +43,8 @@ from app.security import create_access_token, get_current_user_id, rate_limit
 from app.services.anonymizer import anonymize_pii, extract_auxiliary_features
 from app.services.question_selector import select_randomized_questions_for_career
 from app.agents.graph import interview_graph
-from app.agents.interviewer import contextualize_question_with_vacancy
+from app.agents import pipeline
+from app.agents.interviewer import FINAL_MESSAGE, compose_message
 from app.agents.synthesizer import synthesize_final_report
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -62,6 +63,7 @@ app.add_middleware(
 
 auth_limit = Depends(rate_limit(settings.RATE_LIMIT_AUTH_PER_MINUTE))
 turn_limit = Depends(rate_limit(settings.RATE_LIMIT_TURN_PER_MINUTE))
+poll_limit = Depends(rate_limit(240))
 
 
 @app.on_event("startup")
@@ -306,15 +308,8 @@ def start_interview_session(
         )
 
     q_ids = [q.question_id for q in selected_questions]
-    first_question_raw = selected_questions[0].question_text
+    bank_texts = [q.question_text for q in selected_questions]
     first_competency = selected_questions[0].competency
-    db.commit()  # libera la conexión a la BD mientras responde el agente de IA
-    first_question_adapted = contextualize_question_with_vacancy(
-        base_question=first_question_raw,
-        target_role=payload.target_role,
-        vacancy_context=anonymized_jd,
-        cv_summary=anonymized_cv,
-    )
 
     session_obj = InterviewSession(
         user_id=user.user_id,
@@ -331,6 +326,19 @@ def start_interview_session(
     db.add(session_obj)
     db.commit()
     db.refresh(session_obj)
+    sid = str(session_obj.session_id)
+
+    # La 1.ª pregunta (prioritaria) y las siguientes se redactan en paralelo desde ahora.
+    ahead = 1 + settings.QUESTION_PREFETCH_AHEAD
+    pipeline.prefetch_questions(
+        sid, list(enumerate(bank_texts))[:ahead], payload.target_role, anonymized_jd, anonymized_cv,
+        priority_index=0,
+    )
+    first_question = pipeline.get_question(
+        sid, 0, bank_texts[0], payload.target_role, anonymized_jd, anonymized_cv,
+        wait_seconds=pipeline.question_wait_seconds(first=True),
+    )
+    first_question_adapted = compose_message(first_question, 0, len(q_ids))
 
     return {
         "session_id": str(session_obj.session_id),
@@ -381,6 +389,10 @@ def submit_interview_turn(
 
     aux_features = extract_auxiliary_features(payload.candidate_response)
     anonymized_response = anonymize_pii(payload.candidate_response, [user.full_name])
+
+    if not payload.allow_followups and session_obj.session_state != "profundizar_pregunta":
+        return _fast_turn(db, session_obj, idx, current_q_id, current_q_text, next_q_text,
+                          anonymized_response, aux_features, payload.response_time_seconds, q_ids)
 
     graph_input = (
         {
@@ -483,6 +495,123 @@ def submit_interview_turn(
     }
 
 
+def _fast_turn(db: Session, session_obj: InterviewSession, idx: int, current_q_id, current_q_text: str,
+               next_q_text, anonymized_response: str, aux_features: dict, response_time: float,
+               q_ids: List[int]):
+    """
+    Camino rápido (sin repreguntas, el predeterminado): guarda la respuesta, devuelve la
+    siguiente pregunta ya preparada y evalúa en segundo plano. Tiempo típico: < 0.5 s.
+    """
+    session_obj = (
+        db.query(InterviewSession)
+        .filter(InterviewSession.session_id == session_obj.session_id)
+        .with_for_update()
+        .first()
+    )
+    if session_obj.current_question_index != idx or session_obj.session_state == "finalizar_entrevista":
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Esa respuesta ya fue registrada.")
+
+    total = session_obj.total_questions
+    finished = idx + 1 >= total
+    turn_obj = MessageTurn(
+        session_id=session_obj.session_id,
+        question_number=min(total, idx + 1),
+        question_id=current_q_id,
+        is_followup=False,
+        interviewer_question=current_q_text,
+        candidate_response=anonymized_response,
+        response_length_chars=aux_features["response_length_chars"],
+        response_word_count=aux_features["response_word_count"],
+        has_quantitative_metrics=aux_features["has_quantitative_metrics"],
+        quantitative_metrics_count=aux_features["quantitative_metrics_count"],
+        detected_metrics_list=aux_features["detected_metrics_list"],
+        response_time_seconds=response_time,
+    )
+    db.add(turn_obj)
+    if finished:
+        session_obj.session_state = "finalizar_entrevista"
+        session_obj.current_question_index = total
+        session_obj.completed_at = datetime.now(timezone.utc)
+    else:
+        session_obj.session_state = "pasar_a_siguiente_tema"
+        session_obj.current_question_index = idx + 1
+    db.flush()
+    sid, turn_id, qnum = str(session_obj.session_id), str(turn_obj.turn_id), turn_obj.question_number
+    role, jd, cv = session_obj.target_role, session_obj.job_description_text, session_obj.anonymized_cv_text
+    # Siguientes preguntas de la ventana deslizante para prepararlas mientras el usuario escribe
+    window = list(range(idx + 2, min(total, idx + 2 + settings.QUESTION_PREFETCH_AHEAD)))
+    window_ids = [q_ids[i] for i in window if i < len(q_ids)]
+    texts = {q.question_id: q.question_text
+             for q in db.query(QuestionBank).filter(QuestionBank.question_id.in_(window_ids)).all()} if window_ids else {}
+    db.commit()
+
+    pipeline.submit_evaluation(turn_id)
+    pipeline.prefetch_questions(
+        sid, [(i, texts[q_ids[i]]) for i in window if i < len(q_ids) and q_ids[i] in texts], role, jd, cv
+    )
+
+    if finished:
+        message = FINAL_MESSAGE
+        pipeline.forget_session(sid)
+    else:
+        question = pipeline.get_question(
+            sid, idx + 1, next_q_text or current_q_text, role, jd, cv,
+            wait_seconds=pipeline.question_wait_seconds(first=False),
+        )
+        message = compose_message(question, idx + 1, total)
+
+    return {
+        "session_id": sid,
+        "session_state": "finalizar_entrevista" if finished else "pasar_a_siguiente_tema",
+        "question_number": qnum,
+        "total_questions": total,
+        "turn_id": turn_id,
+        "evaluation": None,
+        "evaluation_pending": True,
+        "auxiliary_features": aux_features,
+        "next_interviewer_message": message,
+        "is_completed": finished,
+        "evaluator_source": None,
+    }
+
+
+_EVAL_FIELDS = ("star_situation", "star_task", "star_action", "star_result",
+                "technical_clarity", "relevance")
+
+
+def _evaluation_dict(e: ModelEvaluation) -> dict:
+    data = {k: int(getattr(e, k)) for k in _EVAL_FIELDS}
+    data.update(
+        turn_average_score=float(e.turn_average_score),
+        strengths=e.strengths,
+        improvement_areas=e.improvement_areas,
+    )
+    return data
+
+
+@app.get("/api/sessions/{session_id}/turns/{turn_id}/evaluation", dependencies=[poll_limit])
+def get_turn_evaluation(
+    session_id: str,
+    turn_id: str,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """El frontend consulta aquí la evaluación que el agente calcula en segundo plano."""
+    session_obj = _get_owned_session(db, session_id, current_user_id)
+    ev = (
+        db.query(ModelEvaluation)
+        .filter(
+            ModelEvaluation.turn_id == _parse_uuid(turn_id, "Turno"),
+            ModelEvaluation.session_id == session_obj.session_id,
+        )
+        .first()
+    )
+    if not ev:
+        return {"ready": False}
+    return {"ready": True, "evaluation": _evaluation_dict(ev)}
+
+
 @app.get("/api/sessions/{session_id}/report", dependencies=[turn_limit])
 def get_final_report(
     session_id: str,
@@ -493,6 +622,19 @@ def get_final_report(
 
     if session_obj.final_report_json:
         return session_obj.final_report_json
+
+    # Esperar las evaluaciones que siguen en segundo plano (o calcular las que falten).
+    pending = [
+        str(t.turn_id)
+        for t in db.query(MessageTurn)
+        .outerjoin(ModelEvaluation, MessageTurn.turn_id == ModelEvaluation.turn_id)
+        .filter(MessageTurn.session_id == session_obj.session_id, ModelEvaluation.evaluation_id.is_(None))
+        .all()
+    ]
+    if pending:
+        db.commit()
+        pipeline.wait_for_evaluations(pending, settings.REPORT_EVALUATION_WAIT_SECONDS)
+        session_obj = _get_owned_session(db, session_id, current_user_id)
 
     turns = (
         db.query(MessageTurn, ModelEvaluation)
@@ -571,6 +713,12 @@ def get_final_report(
             )
             report["score_evolution_rate"] = evolution
 
+    report["turn_evaluations"] = [
+        {"question_number": t["question_number"], **{k: t[k] for k in _EVAL_FIELDS},
+         "turn_average_score": t["turn_average_score"], "strengths": t["strengths"],
+         "improvement_areas": t["improvement_areas"]}
+        for t in turns_data
+    ]
     session_obj.overall_score = report["overall_score"]
     session_obj.score_evolution_rate = report["score_evolution_rate"]
     session_obj.final_report_json = report

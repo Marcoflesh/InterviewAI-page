@@ -71,7 +71,19 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 
 - Texto del campo de contraseña en el registro corregido de 6 a 8 caracteres para coincidir con la validación (`app.js` y `schemas.py` ya exigían 8).
 
-## 9. Próximos pasos inmediatos
+## 9. Consulta 30/10/2026: calidad y "entrenamiento" de los agentes (sin código)
+
+- Respuesta: los agentes no están entrenados ni medidos contra humanos; el camino recomendado es rúbrica con anclas → golden dataset → arnés de evaluación → mejoras de prompt → ciclo con usuarios → fine-tuning solo si hace falta. Plan en `roadmap.md` §3.
+- Pendiente de decisión del usuario: quién califica el golden dataset y cuántas respuestas reunir.
+
+## 10. `v0.5.0` — Velocidad y tono del entrevistador (30/10/2026)
+
+- **Arquitectura del turno**: `POST /turn` ya no espera a la IA. Guarda la respuesta, toma la siguiente pregunta de `pipeline` (preparada por adelantado) y encola la evaluación. El frontend consulta `GET /turns/{turn_id}/evaluation` hasta que llega y actualiza el panel.
+- **Limitación conocida**: el caché de preguntas vive en memoria de un solo proceso (Docker usa uno). Con varias réplicas habría que moverlo a Redis; si se pierde, todo se recalcula bajo demanda sin romper la entrevista.
+- **Parámetros** (`.env` opcional): `QUESTION_PREFETCH_AHEAD=2`, `FIRST_QUESTION_WAIT_SECONDS=4`, `NEXT_QUESTION_WAIT_SECONDS=2`, `REPORT_EVALUATION_WAIT_SECONDS=30`.
+- **Repreguntas** (`allow_followups`): siguen por el grafo de LangGraph de forma síncrona porque dependen de la evaluación.
+
+## 11. Próximos pasos inmediatos
 
 1. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
 2. Pegar los resultados reales de `stress_test_agents.py` en `PRUEBAS.md` §5 y decidir viabilidad con los criterios ahí definidos.

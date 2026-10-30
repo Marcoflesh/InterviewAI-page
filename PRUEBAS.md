@@ -53,3 +53,16 @@ Sirvió para validar el script y el *guardrail* (el modelo simulado "obedece" la
 `python scripts/stress_test_agents.py` envía 9 respuestas etiquetadas (excelente, media, vaga, evasiva, sin sentido, fuera de tema y dos inyecciones) × 7 rondas con 8 llamadas simultáneas por proveedor (~126 llamadas, centavos de dólar). Reporta latencia p50/p95, % de errores, % de JSON válido, % de calificaciones dentro del rango esperado y la desviación entre repeticiones (consistencia).
 
 **Criterios de viabilidad sugeridos:** JSON válido ≥ 99.5 % (RN-09), p95 < 8 s por turno, ≥ 85 % de calificaciones en rango y desviación < 0.5 puntos.
+
+## 6. Velocidad del entrevistador (`v0.5.0`, 30/10/2026)
+
+Simulador de IA con latencias reales (GPT ~1.4 s, Gemini ~2.0 s, 4 % de errores). Cada usuario responde 5 preguntas.
+
+| Escenario | Turno p50 | Turno p95 | Reporte p50 | Errores |
+|---|---|---|---|---|
+| `v0.4.0` · 50 usuarios | 3.8 s | 7.3 s | 4.4 s | 0 |
+| **`v0.5.0` · 50 usuarios (escriben en 5 s)** | **21 ms** | **54 ms** | **4.8 s** | **0** |
+| `v0.5.0` · 50 usuarios (responden en 0 s, peor caso) | 2.0 s | 2.0 s | 11.8 s | 0 |
+| `v0.5.0` · navegador, 1 usuario | 63–131 ms | | | 0 |
+
+En el peor caso la pregunta aún no está lista y se espera el tope de 2 s; después se muestra la pregunta del banco, que ya está bien redactada. En uso real (30 s o más para escribir) siempre está lista.

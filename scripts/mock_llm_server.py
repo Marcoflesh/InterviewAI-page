@@ -53,8 +53,9 @@ async def openai(req: Request):
     if fail := await maybe_fail(CFG["median_openai"]):
         return fail
     text = body["messages"][-1]["content"]
+    m = re.search(r"Pregunta original:\s*(.+)", text)
     content = json.dumps(fake_eval(text)) if body.get("response_format") else \
-        "Adapta tu experiencia: ¿cómo aplicarías esto en la plataforma de pagos de la vacante con PostgreSQL y Docker?"
+        ((m.group(1).strip() if m else "¿Me cuentas de un proyecto donde resolviste un problema importante?"))
     return {"choices": [{"message": {"content": content}}]}
 
 

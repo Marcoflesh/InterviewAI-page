@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     EVALUATOR_PROVIDER: str = "gemini"      # gemini | openai | ollama
     INTERVIEWER_PROVIDER: str = "openai"    # openai | gemini | ollama
     LLM_TIMEOUT_SECONDS: float = 20.0
+    # Cuánto esperar a que el Agente Entrevistador termine de redactar una pregunta
+    # antes de mostrar la del banco (que ya está bien escrita).
+    FIRST_QUESTION_WAIT_SECONDS: float = 4.0
+    NEXT_QUESTION_WAIT_SECONDS: float = 2.0
+    QUESTION_PREFETCH_AHEAD: int = 2   # preguntas que se preparan por adelantado
+    # Cuánto espera el reporte final a las evaluaciones que aún corren en segundo plano.
+    REPORT_EVALUATION_WAIT_SECONDS: float = 30.0
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
 

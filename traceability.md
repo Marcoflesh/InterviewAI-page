@@ -4,6 +4,20 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.5.0] - 2026-10-30 — Respuesta inmediata del entrevistador, sin emojis y preguntas humanizadas`
+
+* **Causa de la lentitud**: cada turno llamaba en serie al Agente Evaluador (Gemini) y luego al Entrevistador (GPT) antes de responder: 4–8 s por turno.
+* **`backend/app/agents/pipeline.py` (nuevo)**: el Entrevistador redacta por adelantado las siguientes 2 preguntas (ventana deslizante, `QUESTION_PREFETCH_AHEAD`) y el Evaluador califica en segundo plano; colas separadas para preguntas, prioridad y evaluaciones; caché con expiración.
+* **`backend/app/main.py`**: camino rápido del turno (sin repreguntas): guarda la respuesta y devuelve la siguiente pregunta al instante; nuevo `GET /api/sessions/{id}/turns/{turn_id}/evaluation`; el reporte espera o calcula las evaluaciones pendientes e incluye `turn_evaluations`. Las repreguntas (si se activan) siguen por el grafo de LangGraph.
+* **`backend/app/agents/interviewer.py`**: prompt de reclutador real (español de México, tuteo, una pregunta, máx. 260 caracteres, sin jerga STAR); transiciones neutras ("Gracias.", "Entiendo, gracias.", "Vamos con la última pregunta.") que no elogian ni juzgan; repreguntas y cierre reescritos en tono humano. Se eliminan los prefijos "Considerando que la vacante…".
+* **`backend/app/llm.py`**: `strip_emojis` en toda salida de IA. **`evaluator.py`**: retroalimentación en segunda persona, máximo 2 oraciones, sin emojis. **`synthesizer.py`**: los 2 ejemplos STAR se redactan en paralelo.
+* **`frontend/js/app.js`, `css/styles.css`**: indicador "Escribiendo…", la pregunta aparece sin retraso artificial, consulta de la evaluación en segundo plano, transiciones humanas también en modo demo.
+* **Medición** (simulador de IA con latencias reales): turno p50 3.8 s → **21 ms** (p95 7.3 s → 54 ms) con 50 usuarios; reporte p50 47 s → 4.8 s; navegador 63–131 ms por turno. Pruebas: 39 pytest + 17 E2E + prueba de chat.
+
+### `[plan] - 2026-10-30 — Plan de calidad de agentes (sin cambios de código)`
+
+* **`roadmap.md` §3**: fases A–F para medir y mejorar la precisión de evaluador, entrevistador y sintetizador. Vinculado a **RN-07** (golden dataset, acuerdo ≥ 0.75), **RN-08** (evaluación sin sesgos) y **RF-08 a RF-10** (rúbricas, golden dataset, *human-in-the-loop*).
+
 ### `[v0.4.4] - 2026-10-30 — Texto de contraseña mínima`
 
 * **`frontend/index.html`**: el campo de registro decía "mínimo 6 caracteres" aunque el frontend y el backend exigen 8 desde `v0.4.0`. Ahora dice 8 y tiene `minlength="8"`.

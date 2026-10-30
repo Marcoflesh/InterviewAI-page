@@ -7,6 +7,7 @@ Cliente único para los proveedores de IA (Gemini, OpenAI y Ollama).
 - Si un proveedor falla, se devuelve None y el llamador usa el siguiente.
 """
 import logging
+import re
 import time
 from typing import Iterable, List, Optional, Tuple
 
@@ -21,7 +22,7 @@ OPENAI_URL = settings.OPENAI_BASE_URL.rstrip("/") + "/chat/completions"
 
 _client = httpx.Client(
     timeout=httpx.Timeout(settings.LLM_TIMEOUT_SECONDS, connect=5.0),
-    limits=httpx.Limits(max_connections=50, max_keepalive_connections=20),
+    limits=httpx.Limits(max_connections=120, max_keepalive_connections=40),
 )
 
 
@@ -138,6 +139,17 @@ def call_ollama(prompt: str, system: Optional[str] = None, json_mode: bool = Fal
 _PROVIDERS = {"gemini": call_gemini, "openai": call_openai, "ollama": call_ollama}
 
 
+# Emojis y pictogramas (no toca letras con acento ni signos del español)
+_EMOJI = re.compile(
+    "[\U0001F000-\U0001FAFF\U0001F1E6-\U0001F1FF\u2600-\u27BF\u2B00-\u2BFF"
+    "\u2300-\u23FF\uFE0E\uFE0F\u200D\u20E3]"
+)
+
+
+def strip_emojis(text: str) -> str:
+    return re.sub(r"[ \t]{2,}", " ", _EMOJI.sub("", text or "")).strip()
+
+
 def provider_order(preferred: str) -> List[str]:
     preferred = (preferred or "").lower()
     order = [preferred] if preferred in _PROVIDERS else []
@@ -151,5 +163,5 @@ def complete(prompt: str, preferred: str, system: Optional[str] = None,
     for name in order or provider_order(preferred):
         result = _PROVIDERS[name](prompt, system=system, json_mode=json_mode, max_tokens=max_tokens)
         if result:
-            return result
+            return strip_emojis(result[0]), result[1]  # la app nunca muestra emojis
     return None
