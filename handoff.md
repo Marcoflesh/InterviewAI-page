@@ -136,7 +136,13 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 
 - Se prefirió `ollama/ollama:latest` a una versión fija porque los modelos nuevos exigen Ollama reciente; `iniciar` lo actualiza y se recupera solo del 412.
 
-## 20. Próximos pasos inmediatos
+## 20. `v0.9.0` — Calificación según lo que pide la pregunta (30/10/2026)
+
+- Regla única en `backend/app/agents/question_focus.py` (copiada en `frontend/js/app.js`: `questionFocus`, `weightedAverage`). Si se cambia una, cambiar la otra; la paridad se revisó con 98 preguntas.
+- El reporte que mandó el usuario lo calificó el analizador local: falta confirmar con `docker compose exec backend python scripts/probar_ia.py` por qué Gemini no respondió en su máquina.
+- `focus` va en el resultado de la evaluación pero no se guarda en BD (no hay columna); la nota ponderada sí.
+
+## 21. Próximos pasos inmediatos
 
 1. Usuario: seguir "Actualizar a la versión con Ollama + Gemini" de `PASO_A_PASO.md` y pegar la salida de `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web`.
 2. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).

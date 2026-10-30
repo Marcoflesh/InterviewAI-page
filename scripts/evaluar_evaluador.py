@@ -152,6 +152,12 @@ def _use_host_database() -> None:
 def load_binary_items():
     """Conjuntos con etiqueta fuerte/débil (web) o con puntaje global (bd)."""
     import re
+    if ARGS.conjunto == "enfoque":
+        data = json.loads((BACKEND / "app/data/pruebas_enfoque.json").read_text(encoding="utf-8"))
+        conv = {"buena": "fuerte", "debil": "debil", None: None}
+        return [{"id": it["id"], "career_code": it["career_code"], "pregunta": it["pregunta"], "vacante": "",
+                 "respuesta": it["respuesta"], "etiqueta": conv[it["etiqueta"]], "ref": None, "fuente": "enfoque"}
+                for it in data["items"]]
     if ARGS.conjunto == "web":
         data = json.loads((BACKEND / "app/data/pruebas_web_star.json").read_text(encoding="utf-8"))
         return [{"id": it["id"], "career_code": it["career_code"], "pregunta": it["pregunta"], "vacante": "",
@@ -188,7 +194,8 @@ def main_binario():
     for it in items:
         t_item = time.time()
         got, src = evaluate(it, ARGS.modo)
-        avg = round(statistics.mean(got[d] for d in DIMS), 2)
+        from app.agents.question_focus import question_focus, weighted_average
+        avg = weighted_average(got, question_focus(it["pregunta"]))  # igual que en la app
         rows.append({**{k: it[k] for k in ("id", "etiqueta", "ref", "fuente")}, "obtenido": avg, "dimensiones": got,
                      "fuente_calificacion": src})
         if ARGS.modo == "llm":
@@ -340,8 +347,8 @@ if __name__ == "__main__":
     ap.add_argument("--modo", choices=["local", "llm"], default="local")
     ap.add_argument("--rubrica", choices=["indicadores", "holistico"], default="indicadores")
     ap.add_argument("--golden", help="CSV con calificaciones humanas (ver datos/golden/)")
-    ap.add_argument("--conjunto", choices=["calibracion", "web", "bd"], default="calibracion",
-                    help="calibracion (sintético, por dimensión) | web (etiquetas de internet) | bd (tabla golden_dataset)")
+    ap.add_argument("--conjunto", choices=["calibracion", "web", "bd", "enfoque"], default="calibracion",
+                    help="calibracion (sintético, por dimensión) | web (etiquetas de internet) | enfoque (preguntas que piden una sola parte) | bd (tabla golden_dataset)")
     ap.add_argument("--umbral", type=float, default=2.5, help="promedio a partir del cual se considera 'fuerte'")
     ap.add_argument("--guardar-en-bd", action="store_true", help="con --conjunto bd: guarda model_score")
     ARGS = ap.parse_args()

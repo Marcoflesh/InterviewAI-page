@@ -865,7 +865,13 @@ function evaluateResponseCritical(questionText, responseText, careerCode, role) 
   else if (overlapRatio < 0.45) rel = 4;
   else rel = wordCount >= 34 ? 5 : 4;
 
-  const avg = Number(((s + t + a + r + tech + rel) / 6).toFixed(2));
+  // Misma regla que backend/app/agents/question_focus.py: se pondera lo que la pregunta pide.
+  const focus = questionFocus(questionText);
+  if (!focus.full) {
+    const core = [["star_task", t], ["star_action", a], ["star_result", r]].filter(([d]) => focus.asks.includes(d)).map(([, v]) => v);
+    if (core.length) rel = Math.max(rel, Math.min(...core) - 1);
+  }
+  const avg = weightedAverage({ star_situation: s, star_task: t, star_action: a, star_result: r, technical_clarity: tech, relevance: rel }, focus);
 
   // Retroalimentación crítica, objetiva y concisa
   const goodParts = [];
@@ -883,17 +889,20 @@ function evaluateResponseCritical(questionText, responseText, careerCode, role) 
   }
 
   const critiques = [];
+  const asks = (d) => focus.asks.includes(d);
   if (rel <= 2) critiques.push("no respondiste al núcleo específico de la pregunta ni al contexto de la vacante");
-  if (s <= 2) critiques.push("faltó contextualizar el escenario inicial o la magnitud del problema (Situación)");
-  if (t <= 2) critiques.push("no delimitaste cuál era tu responsabilidad o meta concreta a resolver (Tarea)");
-  if (a <= 2) critiques.push("no detallaste las acciones técnicas ni las herramientas que aplicaste directamente (Acción)");
-  if (r === 0) critiques.push("omitiste por completo el desenlace o impacto de tu intervención (Resultado: 0/5)");
-  else if (r <= 3 && metrics.length === 0) critiques.push("el resultado quedó subjetivo porque no incluiste indicadores numéricos (%, tiempos, costos o ahorro)");
-  if (tech <= 2) critiques.push(`faltó vocabulario técnico propio de ${careerCode}`);
+  if (s <= 2 && asks("star_situation")) critiques.push("falta ubicar el caso: en qué proyecto o situación fue (Situación)");
+  if (t <= 2 && asks("star_task")) critiques.push("no queda claro cuál era tu papel o qué te tocaba resolver a ti (Tarea)");
+  if (a <= 2 && asks("star_action")) critiques.push("hace falta decir qué hiciste tú, paso por paso, y con qué herramientas o decisiones (Acción)");
+  if (asks("star_result")) {
+    if (r === 0) critiques.push("la pregunta pide el resultado y no lo mencionaste (Resultado)");
+    else if (r <= 3 && metrics.length === 0) critiques.push("el resultado se queda en algo general; respáldalo con un dato (tiempo, %, usuarios o entrega concreta)");
+  }
+  if (tech <= 2 && focus.technical) critiques.push(`faltan detalles técnicos concretos propios de ${careerCode}`);
 
   const improvements = critiques.length > 0
-    ? "Diagnóstico crítico: " + critiques.join("; ") + "."
-    : "Respuesta completa y rigurosa en las cuatro dimensiones STAR.";
+    ? `La pregunta pedía ${describeFocus(focus)}. Para mejorar: ` + critiques.join("; ") + "."
+    : `Respondiste bien lo que se pedía (${describeFocus(focus)}).`;
 
   return {
     star_situation: s,
@@ -909,6 +918,45 @@ function evaluateResponseCritical(questionText, responseText, careerCode, role) 
     improvement_areas: improvements,
     improved_example_star: buildQuestionSpecificStarExample(questionText, careerCode, role)
   };
+}
+
+// Qué partes STAR pide la pregunta (misma lógica que backend/app/agents/question_focus.py).
+function questionFocus(questionText) {
+  const q = normalizeStr(questionText || "");
+  const asks = [];
+  if (/cuentame|platicame|describe|relata|hablame|una vez|ocasion|situacion|alguna vez|proyecto|reto|momento|experiencia/.test(q)) asks.push("star_situation");
+  if (/\btu (rol|papel|responsabilidad|meta|objetivo|tarea|parte|aporte|contribucion)|te (toco|pidieron|asignaron|correspond)|que (debias|tenias que)|de que (eras|partes)|responsable de|que parte/.test(q)) asks.push("star_task");
+  if (/\bcomo\b|que hiciste|que haces|que harias|estrategia|\bplan\b|pasos|enfoque|que (acciones|medidas|decisiones|herramientas|metodo)|que parte (construiste|hiciste|programaste)/.test(q)) asks.push("star_action");
+  if (/resultado|lograste|\blogro|impacto|entregable|como (termino|acabo|salio)|que obtuviste|que paso (despues|al final)|mediste|metrica|aprendiste|que cambio|como te fue/.test(q)) asks.push("star_result");
+  const concrete = asks.some((d) => d !== "star_situation");
+  const finalAsks = concrete ? asks : ["star_situation", "star_task", "star_action", "star_result"];
+  const technical = /tecnic|servicio|caida|incidente|falla|codigo|\bapi\b|framework|lenguaje|herramienta|base de datos|arquitect|\bbug|error|sistema|despliegue|deploy|produccion|entorno|servidor|nube|prueba|\btest|algoritmo|rendimiento|datos|modelo|\bgit\b|migracion|backend|frontend|software|programa|analisis|infraestructura|seguridad|integracion/.test(q);
+  return { asks: finalAsks, technical, full: finalAsks.length === 4 };
+}
+
+function weightedAverage(scores, focus) {
+  const dims = ["star_situation", "star_task", "star_action", "star_result", "technical_clarity", "relevance"];
+  const w = {};
+  if (focus.full) dims.forEach((d) => { w[d] = 1; });
+  else {
+    focus.asks.forEach((d) => { w[d] = 1; });
+    w.relevance = 1;
+    w.technical_clarity = focus.technical ? 1 : 0.5;
+  }
+  let total = 0, weight = 0;
+  Object.keys(w).forEach((d) => { total += scores[d] * w[d]; weight += w[d]; });
+  const base = total / weight;
+  dims.forEach((d) => {
+    if (!(d in w) && scores[d] > base) { total += 0.5 * scores[d]; weight += 0.5; }
+  });
+  return Number((total / weight).toFixed(2));
+}
+
+function describeFocus(focus) {
+  if (focus.full) return "la historia completa: contexto, tu papel, qué hiciste y el resultado";
+  const names = { star_task: "tu papel o meta (Tarea)", star_action: "qué hiciste y cómo (Acción)", star_result: "el resultado (Resultado)" };
+  const parts = focus.asks.filter((d) => d !== "star_situation").map((d) => names[d]);
+  return parts.length ? parts.join(" y ") : names.star_action;
 }
 
 function buildQuestionSpecificStarExample(questionText, careerCode, role) {

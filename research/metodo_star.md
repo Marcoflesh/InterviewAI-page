@@ -88,3 +88,6 @@ Fuentes: [JobTailor](https://www.jobtailor.work/blog/behavioral-interview-questi
 
 Línea base del analizador local: AUC 0.93, exactitud 81 %. Limitación: las etiquetas de los autores son binarias y algunos ejemplos "débiles" están escritos para ser casi buenos, así que es una prueba de discriminación, no de calibración fina.
 
+## 8. No todas las preguntas piden STAR completo
+
+En entrevistas reales muchas preguntas piden una parte concreta: "¿cómo lo resolviste?" (Acción), "¿cuál era tu rol?" (Tarea), "¿qué lograste?" (Resultado). Calificar siempre las cuatro partes castiga respuestas buenas por no contestar lo que no se preguntó. InterviewAI detecta qué pide la pregunta (`backend/app/agents/question_focus.py`) y pondera solo eso, más pertinencia y claridad; lo no pedido solo suma. Cuando la pregunta es abierta ("Cuéntame de una vez que…") se espera la historia completa. Una respuesta hipotética ("no me ha pasado, pero haría…") cuenta como débil y la retroalimentación sugiere contar el caso real más parecido, que es lo que recomiendan las guías de entrevista conductual.

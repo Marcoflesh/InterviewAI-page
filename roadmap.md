@@ -39,6 +39,7 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 - [x] **`v0.8.2`**: Ollama de Docker sin puerto publicado (no choca con un Ollama instalado).
 - [x] **`v0.8.3`**: imagen `ollama/ollama:0.40.9` (qwen3.5 necesita ≥ 0.24.0); primer arranque completo confirmado por el usuario.
 - [x] **`v0.8.4`**: Ollama `latest` + reintento automático ante el error 412.
+- [x] **`v0.9.0`**: calificación según lo que pide cada pregunta (no siempre STAR completo), retroalimentación enfocada y detección de respuestas hipotéticas; set `pruebas_enfoque.json`.
 - [ ] **Siguiente**: correr `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web` y `--conjunto bd --guardar-en-bd` con Gemini en la computadora del usuario y registrar los resultados aquí.
 
 ---

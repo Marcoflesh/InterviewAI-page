@@ -6,6 +6,8 @@ import logging
 
 from app import llm
 from app.agents import rubric
+from app.agents.question_focus import (NOMBRES, describe_focus, not_asked, question_focus,
+                                       weighted_average)
 from app.config import settings
 from app.agents.state import InterviewGraphState
 
@@ -339,26 +341,47 @@ def _critical_star_analyzer(
     else:
         strengths = "La respuesta es superficial y no aporta evidencia suficiente de dominio de la competencia."
 
+    focus = question_focus(question_text)
+    pide = set(focus["pide"])
+    # "Nunca me ha pasado" / "no he tenido…, pero haría…": no hay un caso real que evaluar.
+    sin_caso = bool(SIN_EXPERIENCIA.search(norm))
+    if sin_caso:
+        s_score, r_score = min(s_score, 1), min(r_score, 1)
+        a_score = min(a_score, 2)
+    # Contar palabras en común con la pregunta subestima respuestas que sí contestan con otras
+    # palabras: si contesta bien la parte concreta que se pidió, eso ya es pertinencia.
+    nucleo = [v for d, v in (("star_task", t_score), ("star_action", a_score), ("star_result", r_score)) if d in pide]
+    if nucleo and not focus["star_completo"]:
+        rel_score = max(rel_score, min(nucleo) - 1)
     critiques = []
     if rel_score <= 2:
         critiques.append("te desviaste del núcleo de la pregunta o no conectaste con el contexto de la vacante")
-    if s_score <= 2:
-        critiques.append("omitiste explicar el escenario técnico inicial o la magnitud del problema (Situación)")
-    if t_score <= 2:
-        critiques.append("no especificaste qué meta, requerimiento o responsabilidad puntual tenías a tu cargo (Tarea)")
-    if a_score <= 2:
-        critiques.append("hablaste de forma ambigua sin detallar qué pasos técnicos, herramientas o decisiones ejecutaste tú (Acción)")
-    if r_score == 0:
-        critiques.append("no mencionaste ningún resultado ni desenlace de tus acciones (Resultado = 0/5)")
-    elif r_score <= 3 and metrics_count == 0:
-        critiques.append("declaraste un resultado subjetivo sin respaldarlo con métricas numéricas (%, tiempos, costos o indicadores)")
-    if tech_score <= 2:
-        critiques.append(f"faltó rigor técnico y uso de conceptos propios de {career_code}")
+    if s_score <= 2 and "star_situation" in pide:
+        critiques.append("falta ubicar el caso: en qué proyecto o situación fue (Situación)")
+    if t_score <= 2 and "star_task" in pide:
+        critiques.append("no queda claro cuál era tu papel o qué te tocaba resolver a ti (Tarea)")
+    if a_score <= 2 and "star_action" in pide:
+        critiques.append("hace falta decir qué hiciste tú, paso por paso, y con qué herramientas o decisiones (Acción)")
+    if "star_result" in pide:
+        if r_score == 0:
+            critiques.append("la pregunta pide el resultado y no lo mencionaste (Resultado)")
+        elif r_score <= 3 and metrics_count == 0:
+            critiques.append("el resultado se queda en algo general; respáldalo con un dato (tiempo, %, usuarios o entrega concreta)")
+    if tech_score <= 2 and focus["tecnica"]:
+        critiques.append(f"faltan detalles técnicos concretos propios de {career_code}")
 
+    if sin_caso:
+        critiques.insert(0, "contaste qué harías en lugar de algo que hiciste; si no te ha pasado tal cual, "
+                            "cuenta el caso más parecido que sí hayas vivido (escuela, proyecto personal o trabajo)")
+    opcionales = [NOMBRES[d] for d in not_asked(focus)
+                  if {"star_situation": s_score, "star_task": t_score, "star_action": a_score, "star_result": r_score}[d] <= 2]
     if critiques:
-        improvements = "Crítica objetiva: " + "; ".join(critiques) + "."
+        improvements = f"La pregunta pedía {describe_focus(focus)}. Para mejorar: " + "; ".join(critiques) + "."
+    elif opcionales:
+        improvements = (f"Respondiste bien lo que se pedía ({describe_focus(focus)}). Si quieres reforzarla, "
+                        f"puedes agregar {' y '.join(opcionales)}, pero no era obligatorio.")
     else:
-        improvements = "Respuesta sólida y bien estructurada en las cuatro dimensiones STAR. Para nivel senior, contrasta brevemente el trade-off técnico frente a otras alternativas."
+        improvements = "Respuesta sólida y completa. Para un nivel más alto, menciona brevemente qué alternativa descartaste y por qué."
 
     return {
         "star_situation": s_score,
@@ -372,6 +395,11 @@ def _critical_star_analyzer(
     }
 
 
+SIN_EXPERIENCIA = re.compile(
+    r"\b(nunca (he|me ha|me han|tuve|hice)|no he (tenido|vivido|hecho|estado|pasado)|no me ha (pasado|tocado)"
+    r"|no tengo experiencia|en todo caso (seria|haria)|lo que haria seria|si me pasara)"
+)
+
 _DIMENSIONS = (
     "star_situation", "star_task", "star_action",
     "star_result", "technical_clarity", "relevance",
@@ -383,6 +411,11 @@ STYLE_RULES = (
     "como lo diría un reclutador honesto y respetuoso. 'strengths' e 'improvement_areas' deben tener "
     "máximo 2 oraciones cada uno, concretas y basadas en lo que dijo el candidato. "
     "Prohibido usar emojis, viñetas o Markdown."
+    "\n\nLO QUE PIDE LA PREGUNTA: el mensaje indica qué partes pide la pregunta. Marca los indicadores "
+    "de todas las dimensiones como siempre (el sistema pondera la calificación), pero en "
+    "'improvement_areas' enfócate en lo que la pregunta sí pide. No señales como falla una parte STAR "
+    "que la pregunta no pide; como mucho sugiérela como opcional en media frase. Si la pregunta no es "
+    "técnica, no exijas vocabulario técnico."
 )
 
 INJECTION_GUARD = STYLE_RULES + (
@@ -490,6 +523,7 @@ def evaluate_candidate_turn_node(state: InterviewGraphState) -> Dict[str, Any]:
     target_role = state.get("target_role", "Practicante")
     vacancy_context = state.get("job_description_text", "")
 
+    focus = question_focus(question_text)
     baseline = _critical_star_analyzer(
         question_text=question_text,
         vacancy_context=vacancy_context,
@@ -504,6 +538,9 @@ def evaluate_candidate_turn_node(state: InterviewGraphState) -> Dict[str, Any]:
         f"Puesto objetivo: {target_role} ({state.get('seniority_level')})\n"
         f"Contexto de la vacante: {vacancy_context[:600]}\n"
         f"Pregunta actual: {question_text}\n"
+        f"Lo que pide la pregunta: {describe_focus(focus)}"
+        f"{'' if focus['star_completo'] else ' (no pide: ' + ', '.join(NOMBRES[d] for d in not_asked(focus)) + ')'}"
+        f"{'' if focus['tecnica'] else '. No es una pregunta técnica.'}\n"
         f"Metadatos regex: {json.dumps(aux, ensure_ascii=False)}\n"
         f"<respuesta_candidato>\n{candidate_response}\n</respuesta_candidato>"
     )
@@ -526,7 +563,9 @@ def evaluate_candidate_turn_node(state: InterviewGraphState) -> Dict[str, Any]:
         json_valid = False
 
     eval_data = dict(eval_data)
-    eval_data["turn_average_score"] = round(sum(eval_data[k] for k in _DIMENSIONS) / 6.0, 2)
+    # Promedio según lo que pide la pregunta (ver app/agents/question_focus.py)
+    eval_data["turn_average_score"] = weighted_average(eval_data, focus)
+    eval_data["focus"] = list(focus["pide"])
     eval_data["evaluator_source"] = source
     eval_data["guardrail_applied"] = guardrail
     latency_ms = int((time.perf_counter() - start_ts) * 1000)

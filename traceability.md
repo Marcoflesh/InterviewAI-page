@@ -4,6 +4,15 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.9.0] - 2026-10-30 — La calificación pondera lo que pide cada pregunta`
+
+* **Reporte del usuario (PDF de su entrevista)**: preguntas que piden una sola parte ("¿Cómo estructuraste tu explicación?", "¿Qué plan seguiste?") bajaban la nota por no traer un Resultado que nadie pidió; la retroalimentación exigía STAR completo y vocabulario técnico en preguntas de trabajo en equipo. Además, ese reporte lo calificó el analizador local (no Gemini).
+* **`backend/app/agents/question_focus.py` (nuevo)**: detecta qué partes STAR pide la pregunta y si es técnica. Promedio: solo lo pedido + pertinencia + claridad (medio peso si no es técnica); lo no pedido solo puede subir la nota. Historia completa ("Cuéntame de una vez que…") = el promedio de siempre.
+* **`evaluator.py`**: `turn_average_score` ponderado y `focus` en el resultado; el prompt de Gemini recibe "Lo que pide la pregunta" y la regla de no señalar como falla lo no pedido; el analizador local ya no critica lo no pedido, detecta respuestas hipotéticas ("no he tenido…, pero sería…") y sugiere contar el caso real más parecido, y su pertinencia considera si contestó la parte pedida.
+* **`frontend/js/app.js`**: misma regla en el navegador (modo demo); paridad verificada en 98 preguntas.
+* **`backend/app/data/pruebas_enfoque.json` (nuevo)**: 10 casos con pregunta enfocada (5 buenas, 5 débiles) + las 4 respuestas reales del usuario. `evaluar_evaluador.py --conjunto enfoque` y el modo binario usa el mismo promedio ponderado que la app.
+* **Medición (analizador local)**: enfoque AUC 1.00 / exactitud 100 % (antes: buenas promedio 3.17 con 1 de 5 bajo 3.0; ahora 4.02, todas ≥ 3.0; débiles 1.10 → 1.49). Internet sin retroceso: AUC 0.93 / 81 %. 67 pytest (5 nuevas) y E2E sin errores.
+
 ### `[v0.8.4] - 2026-10-30 — Ollama siempre actualizado y reintento automático`
 
 * **Reporte**: el error 412 se repitió y el mensaje final era el genérico de `v0.8.2` (la carpeta del usuario no tenía `v0.8.3` o la imagen no se actualizó).

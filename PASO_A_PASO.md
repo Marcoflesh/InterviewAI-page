@@ -84,6 +84,8 @@ docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --con
 docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto bd --guardar-en-bd   # todo golden_dataset; guarda model_score
 ```
 
+Para revisar preguntas que piden solo una parte (cómo, plan, rol): `--conjunto enfoque`.
+
 La meta propuesta es AUC ≥ 0.90 y exactitud ≥ 85 %. El script lista las respuestas mal clasificadas para revisarlas a mano. El analizador local (sin IA) saca AUC 0.93 y 81 %.
 
 ## Entrenar y medir a los agentes (v0.6.0)

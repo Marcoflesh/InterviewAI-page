@@ -92,3 +92,15 @@ Chromium + Playwright contra backend y PostgreSQL reales:
 | Descargar PDF de la entrevista pasada | descargado, incluye "3. Conversación completa" |
 | Errores de JavaScript | 0 |
 
+## 9. Preguntas enfocadas (`v0.9.0`, 30/10/2026)
+
+`backend/app/data/pruebas_enfoque.json`: preguntas que piden una sola parte (cómo lo hiciste, qué plan, cuál era tu rol). Analizador local:
+
+| Métrica | Antes (promedio de 6) | Ahora (ponderado por lo que pide) |
+|---|---|---|
+| Promedio respuestas buenas | 3.17 (1 de 5 bajo 3.0) | 4.02 (todas ≥ 3.0) |
+| Promedio respuestas débiles | 1.10 | 1.49 (todas < 2.5) |
+| AUC / exactitud (umbral 2.5) | — | 1.00 / 100 % |
+| Set de internet (sin retroceso) | AUC 0.93 / 81 % | AUC 0.93 / 81 % |
+
+Respuestas reales del usuario (calificación local): pregunta 1 de 2.33 a 3.00 (pedía "cómo lo resolviste"); pregunta 2 de 2.83 a 1.91 (respuesta hipotética: ahora se le pide contar un caso real); preguntas 3 y 4 casi igual porque sí pedían plan/entregable y la respuesta era general.
