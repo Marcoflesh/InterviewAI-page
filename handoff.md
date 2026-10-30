@@ -154,6 +154,8 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - `origin_mismatch`: falta `https://marcoflesh.github.io` en el cliente OAuth; solo se puede en la consola.
 - Invitados: `appState.user.guest = true`, correo interno `invitado-<nombre>@este-navegador` solo como llave del historial local; `userLabel()` lo oculta.
 
+- `v0.11.1`: etiqueta `google-site-verification` del usuario fija en `frontend/index.html` (no quitarla).
+
 ## 23. Próximos pasos inmediatos
 
 1. Usuario: seguir "Actualizar a la versión con Ollama + Gemini" de `PASO_A_PASO.md` y pegar la salida de `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web`.
