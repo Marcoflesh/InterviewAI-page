@@ -83,10 +83,14 @@ PY
       else
         echo "→ Descargando el entrevistador local (Ollama ${modelo}, ~3.4 GB, solo la primera vez)."
         echo "  Ya puedes usar la página: mientras tanto usa las preguntas del banco."
-        if docker compose exec ollama ollama pull "$modelo"; then
+        if docker compose exec ollama ollama pull "$modelo" 2>&1 | tee /tmp/interviewai_ollama.txt && ! grep -q "Error" /tmp/interviewai_ollama.txt; then
           echo "✓ Entrevistador local (Ollama ${modelo}): listo. Las siguientes entrevistas ya lo usan."
         else
-          echo "✗ No se terminó la descarga. Vuelve a correr ./iniciar.sh (continúa donde se quedó)."
+          if grep -q "newer version" /tmp/interviewai_ollama.txt; then
+            echo "✗ Tu imagen de Ollama es vieja para ${modelo}. Agrega  OLLAMA_IMAGE=ollama/ollama:latest  a tu .env y corre: docker compose down && ./iniciar.sh"
+          else
+            echo "✗ No se terminó la descarga. Vuelve a correr ./iniciar.sh (continúa donde se quedó)."
+          fi
         fi
       fi
       exit 0 ;;

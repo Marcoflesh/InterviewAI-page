@@ -4,6 +4,12 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.8.3] - 2026-10-30 — Imagen de Ollama compatible con qwen3.5`
+
+* **Error reportado**: `pull model manifest: 412: The model you are attempting to pull requires a newer version of Ollama`. La imagen fijada `ollama/ollama:0.17.7` no entiende el formato de `qwen3.5` (soportado desde 0.24.0).
+* **`docker-compose.yml`**: `ollama/ollama:0.40.9` (estable, 22/10/2026) en `ollama` y `ollama-init`; se puede cambiar con `OLLAMA_IMAGE`. **`iniciar.sh`**: detecta el error 412 y dice exactamente qué hacer (antes `ollama pull` fallaba con código 0 y el script podía decir "listo").
+* Primer arranque completo del usuario confirmado: BD, backend, frontend y Ollama sanos; `Entrevistador: ollama (qwen3.5:4b) · Evaluador: gemini (gemini-3.8-flash)`.
+
 ### `[v0.8.2] - 2026-10-30 — Ollama de Docker sin puerto en la computadora`
 
 * **Error reportado**: `ports are not available: 127.0.0.1:11434 … address already in use` (el usuario ya tiene Ollama instalado fuera de Docker; con Docker Desktop + WSL la detección por `ss` no lo ve).

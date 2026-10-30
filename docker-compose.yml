@@ -28,7 +28,9 @@ services:
       retries: 10
 
   ollama:
-    image: ${OLLAMA_IMAGE:-ollama/ollama:0.17.7}
+    # qwen3.5 necesita Ollama >= 0.24.0 (con versiones viejas: "412 requires a newer version").
+    # Si algún día vuelve a pasar: OLLAMA_IMAGE=ollama/ollama:latest en .env
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.40.9}
     container_name: interviewai-ollama
     restart: unless-stopped
     environment:
@@ -46,7 +48,7 @@ services:
 
   # Descarga el modelo local una sola vez (queda guardado en el volumen ollamadata)
   ollama-init:
-    image: ${OLLAMA_IMAGE:-ollama/ollama:0.17.7}
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.40.9}
     container_name: interviewai-ollama-init
     restart: "no"
     depends_on:

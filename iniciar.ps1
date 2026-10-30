@@ -88,7 +88,7 @@ for ($intento = 1; $intento -le 3; $intento++) {
         Write-Host "   Ya puedes usar la pagina: mientras tanto usa las preguntas del banco."
         docker compose exec ollama ollama pull $modelo
         if ($LASTEXITCODE -eq 0) { Write-Host "Entrevistador local (Ollama $modelo): listo." -ForegroundColor Green }
-        else { Write-Host "X No se termino la descarga. Vuelve a abrir iniciar.bat (continua donde se quedo)." -ForegroundColor Red }
+        else { Write-Host "X No se termino la descarga. Vuelve a abrir iniciar.bat (continua donde se quedo). Si dice 'requires a newer version', agrega OLLAMA_IMAGE=ollama/ollama:latest a tu .env y corre: docker compose down" -ForegroundColor Red }
       }
       exit 0
     }

@@ -128,7 +128,11 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 
 - El usuario tiene un Ollama nativo en el 11434. El contenedor `ollama` ya no publica puertos; todo lo que lo usa corre dentro de Docker (`docker compose exec backend python scripts/...`).
 
-## 18. Próximos pasos inmediatos
+## 18. `v0.8.3` — Imagen de Ollama (30/10/2026)
+
+- El arranque ya funciona en la máquina del usuario (Linux + Docker). `qwen3.5` exige Ollama ≥ 0.24.0: imagen subida a `0.40.9`. Plan B: `OLLAMA_IMAGE=ollama/ollama:latest`.
+
+## 19. Próximos pasos inmediatos
 
 1. Usuario: seguir "Actualizar a la versión con Ollama + Gemini" de `PASO_A_PASO.md` y pegar la salida de `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web`.
 2. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
