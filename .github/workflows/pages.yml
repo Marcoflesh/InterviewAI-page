@@ -48,7 +48,7 @@ jobs:
               "// Generado por pages.yml (configuración pública, sin secretos)\n"
               f"window.INTERVIEWAI_CONFIG = {json.dumps(cfg)};\n")
           code = re.sub(r"[^A-Za-z0-9_-]", "", os.environ.get("GOOGLE_SITE_VERIFICATION", ""))
-          if code:
+          if code and "google-site-verification" not in open("frontend/index.html", encoding="utf-8").read():
               html = open("frontend/index.html", encoding="utf-8").read()
               tag = f'<meta name="google-site-verification" content="{code}" />'
               open("frontend/index.html", "w", encoding="utf-8").write(html.replace("<head>", "<head>\n  " + tag, 1))

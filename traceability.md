@@ -4,6 +4,10 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.11.1] - 2026-10-30 — Verificación de Search Console`
+
+* `frontend/index.html`: etiqueta `google-site-verification` del usuario en `<head>` (pública y permanente) para verificar `https://marcoflesh.github.io/InterviewAI-page/` y pedir la revisión de Safe Browsing. `pages.yml` no la duplica si además existe la variable `GOOGLE_SITE_VERIFICATION`.
+
 ### `[v0.11.0] - 2026-10-30 — Pages sin alerta de phishing y guía de Google OAuth`
 
 * **Incidentes**: (1) Chrome mostraba "Dangerous site" en `marcoflesh.github.io/InterviewAI-page/` para otras personas; (2) Google Sign-In respondía `Error 400: origin_mismatch`.
