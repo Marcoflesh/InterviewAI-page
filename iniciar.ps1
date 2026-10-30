@@ -28,6 +28,7 @@ if ((Test-Path .git) -and (Get-Command git -ErrorAction SilentlyContinue)) {
 
 function Levantar {
   Write-Host "-> Construyendo y levantando contenedores. La primera vez tarda 2-5 min: NO cierres esta ventana." -ForegroundColor Yellow
+  docker compose pull -q ollama ollama-init 2>$null   # Ollama al dia (los modelos nuevos lo exigen)
   docker compose up --build -d   # si la BD falla, se diagnostica abajo
 }
 
@@ -86,7 +87,15 @@ for ($intento = 1; $intento -le 3; $intento++) {
       } else {
         Write-Host "-> Descargando el entrevistador local (Ollama $modelo, ~3.4 GB, solo la primera vez)." -ForegroundColor Yellow
         Write-Host "   Ya puedes usar la pagina: mientras tanto usa las preguntas del banco."
-        docker compose exec ollama ollama pull $modelo
+        $salida = docker compose exec ollama ollama pull $modelo 2>&1 | Tee-Object -Variable salida
+        if (($salida | Out-String) -match "newer version") {
+          Write-Host "-> La imagen de Ollama es vieja. Bajando la mas nueva y reintentando..." -ForegroundColor Yellow
+          $env:OLLAMA_IMAGE = "ollama/ollama:latest"
+          docker compose pull ollama ollama-init
+          docker compose up -d --force-recreate ollama
+          Start-Sleep -Seconds 8
+          docker compose exec ollama ollama pull $modelo
+        }
         if ($LASTEXITCODE -eq 0) { Write-Host "Entrevistador local (Ollama $modelo): listo." -ForegroundColor Green }
         else { Write-Host "X No se termino la descarga. Vuelve a abrir iniciar.bat (continua donde se quedo). Si dice 'requires a newer version', agrega OLLAMA_IMAGE=ollama/ollama:latest a tu .env y corre: docker compose down" -ForegroundColor Red }
       }

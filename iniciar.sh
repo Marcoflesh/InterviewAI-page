@@ -31,6 +31,7 @@ fi
 
 levantar() {
   echo "→ Construyendo y levantando contenedores. La primera vez tarda 2-5 min: NO presiones Ctrl+C."
+  docker compose pull -q ollama ollama-init 2>/dev/null || true   # Ollama al día (los modelos nuevos lo exigen)
   docker compose up --build -d || true   # si la BD falla, se diagnostica abajo
 }
 
@@ -83,14 +84,22 @@ PY
       else
         echo "→ Descargando el entrevistador local (Ollama ${modelo}, ~3.4 GB, solo la primera vez)."
         echo "  Ya puedes usar la página: mientras tanto usa las preguntas del banco."
-        if docker compose exec ollama ollama pull "$modelo" 2>&1 | tee /tmp/interviewai_ollama.txt && ! grep -q "Error" /tmp/interviewai_ollama.txt; then
+        echo "  Versión de Ollama en Docker: $(docker compose exec -T ollama ollama --version 2>/dev/null | tail -1)"
+        bajar_modelo() { docker compose exec ollama ollama pull "$modelo" 2>&1 | tee /tmp/interviewai_ollama.txt; ! grep -q "Error" /tmp/interviewai_ollama.txt; }
+        if ! bajar_modelo && grep -q "newer version" /tmp/interviewai_ollama.txt; then
+          echo "→ La imagen de Ollama es vieja para ${modelo}. Bajando la versión más nueva de Ollama y reintentando…"
+          grep -q '^OLLAMA_IMAGE=' .env && sed -i.bak 's#^OLLAMA_IMAGE=.*#OLLAMA_IMAGE=ollama/ollama:latest#' .env
+          OLLAMA_IMAGE=ollama/ollama:latest docker compose pull ollama ollama-init
+          OLLAMA_IMAGE=ollama/ollama:latest docker compose up -d --force-recreate ollama
+          sleep 8
+          echo "  Versión de Ollama en Docker: $(docker compose exec -T ollama ollama --version 2>/dev/null | tail -1)"
+          bajar_modelo
+        fi
+        if ! grep -q "Error" /tmp/interviewai_ollama.txt; then
           echo "✓ Entrevistador local (Ollama ${modelo}): listo. Las siguientes entrevistas ya lo usan."
         else
-          if grep -q "newer version" /tmp/interviewai_ollama.txt; then
-            echo "✗ Tu imagen de Ollama es vieja para ${modelo}. Agrega  OLLAMA_IMAGE=ollama/ollama:latest  a tu .env y corre: docker compose down && ./iniciar.sh"
-          else
-            echo "✗ No se terminó la descarga. Vuelve a correr ./iniciar.sh (continúa donde se quedó)."
-          fi
+          echo "✗ No se pudo descargar ${modelo}. Copia el error de arriba y compártelo."
+          echo "  Mientras tanto la página funciona con las preguntas del banco."
         fi
       fi
       exit 0 ;;

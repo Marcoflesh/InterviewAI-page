@@ -4,6 +4,11 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.8.4] - 2026-10-30 — Ollama siempre actualizado y reintento automático`
+
+* **Reporte**: el error 412 se repitió y el mensaje final era el genérico de `v0.8.2` (la carpeta del usuario no tenía `v0.8.3` o la imagen no se actualizó).
+* **`docker-compose.yml`**: `ollama/ollama:latest` por defecto (fijable con `OLLAMA_IMAGE`). **`iniciar.sh` / `iniciar.ps1`**: `docker compose pull ollama ollama-init` antes de levantar; imprimen la versión de Ollama; si la descarga del modelo devuelve 412, bajan la imagen más nueva, recrean el contenedor y reintentan solos.
+
 ### `[v0.8.3] - 2026-10-30 — Imagen de Ollama compatible con qwen3.5`
 
 * **Error reportado**: `pull model manifest: 412: The model you are attempting to pull requires a newer version of Ollama`. La imagen fijada `ollama/ollama:0.17.7` no entiende el formato de `qwen3.5` (soportado desde 0.24.0).
