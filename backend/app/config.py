@@ -1,47 +1,103 @@
-import os
-from pydantic_settings import BaseSettings
+"""
+Configuración central del backend.
+
+Todas las llaves se leen del archivo `.env` (raíz del proyecto) o de variables
+de entorno. NUNCA escribas llaves reales en este archivo ni en el frontend.
+Guía completa: GUIA_CONFIGURACION_APIS.md
+"""
+import logging
+import secrets
+from pathlib import Path
+from typing import List
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger("interviewai.config")
+
+# Busca `.env` en la raíz del proyecto aunque el backend se ejecute desde backend/
+_ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
+_LOCAL_ENV = Path(".env")
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=(str(_ROOT_ENV), str(_LOCAL_ENV)),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     APP_NAME: str = "InterviewAI API"
-    APP_VERSION: str = "0.3.0"
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://interviewai:interviewai_secret@db:5432/interviewai",
+    APP_VERSION: str = "0.4.0"
+    DATABASE_URL: str = "postgresql://interviewai:interviewai_secret@db:5432/interviewai"
+
+    # --- Agentes de IA (las llaves viven SOLO en .env) ---------------------
+    OPENAI_API_KEY: str = ""
+    OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.8-flash"
+    GEMINI_FALLBACK_MODEL: str = "gemini-2.5-flash"
+    EVALUATOR_PROVIDER: str = "gemini"      # gemini | openai | ollama
+    INTERVIEWER_PROVIDER: str = "openai"    # openai | gemini | ollama
+    LLM_TIMEOUT_SECONDS: float = 20.0
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
+
+    # --- Google Sign-In (el Client ID es público; no es un secreto) --------
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLOCK_SKEW_SECONDS: int = 30
+
+    # --- Respaldo local con Ollama -----------------------------------------
+    OLLAMA_BASE_URL: str = "http://ollama:11434"
+    OLLAMA_MODEL: str = "llama3.2:3b"
+    OLLAMA_ENABLED: bool = False
+
+    # --- Sesión de usuario y seguridad -------------------------------------
+    SECRET_KEY: str = ""                    # firma de tokens de sesión
+    ACCESS_TOKEN_TTL_MINUTES: int = 720
+    ALLOWED_ORIGINS: str = (
+        "http://localhost:3000,http://127.0.0.1:3000,"
+        "http://localhost:8000,https://marcoflesh.github.io"
     )
+    RATE_LIMIT_AUTH_PER_MINUTE: int = 10
+    RATE_LIMIT_TURN_PER_MINUTE: int = 30
+    MAX_RESPONSE_CHARS: int = 4000
+    MAX_CONTEXT_CHARS: int = 6000
+    EMAIL_MX_CHECK: str = "strict"          # strict | lenient | off
 
-    # =========================================================================
-    # >>> CONFIGURACIÓN DE AGENTES DE IA (GPT-4o mini y Gemini 3.8 Flash) <<<
-    # Puedes colocar tus llaves directamente en el archivo `.env` (recomendado)
-    # o reemplazar el segundo argumento de os.getenv(...) aquí abajo:
-    # =========================================================================
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")  # <-- PON AQUÍ TU API KEY DE OPENAI EN .env
-    OPENAI_CHAT_MODEL: str = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+    # --- Reglas de sesión en LangGraph -------------------------------------
+    ENABLE_FOLLOWUP_QUESTIONS: bool = False
+    FOLLOWUP_STAR_THRESHOLD: int = 3
 
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")  # <-- PON AQUÍ TU API KEY DE GEMINI EN .env
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    @property
+    def allowed_origins_list(self) -> List[str]:
+        return [o.strip().rstrip("/") for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
-    # Proveedores por defecto para cada agente en LangGraph:
-    EVALUATOR_PROVIDER: str = os.getenv("EVALUATOR_PROVIDER", "gemini")
-    INTERVIEWER_PROVIDER: str = os.getenv("INTERVIEWER_PROVIDER", "openai")
+    @property
+    def openai_ready(self) -> bool:
+        return bool(self.OPENAI_API_KEY) and self.OPENAI_API_KEY.startswith("sk-")
 
-    # =========================================================================
-    # >>> VERIFICADOR OFICIAL DE GOOGLE OAUTH 2.0 <<<
-    # Coloca tu Client ID de Google Cloud Console en `.env` (GOOGLE_CLIENT_ID)
-    # =========================================================================
-    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    @property
+    def gemini_ready(self) -> bool:
+        # Las llaves de Google AI Studio empiezan con "AIza"
+        return bool(self.GEMINI_API_KEY) and self.GEMINI_API_KEY.startswith("AIza")
 
-    # Respaldo con Ollama local
-    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
-
-    ENABLE_FOLLOWUP_QUESTIONS: bool = (
-        os.getenv("ENABLE_FOLLOWUP_QUESTIONS", "false").lower() == "true"
-    )
-    FOLLOWUP_STAR_THRESHOLD: int = int(os.getenv("FOLLOWUP_STAR_THRESHOLD", "3"))
-
-    class Config:
-        env_file = ".env"
+    @property
+    def google_signin_ready(self) -> bool:
+        cid = self.GOOGLE_CLIENT_ID or ""
+        return cid.endswith(".apps.googleusercontent.com") and not cid.startswith("PON_AQUI")
 
 
 settings = Settings()
+
+if not settings.SECRET_KEY:
+    # Sin SECRET_KEY las sesiones se invalidan en cada reinicio. Úsalo solo en desarrollo.
+    settings.SECRET_KEY = secrets.token_urlsafe(48)
+    logger.warning("SECRET_KEY no está definida en .env: se generó una temporal (las sesiones se cerrarán al reiniciar).")
+
+if settings.GEMINI_API_KEY and not settings.gemini_ready:
+    logger.error(
+        "GEMINI_API_KEY no tiene formato de llave de Google AI Studio (debe empezar con 'AIza'). "
+        "El evaluador usará el siguiente proveedor disponible."
+    )
+if settings.OPENAI_API_KEY and not settings.openai_ready:
+    logger.error("OPENAI_API_KEY no tiene formato válido (debe empezar con 'sk-').")

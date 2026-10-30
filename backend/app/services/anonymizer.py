@@ -1,16 +1,17 @@
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Optional
 
 # Expresiones regulares para anonimización de datos personales (PII) en currículums
 EMAIL_REGEX = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 PHONE_REGEX = re.compile(
-    r"(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{2,3}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}\b"
+    r"(?<![\d.,])(?:\+?\d{1,3}[\s.-]?)?\(?\d{2,3}\)?[\s.-]?\d{3,4}[\s.-]?\d{4}(?![\d%])"
 )
 CURP_RFC_ID_REGEX = re.compile(
     r"\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d\b|\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b|\bA0\d{7}\b"
 )
 URL_PERSONAL_REGEX = re.compile(
-    r"https?://(?:www\.)?(?:linkedin\.com/in/|github\.com/)[^\s,)>;]+"
+    r"(?:https?://)?(?:www\.)?(?:linkedin\.com/in/|github\.com/|instagram\.com/|facebook\.com/|x\.com/|twitter\.com/)[^\s,)>;]*[^\s,)>;.]",
+    re.IGNORECASE,
 )
 
 # Expresiones regulares para detectar métricas cuantitativas en respuestas STAR (Dimensión Resultado)
@@ -22,14 +23,18 @@ QUANTITATIVE_METRICS_REGEX = re.compile(
 )
 
 
-def anonymize_pii(text: str) -> str:
+def anonymize_pii(text: str, extra_names: Optional[Iterable[str]] = None) -> str:
     """
-    Reemplaza correos electrónicos, teléfonos, matrículas/CURP/RFC y enlaces personales
-    antes de almacenar el currículum o texto en PostgreSQL.
+    Reemplaza correos electrónicos, teléfonos, matrículas/CURP/RFC, enlaces personales y
+    (si se conocen) el nombre y apellidos del usuario antes de guardar el texto o
+    enviarlo a un proveedor de IA.
     """
     if not text:
         return ""
     cleaned = EMAIL_REGEX.sub("[EMAIL_ANONIMIZADO]", text)
+    for name in extra_names or []:
+        for part in {p for p in re.split(r"\s+", name or "") if len(p) >= 3}:
+            cleaned = re.sub(rf"(?<!\w){re.escape(part)}(?!\w)", "[NOMBRE]", cleaned, flags=re.IGNORECASE)
     cleaned = CURP_RFC_ID_REGEX.sub("[ID_ANONIMIZADO]", cleaned)
     cleaned = URL_PERSONAL_REGEX.sub("[PERFIL_ANONIMIZADO]", cleaned)
     cleaned = PHONE_REGEX.sub("[TELEFONO_ANONIMIZADO]", cleaned)

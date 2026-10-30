@@ -1,8 +1,13 @@
+import logging
 import random
+import uuid
 from datetime import datetime, timezone
 from typing import List
-from fastapi import Depends, FastAPI, HTTPException, status
+
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -32,32 +37,108 @@ from app.auth import (
     verify_google_token,
     verify_password,
 )
+from app.security import create_access_token, get_current_user_id, rate_limit
 from app.services.anonymizer import anonymize_pii, extract_auxiliary_features
 from app.services.question_selector import select_randomized_questions_for_career
 from app.agents.graph import interview_graph
 from app.agents.interviewer import contextualize_question_with_vacancy
 from app.agents.synthesizer import synthesize_final_report
 
-app = FastAPI(title=settings.APP_NAME, version="0.3.0")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("interviewai.api")
 
+app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
+
+# CORS: solo los orígenes de ALLOWED_ORIGINS (localhost y GitHub Pages). Sin cookies.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.allowed_origins_list,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+auth_limit = Depends(rate_limit(settings.RATE_LIMIT_AUTH_PER_MINUTE))
+turn_limit = Depends(rate_limit(settings.RATE_LIMIT_TURN_PER_MINUTE))
+
+
+@app.on_event("startup")
+def _more_worker_threads() -> None:
+    # Las llamadas a los agentes de IA bloquean un hilo varios segundos: más hilos = más usuarios.
+    import anyio.to_thread
+    anyio.to_thread.current_default_thread_limiter().total_tokens = 100
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.exception_handler(Exception)
+async def unhandled_error(request: Request, exc: Exception):
+    logger.exception("Error no controlado en %s", request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "Error interno del servidor."})
+
+
+def _profile(user: User) -> UserProfileResponse:
+    return UserProfileResponse(
+        user_id=str(user.user_id),
+        email=user.email,
+        full_name=user.full_name,
+        university=user.university or "",
+        auth_provider=user.auth_provider,
+        avatar_url=user.avatar_url,
+        career_code=user.career_code,
+        role_code=user.role_code,
+        access_token=create_access_token(str(user.user_id)),
+    )
+
+
+def _parse_uuid(value: str, label: str = "Sesión") -> uuid.UUID:
+    try:
+        return uuid.UUID(str(value))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=404, detail=f"{label} no encontrada.")
+
+
+def _get_owned_session(db: Session, session_id: str, user_id: str) -> InterviewSession:
+    session_obj = (
+        db.query(InterviewSession)
+        .filter(InterviewSession.session_id == _parse_uuid(session_id))
+        .first()
+    )
+    # Mismo 404 si no existe o si es de otra persona: no revela sesiones ajenas.
+    if not session_obj or str(session_obj.user_id) != str(user_id):
+        raise HTTPException(status_code=404, detail="Sesión no encontrada.")
+    return session_obj
+
+
+def _get_user(db: Session, user_id: str) -> User:
+    user = db.query(User).filter(User.user_id == _parse_uuid(user_id, "Cuenta")).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Tu cuenta ya no existe. Inicia sesión de nuevo.")
+    return user
 
 
 @app.get("/api/health")
 def health_check():
+    # Solo booleanos: nunca se devuelve ninguna llave.
     return {
         "status": "ok",
         "service": settings.APP_NAME,
-        "version": "0.3.0",
-        "interviewer_model": settings.OPENAI_CHAT_MODEL,
-        "evaluator_model": settings.GEMINI_MODEL,
-        "followups_enabled_by_default": settings.ENABLE_FOLLOWUP_QUESTIONS,
+        "version": settings.APP_VERSION,
+        "interviewer": {"provider": settings.INTERVIEWER_PROVIDER, "model": settings.OPENAI_CHAT_MODEL},
+        "evaluator": {"provider": settings.EVALUATOR_PROVIDER, "model": settings.GEMINI_MODEL},
+        "configured": {
+            "openai_key": settings.openai_ready,
+            "gemini_key": settings.gemini_ready,
+            "google_sign_in": settings.google_signin_ready,
+            "ollama": settings.OLLAMA_ENABLED,
+        },
     }
 
 
@@ -67,15 +148,14 @@ def get_google_oauth_config():
     Entrega al frontend el GOOGLE_CLIENT_ID configurado en `.env` para inicializar
     el botón verificador oficial de Google Identity Services (`accounts.google.com/gsi/client`).
     """
-    client_id = settings.GOOGLE_CLIENT_ID
-    is_configured = bool(client_id and not client_id.startswith("PON_AQUI"))
+    is_configured = settings.google_signin_ready
     return {
-        "google_client_id": client_id if is_configured else "",
+        "google_client_id": settings.GOOGLE_CLIENT_ID if is_configured else "",
         "is_configured": is_configured,
     }
 
 
-@app.post("/api/auth/register", response_model=UserProfileResponse)
+@app.post("/api/auth/register", response_model=UserProfileResponse, dependencies=[auth_limit])
 def register_local_user(payload: LocalRegisterRequest, db: Session = Depends(get_db)):
     clean_email = validate_real_email(payload.email, verify_dns_mx=True)
     existing = db.query(User).filter(User.email == clean_email).first()
@@ -98,63 +178,39 @@ def register_local_user(payload: LocalRegisterRequest, db: Session = Depends(get
     db.commit()
     db.refresh(user)
 
-    return UserProfileResponse(
-        user_id=str(user.user_id),
-        email=user.email,
-        full_name=user.full_name,
-        university=user.university,
-        auth_provider=user.auth_provider,
-        avatar_url=user.avatar_url,
-        career_code=user.career_code,
-        role_code=user.role_code,
-    )
+    return _profile(user)
 
 
-@app.post("/api/auth/login", response_model=UserProfileResponse)
+@app.post("/api/auth/login", response_model=UserProfileResponse, dependencies=[auth_limit])
 def login_local_user(payload: LocalLoginRequest, db: Session = Depends(get_db)):
     clean_email = validate_real_email(payload.email, verify_dns_mx=False)
     user = db.query(User).filter(User.email == clean_email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No encontramos una cuenta con ese correo electrónico. Regístrate primero.",
+            detail="Correo o contraseña incorrectos.",
         )
     if user.auth_provider == "google" and not user.password_hash:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Esta cuenta está vinculada con Google. Usa el verificador oficial de Google.",
+            detail="Esta cuenta está vinculada con Google. Usa el botón 'Iniciar sesión con Google'.",
         )
     if not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Contraseña incorrecta. Verifica tus datos e intenta nuevamente.",
+            detail="Correo o contraseña incorrectos.",
         )
 
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(user)
 
-    return UserProfileResponse(
-        user_id=str(user.user_id),
-        email=user.email,
-        full_name=user.full_name,
-        university=user.university,
-        auth_provider=user.auth_provider,
-        avatar_url=user.avatar_url,
-        career_code=user.career_code,
-        role_code=user.role_code,
-    )
+    return _profile(user)
 
 
-@app.post("/api/auth/google", response_model=UserProfileResponse)
+@app.post("/api/auth/google", response_model=UserProfileResponse, dependencies=[auth_limit])
 def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
-    verified = verify_google_token(
-        credential=payload.credential,
-        fallback_email=payload.email,
-        fallback_name=payload.full_name,
-        fallback_sub=payload.google_sub,
-        fallback_avatar=payload.avatar_url,
-    )
+    verified = verify_google_token(payload.credential)
     user = db.query(User).filter(User.email == verified["email"]).first()
     if not user:
         user = User(
@@ -177,16 +233,7 @@ def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    return UserProfileResponse(
-        user_id=str(user.user_id),
-        email=user.email,
-        full_name=user.full_name,
-        university=user.university,
-        auth_provider=user.auth_provider,
-        avatar_url=user.avatar_url,
-        career_code=user.career_code,
-        role_code=user.role_code,
-    )
+    return _profile(user)
 
 
 @app.get("/api/careers")
@@ -205,10 +252,15 @@ def list_careers(db: Session = Depends(get_db)):
 
 @app.post("/api/sessions/start")
 def start_interview_session(
-    payload: StartSessionRequest, db: Session = Depends(get_db)
+    payload: StartSessionRequest,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
 ):
-    anonymized_cv = anonymize_pii(payload.cv_text)
-    anonymized_jd = anonymize_pii(payload.job_description_text)
+    user = _get_user(db, current_user_id)
+    if not db.query(Career).filter(Career.career_code == payload.career_code).first():
+        raise HTTPException(status_code=400, detail="Carrera no válida.")
+    anonymized_cv = anonymize_pii(payload.cv_text, [user.full_name])
+    anonymized_jd = anonymize_pii(payload.job_description_text, [user.full_name])
 
     random_count = payload.total_questions or random.randint(15, 20)
     random_count = max(15, min(20, random_count))
@@ -229,6 +281,8 @@ def start_interview_session(
 
     q_ids = [q.question_id for q in selected_questions]
     first_question_raw = selected_questions[0].question_text
+    first_competency = selected_questions[0].competency
+    db.commit()  # libera la conexión a la BD mientras responde el agente de IA
     first_question_adapted = contextualize_question_with_vacancy(
         base_question=first_question_raw,
         target_role=payload.target_role,
@@ -237,7 +291,7 @@ def start_interview_session(
     )
 
     session_obj = InterviewSession(
-        user_id=payload.user_id,
+        user_id=user.user_id,
         career_code=payload.career_code,
         target_role=payload.target_role,
         seniority_level=payload.seniority_level,
@@ -259,22 +313,21 @@ def start_interview_session(
         "total_questions": session_obj.total_questions,
         "current_question_number": 1,
         "question_text": first_question_adapted,
-        "competency": selected_questions[0].competency,
+        "competency": first_competency,
         "anonymized_cv_preview": anonymized_cv[:200],
     }
 
 
-@app.post("/api/sessions/turn")
+@app.post("/api/sessions/turn", dependencies=[turn_limit])
 def submit_interview_turn(
-    payload: SubmitTurnRequest, db: Session = Depends(get_db)
+    payload: SubmitTurnRequest,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
 ):
-    session_obj = (
-        db.query(InterviewSession)
-        .filter(InterviewSession.session_id == payload.session_id)
-        .first()
-    )
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Sesión no encontrada.")
+    session_obj = _get_owned_session(db, payload.session_id, current_user_id)
+    if session_obj.session_state == "finalizar_entrevista":
+        raise HTTPException(status_code=409, detail="Esta entrevista ya terminó.")
+    user = _get_user(db, current_user_id)
 
     q_ids: List[int] = list(session_obj.selected_question_ids or [])
     idx = session_obj.current_question_index
@@ -301,9 +354,9 @@ def submit_interview_turn(
             next_q_text = next_q_obj.question_text
 
     aux_features = extract_auxiliary_features(payload.candidate_response)
-    anonymized_response = anonymize_pii(payload.candidate_response)
+    anonymized_response = anonymize_pii(payload.candidate_response, [user.full_name])
 
-    graph_output = interview_graph.invoke(
+    graph_input = (
         {
             "session_id": str(session_obj.session_id),
             "career_code": session_obj.career_code,
@@ -329,6 +382,21 @@ def submit_interview_turn(
             "json_format_valid": True,
         }
     )
+    session_pk = session_obj.session_id
+    state_before = session_obj.session_state
+    was_followup = state_before == "profundizar_pregunta"
+    db.commit()  # libera la conexión a la BD mientras evalúan los agentes de IA
+    graph_output = interview_graph.invoke(graph_input)
+    session_obj = (
+        db.query(InterviewSession)
+        .filter(InterviewSession.session_id == session_pk)
+        .with_for_update()
+        .first()
+    )
+    # Evita turnos duplicados si el usuario envía dos veces la misma respuesta
+    if session_obj.current_question_index != idx or session_obj.session_state != state_before:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Esa respuesta ya fue registrada.")
 
     eval_res = graph_output["evaluation_result"]
     new_state = graph_output["session_state"]
@@ -337,7 +405,7 @@ def submit_interview_turn(
         session_id=session_obj.session_id,
         question_number=min(session_obj.total_questions, idx + 1),
         question_id=current_q_id,
-        is_followup=(session_obj.session_state == "profundizar_pregunta"),
+        is_followup=was_followup,
         interviewer_question=current_q_text,
         candidate_response=anonymized_response,
         response_length_chars=aux_features["response_length_chars"],
@@ -385,18 +453,17 @@ def submit_interview_turn(
         "auxiliary_features": aux_features,
         "next_interviewer_message": graph_output["next_interviewer_message"],
         "is_completed": new_state == "finalizar_entrevista",
+        "evaluator_source": eval_res.get("evaluator_source"),
     }
 
 
-@app.get("/api/sessions/{session_id}/report")
-def get_final_report(session_id: str, db: Session = Depends(get_db)):
-    session_obj = (
-        db.query(InterviewSession)
-        .filter(InterviewSession.session_id == session_id)
-        .first()
-    )
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Sesión no encontrada.")
+@app.get("/api/sessions/{session_id}/report", dependencies=[turn_limit])
+def get_final_report(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    session_obj = _get_owned_session(db, session_id, current_user_id)
 
     if session_obj.final_report_json:
         return session_obj.final_report_json
@@ -404,7 +471,7 @@ def get_final_report(session_id: str, db: Session = Depends(get_db)):
     turns = (
         db.query(MessageTurn, ModelEvaluation)
         .join(ModelEvaluation, MessageTurn.turn_id == ModelEvaluation.turn_id)
-        .filter(MessageTurn.session_id == session_id)
+        .filter(MessageTurn.session_id == session_obj.session_id)
         .order_by(MessageTurn.question_number.asc())
         .all()
     )
@@ -456,6 +523,12 @@ def get_final_report(session_id: str, db: Session = Depends(get_db)):
         .all()
     )
 
+    prev_score_val = (
+        float(prev_sessions[0].overall_score)
+        if prev_sessions and prev_sessions[0].overall_score is not None
+        else None
+    )
+    db.commit()  # libera la conexión mientras el agente redacta los ejemplos STAR
     report = synthesize_final_report(
         turns_with_evals=turns_data,
         study_resources=resources_list,
@@ -464,8 +537,8 @@ def get_final_report(session_id: str, db: Session = Depends(get_db)):
         evolution_rate=0.0,
     )
 
-    if prev_sessions and prev_sessions[0].overall_score is not None:
-        prev_score = float(prev_sessions[0].overall_score)
+    if prev_score_val is not None:
+        prev_score = prev_score_val
         if prev_score > 0:
             evolution = round(
                 ((report["overall_score"] - prev_score) / prev_score) * 100.0, 2
@@ -481,10 +554,15 @@ def get_final_report(session_id: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/sessions/csat")
-def submit_csat(payload: SubmitCsatRequest, db: Session = Depends(get_db)):
+def submit_csat(
+    payload: SubmitCsatRequest,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    session_obj = _get_owned_session(db, payload.session_id, current_user_id)
     existing = (
         db.query(UserFeedback)
-        .filter(UserFeedback.session_id == payload.session_id)
+        .filter(UserFeedback.session_id == session_obj.session_id)
         .first()
     )
     if existing:
@@ -493,8 +571,8 @@ def submit_csat(payload: SubmitCsatRequest, db: Session = Depends(get_db)):
         existing.student_comment = payload.student_comment
     else:
         fb = UserFeedback(
-            session_id=payload.session_id,
-            user_id=payload.user_id,
+            session_id=session_obj.session_id,
+            user_id=session_obj.user_id,
             csat_score=payload.csat_score,
             perceived_utility=payload.perceived_utility,
             student_comment=payload.student_comment,
@@ -504,11 +582,14 @@ def submit_csat(payload: SubmitCsatRequest, db: Session = Depends(get_db)):
     return {"status": "saved"}
 
 
-@app.get("/api/users/{user_id}/history")
-def get_user_history(user_id: str, db: Session = Depends(get_db)):
+@app.get("/api/users/me/history")
+def get_my_history(
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
     sessions = (
         db.query(InterviewSession)
-        .filter(InterviewSession.user_id == user_id)
+        .filter(InterviewSession.user_id == _parse_uuid(current_user_id, "Cuenta"))
         .order_by(InterviewSession.started_at.desc())
         .all()
     )
@@ -524,3 +605,15 @@ def get_user_history(user_id: str, db: Session = Depends(get_db)):
         }
         for s in sessions
     ]
+
+
+@app.delete("/api/users/me")
+def delete_my_account(
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """Derecho al olvido: borra la cuenta y, por cascada, sesiones, turnos, evaluaciones y CSAT."""
+    user = _get_user(db, current_user_id)
+    db.execute(delete(User).where(User.user_id == user.user_id))
+    db.commit()
+    return {"status": "deleted"}
