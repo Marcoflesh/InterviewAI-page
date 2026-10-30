@@ -55,7 +55,13 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - Se le entregó un `.env` completo (no versionado) con secretos aleatorios para PostgreSQL y `SECRET_KEY`. Si ya había un volumen `pgdata` con la contraseña vieja, debe correr `docker compose down -v`.
 - Nuevos guardas: `scripts/install_git_hooks.sh`, regla gitleaks `AQ.`, patrones ampliados en `push_to_github.sh`.
 
-## 6. Próximos pasos inmediatos
+## 6. Actualización `v0.4.2` (plug & play)
+
+- `.env` completo: OpenAI `sk-svcacct-…`, Gemini `AQ.…`, Client ID, secretos aleatorios. Entregado al usuario, nunca versionado.
+- Arranque en un paso: `iniciar.bat` (Windows) / `iniciar.sh` (macOS/Linux).
+- GitHub Pages: el workflow falla en `configure-pages` hasta que el dueño active *Settings → Pages → Source: GitHub Actions*; la API de GitHub para activarlo no está disponible desde esta sesión.
+
+## 7. Próximos pasos inmediatos
 
 1. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
 2. Pegar los resultados reales de `stress_test_agents.py` en `PRUEBAS.md` §5 y decidir viabilidad con los criterios ahí definidos.

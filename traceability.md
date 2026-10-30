@@ -4,6 +4,13 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.4.2] - 2026-10-29 — Plug & Play`
+
+* **`iniciar.bat`, `iniciar.ps1`, `iniciar.sh` (nuevos)**: verifican Docker y `.env`, protegen `.env` (permisos), instalan el pre-commit, levantan los contenedores, esperan `/api/health`, muestran qué llaves están activas y abren el navegador; opción de reinicio limpio de la base de datos.
+* **`.gitattributes` (nuevo)**: finales de línea correctos para `.sh` (LF) y `.bat`/`.ps1` (CRLF).
+* **`.env` local (no versionado)**: llave de OpenAI de cuenta de servicio `sk-svcacct-…` (la pegada venía duplicada; se usó una sola copia).
+* **Docs**: `PASO_A_PASO.md` reorganizado con tabla de estado; `README.md` con inicio plug & play.
+
 ### `[v0.4.1] - 2026-10-29 — Llaves reales configuradas de forma segura`
 
 * **`backend/app/config.py`, `scripts/check_apis.py`, `.env.example`**: soporte del formato nuevo de llaves de Gemini `AQ.` (además de `AIza`) y detección del ID de OpenAI `key_…` pegado por error.

@@ -6,13 +6,12 @@ Plataforma web minimalista para practicar entrevistas laborales por escrito, con
 - **Stack:** FastAPI + PostgreSQL 16 + nginx en Docker. Frontend HTML/CSS/JS sin frameworks.
 - **Privacidad:** anonimización de datos personales (incluido tu nombre) antes de guardar o enviar a la IA, sesiones con token firmado y borrado de cuenta.
 
-## Inicio rápido (localhost)
+## Inicio rápido (localhost, plug & play)
 
-```bash
-cp .env.example .env          # llena tus llaves (ver PASO_A_PASO.md)
-python scripts/check_apis.py  # verifica llaves sin gastar saldo
-docker compose up --build -d
-```
+1. Abre Docker Desktop y pon tu `.env` en la raíz (plantilla: `.env.example`).
+2. **Windows:** doble clic en `iniciar.bat` · **macOS/Linux:** `./iniciar.sh`
+
+O a mano: `python scripts/check_apis.py` y `docker compose up --build -d`.
 
 Abre **http://localhost:3000** · API: http://localhost:8000/docs
 

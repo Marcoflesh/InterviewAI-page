@@ -1,36 +1,46 @@
-# Paso a Paso: lo que tienes que hacer tú — InterviewAI (`v0.4.0`)
+# Paso a Paso — InterviewAI (`v0.4.2`)
 
-Todo lo que se podía resolver en código ya está en el repositorio. Esta lista es lo que **solo tú** puedes hacer porque requiere tus cuentas. Hazlo en orden.
+## Plug & Play (lo único que necesitas para verlo funcionando)
+
+1. Instala y abre **Docker Desktop**.
+2. `git clone https://github.com/Marcoflesh/InterviewAI-page.git` y copia tu `.env` (el que te entregué) a la carpeta `InterviewAI-page/`.
+3. **Windows:** doble clic en `iniciar.bat`. **macOS/Linux:** `./iniciar.sh`.
+
+El script levanta todo, instala la protección anti-secretos de git, te dice qué llaves están activas y abre http://localhost:3000. Si la base de datos tenía una contraseña vieja, te pedirá correrlo con `-Reset` / `--reset`.
+
+## Estado de la configuración (29/10/2026)
+
+| Pieza | Estado |
+|---|---|
+| Llave de OpenAI (`sk-svcacct-…`, cuenta de servicio) | ✅ En tu `.env` |
+| Llave de Gemini (`AQ.…`, formato nuevo) | ✅ En tu `.env` |
+| Google Sign-In Client ID | ✅ En tu `.env` y en `frontend/js/config.js` (es público) |
+| Contraseña de PostgreSQL y `SECRET_KEY` | ✅ Generadas al azar en tu `.env` |
+| Repositorio, CI y escáner de secretos | ✅ En verde en GitHub |
+| **Orígenes de Google** (Paso 3) | ⏳ Tú, en Google Cloud Console |
+| **Activar GitHub Pages** (Paso 7) | ⏳ Tú, un clic (GitHub no deja que una herramienta externa lo active) |
+| **Revocar el token `ghp_…`** (Paso 0) | ⏳ Tú, en GitHub |
 
 ---
 
-## Paso 0 — URGENTE: proteger tus cuentas (10 min)
+## Paso 0 — Proteger tus cuentas
 
-El `.zip` del proyecto incluía tu archivo `.env` con llaves reales.
+1. **Revoca el token de GitHub `ghp_…`** que estaba en `GEMINI_API_KEY` del `.env` viejo: GitHub → *Settings → Developer settings → Personal access tokens* → bórralo.
+2. **Borra la llave `sk-proj-…` vieja** en https://platform.openai.com/api-keys (ya la reemplazamos por la nueva `sk-svcacct-…`).
+3. **No compartas el `.env`.** El `.zip` en los archivos del proyecto de Claude todavía trae el `.env` viejo: reemplázalo por uno hecho con `git archive -o proyecto.zip HEAD`.
+4. En Google Cloud **restringe** la llave de Gemini a *Generative Language API* y en OpenAI ponle **límite de gasto mensual** al proyecto.
 
-1. **Revoca el token de GitHub.** En `GEMINI_API_KEY` tenías un token que empieza con `ghp_`: eso es un *Personal Access Token* de GitHub, no una llave de Gemini, y da acceso a tu cuenta. Entra a GitHub → *Settings → Developer settings → Personal access tokens*, bórralo y crea otro solo si lo necesitas.
-2. **Rota tu llave de OpenAI.** En https://platform.openai.com/api-keys elimina la llave actual y crea una nueva (la anterior viajó dentro del `.zip`).
-3. **No vuelvas a compartir el `.env`.** Si subes el proyecto como `.zip` a un chat o a un proyecto, bórralo antes o comprime solo lo que está en Git (`git archive -o proyecto.zip HEAD`). El `.zip` que está en los archivos del proyecto de Claude todavía contiene el `.env`: reemplázalo.
+## Paso 1 y 2 — Llaves y `.env` ✅ (ya hechos)
 
-## Paso 1 — Crear la llave correcta de Gemini
-
-1. ✅ **Hecho (29/10/2026):** ya tienes una llave nueva con formato `AQ.` y quedó en tu `.env`. Google cambió el formato de `AIza…` a `AQ.…`; el backend acepta ambos.
-2. **OpenAI:** lo que mandaste (`key_…`) es el **ID** de la llave, no la llave secreta. En https://platform.openai.com/api-keys crea una nueva y copia el valor que empieza con `sk-` (solo se muestra una vez). Mientras tanto, tu `.env` conserva la `sk-proj-…` anterior para que la app funcione; cámbiala en cuanto tengas la nueva.
-3. Recomendado para privacidad: activa facturación en ese proyecto. En la capa gratuita Google puede usar las entradas para mejorar sus productos (ver `SEGURIDAD.md`).
-
-## Paso 2 — Llenar `.env`
-
-✅ **Hecho:** te entregué un `.env` listo con contraseña de PostgreSQL y `SECRET_KEY` generadas al azar, tu llave de Gemini y tu Client ID. Cópialo a la raíz del proyecto (reemplaza el tuyo), corre `chmod 600 .env` y `bash scripts/install_git_hooks.sh`. Si lo quieres hacer a mano:
+Si algún día necesitas rehacer el `.env` a mano:
 
 ```bash
 cp .env.example .env
-python -c "import secrets;print(secrets.token_urlsafe(48))"   # cópialo en SECRET_KEY
-python -c "import secrets;print(secrets.token_urlsafe(24))"   # cópialo en POSTGRES_PASSWORD
+python -c "import secrets;print(secrets.token_urlsafe(48))"   # SECRET_KEY
+python -c "import secrets;print(secrets.token_urlsafe(24))"   # POSTGRES_PASSWORD
 ```
 
-Llena en `.env`: `OPENAI_API_KEY` (nueva, `sk-…`), `GEMINI_API_KEY` (`AIza…`), `GOOGLE_CLIENT_ID`, `SECRET_KEY` y `POSTGRES_PASSWORD`.
-
-> Si ya habías levantado Docker antes, PostgreSQL conserva la contraseña vieja en su volumen. Para empezar limpio: `docker compose down -v` (borra los datos locales de prueba).
+Formatos: OpenAI `sk-…` (no `key_…`, que es solo el ID), Gemini `AQ.…` o `AIza…`, Client ID `….apps.googleusercontent.com`.
 
 ## Paso 3 — Arreglar "Iniciar sesión con Google"
 
@@ -85,7 +95,7 @@ Copia la salida en `PRUEBAS.md` (sección 5) y compárala con los criterios de v
 
 ## Paso 7 — Publicar en GitHub Pages
 
-1. En GitHub → repositorio → *Settings → Pages → Source:* **GitHub Actions**.
+1. En GitHub → repositorio → *Settings → Pages → Build and deployment → Source:* **GitHub Actions**. (El workflow ya existe; solo falta este clic. Después avísame o haz cualquier push y se publica.)
 2. *Settings → Secrets and variables → Actions → Variables*: crea `GOOGLE_CLIENT_ID` (es público). **Nunca** pongas ahí las llaves de OpenAI o Gemini.
 3. Haz un push a `main` (o corre el workflow manualmente). La página queda en `https://marcoflesh.github.io/InterviewAI-page/`.
 

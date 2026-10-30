@@ -22,7 +22,8 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 - [x] **GitHub**: repositorio publicado, workflow de GitHub Pages (con Modo demo sin backend) y CI con pytest + gitleaks.
 - [x] **Pruebas**: 32 pytest con PostgreSQL real, 17 E2E en Chromium, carga hasta 100 usuarios simultáneos, scripts de estrés para las APIs reales.
 - [x] **`v0.4.1`**: llave de Gemini `AQ.` y Client ID configurados en `.env` seguro; soporte del formato `AQ.`; pre-commit anti-secretos.
-- [ ] **Pendiente del usuario**: revocar el token `ghp_`, crear una llave secreta de OpenAI `sk-…` (se recibió el ID `key_…`), configurar orígenes de Google y correr `check_apis.py` y `stress_test_agents.py` en su computadora (ver `PASO_A_PASO.md`).
+- [x] **`v0.4.2`**: llave de OpenAI `sk-svcacct-…` en `.env`; scripts plug & play `iniciar.bat` / `iniciar.sh`.
+- [ ] **Pendiente del usuario**: activar GitHub Pages (Settings → Pages → GitHub Actions), agregar orígenes en Google Cloud, revocar el token `ghp_` y la llave `sk-proj-` vieja, y correr `stress_test_agents.py` en su computadora.
 
 ---
 
