@@ -20,8 +20,27 @@ BLOCKED_FAKE_DOMAINS = {
     "10minutemail.com", "guerrillamail.com", "yopmail.com", "trashmail.com",
     "sharklasers.com", "fakeinbox.com", "getnada.com", "maildrop.cc",
     "dispostable.com", "fake.com", "asdf.com", "qwerty.com", "none.com",
-    "xyz.com", "abc.com", "hola.com", "email.com",
+    "xyz.com", "abc.com", "hola.com", "email.com", "gnial.com", "gmal.com",
+    "gmial.com", "gamil.com", "gmai.com", "gmail.co", "hotmial.com",
+    "hotmal.com", "outlok.com", "outllok.com", "yaho.com",
 }
+
+CANONICAL_PROVIDERS = [
+    "gmail.com", "hotmail.com", "outlook.com", "icloud.com", "yahoo.com", "live.com", "proton.me", "tec.mx", "itesm.mx", "unam.mx", "ipn.mx"
+]
+
+
+def _edit_distance(a: str, b: str) -> int:
+    dp = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]
+    for i in range(len(a) + 1):
+        dp[i][0] = i
+    for j in range(len(b) + 1):
+        dp[0][j] = j
+    for i in range(1, len(a) + 1):
+        for j in range(1, len(b) + 1):
+            cost = 0 if a[i - 1] == b[j - 1] else 1
+            dp[i][j] = min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+    return dp[len(a)][len(b)]
 
 TRUSTED_KNOWN_DOMAINS = {
     "gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "live.com",
@@ -54,10 +73,19 @@ def validate_real_email(email: str, verify_dns_mx: bool = True) -> str:
             detail="El usuario del correo es demasiado corto para ser una cuenta válida.",
         )
 
+    domain_root = domain.split(".")[0]
+    for canonical in CANONICAL_PROVIDERS:
+        canon_root = canonical.split(".")[0]
+        if domain != canonical and (_edit_distance(domain, canonical) <= 2 or _edit_distance(domain_root, canon_root) <= 2):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"El dominio '@{domain}' no existe o está mal escrito (¿quisiste escribir '@{canonical}'?).",
+            )
+
     if domain in BLOCKED_FAKE_DOMAINS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"El dominio '{domain}' es un dominio de prueba o temporal no permitido. Ingresa un correo real.",
+            detail=f"El dominio '@{domain}' no es un proveedor de correo válido.",
         )
 
     if verify_dns_mx and domain not in TRUSTED_KNOWN_DOMAINS:

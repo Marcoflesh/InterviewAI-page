@@ -370,15 +370,52 @@ const STOPWORDS_ES = new Set([
   "mas", "menos", "muy", "todo", "toda", "todos", "todas", "otro", "otra"
 ]);
 
-// Dominios falsos, temporales o de prueba bloqueados por el validador de correos reales
+// Dominios falsos, temporales o de prueba bloqueados por el validador de correos
 const BLOCKED_FAKE_EMAIL_DOMAINS = new Set([
   "ejemplo.com", "example.com", "test.com", "prueba.com", "correo.com",
   "dominio.com", "usuario.com", "mailinator.com", "tempmail.com",
   "10minutemail.com", "guerrillamail.com", "yopmail.com", "trashmail.com",
   "sharklasers.com", "fakeinbox.com", "getnada.com", "maildrop.cc",
   "dispostable.com", "fake.com", "asdf.com", "qwerty.com", "none.com",
-  "xyz.com", "abc.com", "hola.com", "email.com", "nada.com", "patito.com"
+  "xyz.com", "abc.com", "hola.com", "email.com", "nada.com", "patito.com",
+  "gnial.com", "gmal.com", "gmial.com", "gamil.com", "gmai.com", "gmail.co",
+  "hotmial.com", "hotmal.com", "outlok.com", "outllok.com", "yaho.com"
 ]);
+
+// Proveedores de correo oficiales e institucionales verificados
+const VERIFIED_EMAIL_DOMAINS = new Set([
+  "gmail.com", "googlemail.com",
+  "outlook.com", "outlook.es", "outlook.com.mx",
+  "hotmail.com", "hotmail.es", "hotmail.com.mx",
+  "live.com", "live.com.mx", "msn.com",
+  "icloud.com", "me.com", "mac.com",
+  "yahoo.com", "yahoo.com.mx", "yahoo.es", "ymail.com",
+  "proton.me", "protonmail.com", "zoho.com", "fastmail.com", "gmx.com", "aol.com",
+  "tec.mx", "itesm.mx", "exatec.tec.mx",
+  "unam.mx", "comunidad.unam.mx", "ipn.mx", "alumno.ipn.mx", "uam.mx",
+  "ibero.mx", "iberopuebla.mx", "anahuac.mx", "udem.edu.mx", "up.edu.mx",
+  "udg.mx", "uanl.mx", "uaq.mx", "buap.mx", "uv.mx", "uaslp.mx", "ugto.mx",
+  "javeriana.edu.co", "uniandes.edu.co", "unal.edu.co", "udea.edu.co"
+]);
+
+const CANONICAL_PROVIDERS = [
+  "gmail.com", "hotmail.com", "outlook.com", "icloud.com", "yahoo.com", "live.com", "proton.me", "tec.mx", "itesm.mx", "unam.mx", "ipn.mx"
+];
+
+function computeEditDistance(a, b) {
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+    }
+  }
+  return dp[m][n];
+}
 
 const appState = {
   user: null,
@@ -447,7 +484,7 @@ async function validateRealEmailAccount(email) {
   const rfcRegex = /^[A-Za-z0-9](?:[A-Za-z0-9._%+-]{0,62}[A-Za-z0-9])?@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z]{2,})+$/;
 
   if (!rfcRegex.test(clean) || clean.includes("..")) {
-    return { valid: false, reason: "El formato del correo electrónico es inválido." };
+    return { valid: false, reason: "El formato del correo electrónico es inválido (debe incluir @ y un dominio válido como .com o .mx)." };
   }
 
   const [localPart, domain] = clean.split("@");
@@ -456,30 +493,66 @@ async function validateRealEmailAccount(email) {
   }
 
   if (/^(\d+|test|prueba|asdf|qwerty|admin|user|usuario|correo|ejemplo|fake)$/.test(localPart)) {
-    return { valid: false, reason: `El usuario '${localPart}@...' parece ser un correo de prueba. Ingresa tu correo personal o institucional real.` };
+    return { valid: false, reason: `El usuario '${localPart}@...' no es válido. Ingresa tu correo personal o institucional.` };
+  }
+
+  // 1. Detectar typos como @gnial.com, @gmal.com, @hotmial.com, @outlok.com
+  const domainRoot = domain.split(".")[0];
+  for (const canonical of CANONICAL_PROVIDERS) {
+    const canonRoot = canonical.split(".")[0];
+    if (domain !== canonical && (computeEditDistance(domain, canonical) <= 2 || computeEditDistance(domainRoot, canonRoot) <= 2)) {
+      return {
+        valid: false,
+        reason: `El dominio '@${domain}' no existe o está mal escrito (¿quisiste escribir '@${canonical}'?).`
+      };
+    }
   }
 
   if (BLOCKED_FAKE_EMAIL_DOMAINS.has(domain)) {
-    return { valid: false, reason: `El dominio '@${domain}' es un dominio ficticio o temporal no permitido. Usa un proveedor de correo real.` };
+    return { valid: false, reason: `El dominio '@${domain}' no es un proveedor de correo válido.` };
   }
 
-  // Verificar en vivo mediante Google Public DNS-over-HTTPS que el dominio exista y tenga servidores de correo (MX)
+  // 2. Aceptar proveedores oficiales verificados o dominios académicos oficiales (.edu, .edu.mx, .edu.co, .ac.uk, .gob.mx)
+  const isOfficialAcademic = /\.(edu|edu\.[a-z]{2}|ac\.[a-z]{2}|gob\.[a-z]{2})$/.test(domain);
+  if (VERIFIED_EMAIL_DOMAINS.has(domain) || isOfficialAcademic) {
+    return { valid: true, email: clean };
+  }
+
+  // 3. Para dominios corporativos personalizados, exigir verificación real de servidores de correo empresariales (MX)
   try {
     const dnsResp = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=MX`);
     if (dnsResp.ok) {
       const dnsData = await dnsResp.json();
-      if (dnsData.Status === 3 || !Array.isArray(dnsData.Answer) || dnsData.Answer.length === 0) {
-        return {
-          valid: false,
-          reason: `El dominio '@${domain}' no existe o no cuenta con servidores de correo electrónico reales (registros MX).`
-        };
+      const answers = Array.isArray(dnsData.Answer) ? dnsData.Answer : [];
+      const validMx = answers.some((ans) => {
+        const data = String(ans.data || "").toLowerCase().trim();
+        // Rechazar Null MX ("0 .") y servicios de parking de dominios
+        if (!data || data === "0 ." || data.endsWith(" .") || data.includes("sedoparking") || data.includes("bodis") || data.includes("parking")) {
+          return false;
+        }
+        return (
+          data.includes("google.com") ||
+          data.includes("googlemail.com") ||
+          data.includes("outlook.com") ||
+          data.includes("pphosted.com") ||
+          data.includes("mimecast.com") ||
+          data.includes("zoho.com") ||
+          data.includes("protonmail.ch") ||
+          data.includes("yahoodns.net") ||
+          data.includes("icloud.com") ||
+          data.includes("amazonses.com")
+        );
+      });
+      if (dnsData.Status === 0 && validMx) {
+        return { valid: true, email: clean };
       }
     }
-  } catch (_) {
-    // Si el navegador bloquea la consulta externa por red local, verifica que el TLD sea válido
-  }
+  } catch (_) {}
 
-  return { valid: true, email: clean };
+  return {
+    valid: false,
+    reason: `El dominio '@${domain}' no pudo ser verificado como un proveedor de correo válido. Usa un correo real (@gmail.com, @outlook.com, @hotmail.com, @icloud.com o institucional @tec.mx / .edu).`
+  };
 }
 
 function anonymizeText(text) {
@@ -949,6 +1022,11 @@ async function handleLocalLogin() {
 
   if (!email || !password) {
     showAuthFeedback("Ingresa tu correo electrónico y tu contraseña.");
+    return;
+  }
+  const emailCheck = await validateRealEmailAccount(email);
+  if (!emailCheck.valid) {
+    showAuthFeedback(emailCheck.reason, true);
     return;
   }
 
