@@ -1,4 +1,4 @@
-# Documento de Handoff y Continuidad Técnica — InterviewAI (`v0.7.1`)
+# Documento de Handoff y Continuidad Técnica — InterviewAI (`v0.8.0`)
 
 **Fecha de actualización:** 29 de octubre de 2026
 **Repositorio:** `https://github.com/Marcoflesh/InterviewAI-page.git`
@@ -112,7 +112,14 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - `probar_ia.py` y `evaluar_evaluador.py` viven también en la imagen del backend (`/app/scripts`); dentro del contenedor usan `ollama:11434` y `db:5432`, fuera usan `localhost`.
 - Guía de actualización: `PASO_A_PASO.md` → "Actualizar a la versión con Ollama + Gemini".
 
-## 15. Próximos pasos inmediatos
+## 15. `v0.8.0` — Entrevistas pasadas y arranque visible (30/10/2026)
+
+- Historial: fuente de verdad = BD (`/api/users/me/history`, solo terminadas). Detalle con `/api/sessions/{id}/detail`. En el navegador solo resumen; en modo demo se guarda la conversación local para poder verla.
+- `renderReport(data)` es la única función que pinta el reporte (nuevo o pasado) y deja `appState.reportData` para el PDF.
+- Incidente del usuario: Ctrl+C durante `docker compose up --build` dejó el backend viejo (`Entrevistador: None`). `iniciar` ahora enseña el progreso y se auto-repara.
+- GitHub Pages sigue fallando con "Get Pages site failed": falta activar Settings → Pages → Source: GitHub Actions (solo el dueño puede).
+
+## 16. Próximos pasos inmediatos
 
 1. Usuario: seguir "Actualizar a la versión con Ollama + Gemini" de `PASO_A_PASO.md` y pegar la salida de `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web`.
 2. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).

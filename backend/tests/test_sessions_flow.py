@@ -143,3 +143,26 @@ def test_sin_emojis_y_preguntas_humanas(client, make_user, monkeypatch):
     assert "Considerando que la vacante" not in start["question_text"]
     assert compose_message("¿Qué hiciste?", 0, 15).startswith("Hola")
     assert "última pregunta" in compose_message("¿Qué hiciste?", 14, 15)
+
+
+def test_historial_sin_duplicados_y_detalle_privado(client, make_user):
+    _, h = make_user("Carla Historial Ruiz")
+    _, h_otro = make_user("Dario Ajeno Soto")
+    sid = client.post("/api/sessions/start", headers=h, json=START).json()["session_id"]
+    abandonada = client.post("/api/sessions/start", headers=h, json=START).json()["session_id"]
+    client.post("/api/sessions/turn", headers=h, json={"session_id": sid, "candidate_response": GOOD})
+    # pedir el reporte dos veces (doble clic) no debe crear dos entradas
+    assert client.get(f"/api/sessions/{sid}/report", headers=h).status_code == 200
+    assert client.get(f"/api/sessions/{sid}/report", headers=h).status_code == 200
+
+    hist = client.get("/api/users/me/history", headers=h).json()
+    ids = [x["session_id"] for x in hist]
+    assert ids == [sid] and abandonada not in ids and hist[0]["turn_count"] == 1
+
+    d = client.get(f"/api/sessions/{sid}/detail", headers=h)
+    assert d.status_code == 200
+    body = d.json()
+    assert body["turns"][0]["candidate_response"] and body["turns"][0]["evaluation"]["turn_average_score"] >= 0
+    assert body["report"]["overall_score"] == body["overall_score"]
+    assert client.get(f"/api/sessions/{sid}/detail", headers=h_otro).status_code == 404
+    assert client.get(f"/api/sessions/{sid}/detail").status_code in (401, 403)

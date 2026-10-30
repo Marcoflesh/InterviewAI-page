@@ -496,7 +496,10 @@ const appState = {
   turnStartTime: Date.now(),
   googleClientId: PUBLIC_CONFIG.GOOGLE_CLIENT_ID,
   backendOnline: false,
-  serverSession: false
+  serverSession: false,
+  sending: false,          // evita enviar la misma respuesta dos veces (Enter repetido)
+  reportInProgress: false, // evita generar y guardar el mismo reporte dos veces
+  reportData: null         // lo que muestra la vista de reporte y lo que va al PDF
 };
 
 function loadSavedState() {
@@ -513,6 +516,7 @@ function loadSavedState() {
       const parsedH = JSON.parse(savedHistories);
       if (parsedH && typeof parsedH === "object") {
         appState.historiesByUser = parsedH;
+        dedupeLocalHistories();
       }
     }
   } catch (_) {}
@@ -535,6 +539,22 @@ function saveRegisteredUsers() {
   try {
     localStorage.setItem("interviewai_users_v3", JSON.stringify(appState.registeredUsers));
   } catch (_) {}
+}
+
+// Versiones anteriores guardaban la misma entrevista varias veces: se eliminan las repetidas.
+function dedupeLocalHistories() {
+  Object.keys(appState.historiesByUser).forEach((key) => {
+    const list = appState.historiesByUser[key];
+    if (!Array.isArray(list)) return;
+    const seen = new Set();
+    appState.historiesByUser[key] = list.filter((h) => {
+      const id = h.id || [h.date, h.careerCode, h.targetRole, h.overallScore].join("|");
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  });
+  saveHistoriesByUser();
 }
 
 function saveHistoriesByUser() {
@@ -955,6 +975,9 @@ function showAuthFeedback(message, isError = true) {
 // =============================================================================
 function resetPracticeFormAndSession() {
   appState.sessionId = null;
+  appState.sending = false;
+  appState.reportInProgress = false;
+  setChatLocked(false);
   appState.turns = [];
   appState.questionsPool = [];
   appState.currentIndex = 0;
@@ -1263,6 +1286,9 @@ async function startInterview() {
 
   appState.sessionId = null;
   appState.serverSession = false;
+  appState.reportInProgress = false;
+  appState.sending = false;
+  setChatLocked(false);
   if (appState.backendOnline && getToken()) {
     const btn = document.getElementById("btn-start-interview");
     if (btn) btn.disabled = true;
@@ -1446,10 +1472,27 @@ async function pollTurnEvaluation(turn, turnId) {
   }
 }
 
+function setChatLocked(locked) {
+  ["chat-input", "btn-send-chat", "btn-finish-early"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = locked;
+  });
+}
+
 async function sendChatResponse() {
   const input = document.getElementById("chat-input");
   const text = input.value.trim();
-  if (!text) return;
+  if (!text || appState.sending || appState.reportInProgress) return;
+  if (appState.currentIndex >= appState.totalQuestions) return;
+  appState.sending = true;
+  try {
+    await sendChatResponseInner(input, text);
+  } finally {
+    appState.sending = false;
+  }
+}
+
+async function sendChatResponseInner(input, text) {
 
   input.value = "";
   const currentQ = appState.questionsPool[appState.currentIndex];
@@ -1524,23 +1567,15 @@ function finishInterviewEarly() {
 }
 
 async function buildAndShowReport() {
+  if (appState.reportInProgress) return; // doble clic en "Terminar" o Enter repetido
+  appState.reportInProgress = true;
+  setChatLocked(true);
   const turns = appState.turns;
 
   // Ejemplos STAR redactados por el Agente Sintetizador (backend), si hay sesión en servidor
   if (appState.serverSession && appState.sessionId) {
     const r = await apiFetch(`/api/sessions/${encodeURIComponent(appState.sessionId)}/report`, { method: "GET" }, 60000);
-    if (r.ok && r.data && Array.isArray(r.data.turn_evaluations)) {
-      r.data.turn_evaluations.forEach((ev) => {
-        const t = turns.find((x) => x.questionNumber === ev.question_number);
-        if (t) t.evaluation = { ...t.evaluation, ...ev };
-      });
-    }
-    if (r.ok && r.data && Array.isArray(r.data.weakest_responses)) {
-      r.data.weakest_responses.forEach((w) => {
-        const t = turns.find((x) => x.questionNumber === w.question_number);
-        if (t && w.improved_star_example) t.evaluation.improved_example_star = w.improved_star_example;
-      });
-    }
+    if (r.ok && r.data) mergeServerReportIntoTurns(turns, r.data);
   }
   const avgScore = turns.length
     ? Number((turns.reduce((acc, t) => acc + t.evaluation.turn_average_score, 0) / turns.length).toFixed(2))
@@ -1557,26 +1592,60 @@ async function buildAndShowReport() {
     }
   }
 
-  const sortedByWeakest = [...turns].sort(
-    (a, b) => a.evaluation.turn_average_score - b.evaluation.turn_average_score
-  );
-  const weakestTwo = sortedByWeakest.slice(0, 2);
-  const careerObj = CAREER_CATALOG.find((c) => c.code === appState.careerCode) || CAREER_CATALOG[0];
-
-  // Guardar estrictamente en el historial personal del usuario activo
-  userHistory.unshift({
+  // Una sola entrada por entrevista. Con servidor solo se guarda el resumen; la conversación
+  // se consulta al servidor (no se deja texto de respuestas en el navegador).
+  const entryId = appState.sessionId || `local-${Date.now()}`;
+  const entry = {
+    id: entryId,
+    server: Boolean(appState.serverSession && appState.sessionId),
     date: new Date().toLocaleDateString("es-MX"),
     careerCode: appState.careerCode,
     targetRole: appState.targetRole,
     overallScore: avgScore,
     evolutionRate: evolution
-  });
+  };
+  if (!entry.server) entry.turns = JSON.parse(JSON.stringify(turns));
+  const existing = userHistory.findIndex((h) => h.id === entryId);
+  if (existing >= 0) userHistory.splice(existing, 1);
+  userHistory.unshift(entry);
   saveHistoriesByUser();
 
-  document.getElementById("rep-score").textContent = `${avgScore} / 5.0`;
-  document.getElementById("rep-role").textContent = `${appState.targetRole} (${appState.careerCode}) · ${turns.length} respuestas evaluadas`;
+  renderReport({
+    turns, overallScore: avgScore, evolution, careerCode: appState.careerCode,
+    targetRole: appState.targetRole, dateLabel: entry.date, sessionId: appState.sessionId, fromHistory: false
+  });
+}
+
+function mergeServerReportIntoTurns(turns, data) {
+  (data.turn_evaluations || []).forEach((ev) => {
+    const t = turns.find((x) => x.questionNumber === ev.question_number);
+    if (t) t.evaluation = { ...t.evaluation, ...ev };
+  });
+  (data.weakest_responses || []).forEach((w) => {
+    const t = turns.find((x) => x.questionNumber === w.question_number);
+    if (t && w.improved_star_example) t.evaluation.improved_example_star = w.improved_star_example;
+  });
+}
+
+const EMPTY_EVAL = {
+  star_situation: 0, star_task: 0, star_action: 0, star_result: 0, technical_clarity: 0, relevance: 0,
+  turn_average_score: 0, strengths: "", improvement_areas: "Esta respuesta no alcanzó a evaluarse.",
+  improved_example_star: ""
+};
+
+function renderReport(data) {
+  appState.reportData = data;
+  const turns = data.turns;
+  const careerObj = CAREER_CATALOG.find((c) => c.code === data.careerCode) || CAREER_CATALOG[0];
+  const weakestTwo = [...turns]
+    .sort((a, b) => a.evaluation.turn_average_score - b.evaluation.turn_average_score)
+    .slice(0, 2);
+
+  document.getElementById("rep-score").textContent = `${data.overallScore} / 5.0`;
+  document.getElementById("rep-role").textContent =
+    `${data.targetRole} (${data.careerCode}) · ${turns.length} respuestas evaluadas · ${data.dateLabel || ""}`;
   document.getElementById("rep-evolution").textContent =
-    evolution >= 0 ? `+${evolution}% vs. tu sesión previa` : `${evolution}% vs. tu sesión previa`;
+    data.evolution >= 0 ? `+${data.evolution}% vs. tu sesión previa` : `${data.evolution}% vs. tu sesión previa`;
 
   const weakContainer = document.getElementById("rep-weakest-list");
   weakContainer.innerHTML = weakestTwo
@@ -1594,12 +1663,27 @@ async function buildAndShowReport() {
         <div style="font-size: 0.82rem; color: var(--red); margin-bottom: 0.55rem;">
           <strong>${escapeHtml(item.evaluation.improvement_areas)}</strong>
         </div>
+        ${item.evaluation.improved_example_star ? `
         <div style="font-size: 0.84rem; background: #f9fafb; border-left: 3px solid var(--text); padding: 0.65rem 0.8rem; border-radius: 4px;">
           <strong>Ejemplo de respuesta nivel 5/5 bajo método STAR:</strong> ${escapeHtml(item.evaluation.improved_example_star)}
-        </div>
+        </div>` : ""}
       </div>`
     )
     .join("");
+
+  const transcript = document.getElementById("rep-transcript");
+  if (transcript) {
+    transcript.innerHTML = turns
+      .map(
+        (t) => `
+        <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border);">
+          <div style="font-size: 0.8rem; color: var(--muted);">Pregunta ${t.questionNumber} · ${t.evaluation.turn_average_score} / 5.0</div>
+          <div style="font-weight: 500; font-size: 0.88rem; margin: 0.2rem 0 0.35rem;">${escapeHtml(t.questionText)}</div>
+          <div style="font-size: 0.84rem; color: var(--muted);">${escapeHtml(t.responseText)}</div>
+        </div>`
+      )
+      .join("");
+  }
 
   const resourcesContainer = document.getElementById("rep-resources-list");
   resourcesContainer.innerHTML = careerObj.resources
@@ -1617,6 +1701,10 @@ async function buildAndShowReport() {
 
   const pdfStatus = document.getElementById("pdf-download-status");
   if (pdfStatus) pdfStatus.classList.add("hidden");
+  const csat = document.getElementById("csat-block");
+  if (csat) csat.classList.toggle("hidden", Boolean(data.fromHistory));
+  const back = document.getElementById("btn-back-to-history");
+  if (back) back.classList.toggle("hidden", !data.fromHistory);
 
   showView("view-report");
 }
@@ -1662,9 +1750,10 @@ function downloadReportPdf() {
   const scoreText = document.getElementById("rep-score").textContent;
   const roleText = document.getElementById("rep-role").textContent;
   const evoText = document.getElementById("rep-evolution").textContent;
-  const careerObj = CAREER_CATALOG.find((c) => c.code === appState.careerCode) || CAREER_CATALOG[0];
+  const report = appState.reportData || { turns: appState.turns, careerCode: appState.careerCode };
+  const careerObj = CAREER_CATALOG.find((c) => c.code === report.careerCode) || CAREER_CATALOG[0];
 
-  const sortedByWeakest = [...appState.turns].sort(
+  const sortedByWeakest = [...report.turns].sort(
     (a, b) => a.evaluation.turn_average_score - b.evaluation.turn_average_score
   );
   const weakestTwo = sortedByWeakest.slice(0, 2);
@@ -1708,13 +1797,22 @@ function downloadReportPdf() {
         );
         writeWrapped(`Tu respuesta: "${item.responseText}"`, 9.5, false, [75, 85, 99]);
         writeWrapped(`${item.evaluation.improvement_areas}`, 9.5, false, [180, 35, 24]);
-        writeWrapped(`Ejemplo STAR recomendado: ${item.evaluation.improved_example_star}`, 9.5, false, [17, 24, 39]);
+        if (item.evaluation.improved_example_star) {
+          writeWrapped(`Ejemplo STAR recomendado: ${item.evaluation.improved_example_star}`, 9.5, false, [17, 24, 39]);
+        }
         y += 6;
       });
 
       writeWrapped("2. Plan de Accion y Recursos Recomendados", 13, true);
       careerObj.resources.forEach((r) => {
         writeWrapped(`• ${r.title} (${r.provider}) — ${r.url}`, 10, false);
+      });
+      y += 6;
+
+      writeWrapped("3. Conversacion completa", 13, true);
+      report.turns.forEach((t) => {
+        writeWrapped(`Pregunta ${t.questionNumber} (${t.evaluation.turn_average_score}/5.0): ${t.questionText}`, 10, true);
+        writeWrapped(`Tu respuesta: ${t.responseText}`, 9.5, false, [75, 85, 99]);
       });
 
       doc.save(safeFileName);
@@ -1753,31 +1851,87 @@ function downloadReportPdf() {
   } catch (_) {}
 }
 
-function renderHistoryView() {
+async function renderHistoryView() {
   const tbody = document.getElementById("history-tbody");
   const ownerLabel = document.getElementById("history-owner-label");
   if (ownerLabel && appState.user) {
     ownerLabel.textContent = `Cuenta activa: ${appState.user.full_name} (${appState.user.email})`;
   }
   if (!tbody) return;
-
-  const userHistory = getCurrentUserHistoryList();
-  if (userHistory.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" style="padding: 1rem; text-align: center; color: var(--muted);">Esta cuenta aún no tiene entrevistas registradas.</td></tr>`;
-  } else {
-    tbody.innerHTML = userHistory
-      .map(
-        (h) => `
-        <tr style="border-bottom: 1px solid var(--border);">
-          <td style="padding: 0.75rem;">${escapeHtml(h.date)}</td>
-          <td style="padding: 0.75rem;">${escapeHtml(h.careerCode)} — ${escapeHtml(h.targetRole)}</td>
-          <td style="padding: 0.75rem; font-weight: 600;">${escapeHtml(h.overallScore)} / 5.0</td>
-          <td style="padding: 0.75rem; color: var(--muted);">${h.evolutionRate >= 0 ? "+" + h.evolutionRate + "%" : h.evolutionRate + "%"}</td>
-        </tr>`
-      )
-      .join("");
-  }
   showView("view-history");
+  tbody.innerHTML = `<tr><td colspan="5" style="padding: 1rem; text-align: center; color: var(--muted);">Cargando…</td></tr>`;
+
+  // Con servidor, el historial sale de la base de datos (una fila por entrevista terminada).
+  let rows = null;
+  if (appState.backendOnline && getToken()) {
+    const r = await apiFetch("/api/users/me/history", { method: "GET" });
+    if (r.ok && Array.isArray(r.data)) {
+      rows = r.data.map((h) => ({
+        id: h.session_id, server: true,
+        date: h.started_at ? new Date(h.started_at).toLocaleDateString("es-MX") : "",
+        careerCode: h.career_code, targetRole: h.target_role,
+        overallScore: h.overall_score, evolutionRate: Number(h.score_evolution_rate || 0)
+      }));
+    }
+  }
+  if (!rows) rows = getCurrentUserHistoryList().filter((h) => !h.server || !appState.backendOnline);
+  appState.historyRows = rows;
+
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding: 1rem; text-align: center; color: var(--muted);">Esta cuenta aún no tiene entrevistas terminadas.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows
+    .map(
+      (h, i) => `
+      <tr style="border-bottom: 1px solid var(--border);">
+        <td style="padding: 0.75rem;">${escapeHtml(h.date)}</td>
+        <td style="padding: 0.75rem;">${escapeHtml(h.careerCode)} — ${escapeHtml(h.targetRole)}</td>
+        <td style="padding: 0.75rem; font-weight: 600;">${escapeHtml(h.overallScore)} / 5.0</td>
+        <td style="padding: 0.75rem; color: var(--muted);">${h.evolutionRate >= 0 ? "+" + h.evolutionRate + "%" : h.evolutionRate + "%"}</td>
+        <td style="padding: 0.75rem; text-align: right;">
+          <button type="button" class="btn btn-outline history-view-btn" data-index="${i}" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">Ver</button>
+        </td>
+      </tr>`
+    )
+    .join("");
+  tbody.querySelectorAll(".history-view-btn").forEach((btn) => {
+    btn.addEventListener("click", () => openPastInterview(appState.historyRows[Number(btn.dataset.index)], btn));
+  });
+}
+
+async function openPastInterview(h, btn) {
+  if (!h) return;
+  let turns = h.turns || null;
+  if (h.server) {
+    if (btn) { btn.disabled = true; btn.textContent = "Abriendo…"; }
+    const r = await apiFetch(`/api/sessions/${encodeURIComponent(h.id)}/detail`, { method: "GET" });
+    if (btn) { btn.disabled = false; btn.textContent = "Ver"; }
+    if (!r.ok || !r.data) {
+      alertInHistory("No se pudo abrir esta entrevista. Revisa que el servidor esté encendido.");
+      return;
+    }
+    turns = r.data.turns.map((t) => ({
+      questionNumber: t.question_number,
+      questionText: t.interviewer_question,
+      responseText: t.candidate_response,
+      evaluation: { ...EMPTY_EVAL, ...(t.evaluation || {}) }
+    }));
+    if (r.data.report) mergeServerReportIntoTurns(turns, r.data.report);
+  }
+  if (!turns || turns.length === 0) {
+    alertInHistory("Esta entrevista se guardó con una versión anterior y no tiene la conversación.");
+    return;
+  }
+  renderReport({
+    turns, overallScore: h.overallScore, evolution: h.evolutionRate, careerCode: h.careerCode,
+    targetRole: h.targetRole, dateLabel: h.date, sessionId: h.server ? h.id : null, fromHistory: true
+  });
+}
+
+function alertInHistory(message) {
+  const el = document.getElementById("history-owner-label");
+  if (el) el.textContent = message;
 }
 
 async function submitCsatRating(score) {
@@ -1841,6 +1995,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     showView("view-setup");
   });
   document.getElementById("btn-back-from-history").addEventListener("click", () => showView("view-setup"));
+  document.getElementById("btn-back-to-history").addEventListener("click", renderHistoryView);
 
   document.querySelectorAll(".csat-star-btn").forEach((btn) => {
     btn.addEventListener("click", () => {

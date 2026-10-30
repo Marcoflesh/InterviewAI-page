@@ -1,4 +1,8 @@
-# Paso a Paso — InterviewAI (`v0.7.1`)
+# Paso a Paso — InterviewAI (`v0.8.0`)
+
+## Ver tus entrevistas pasadas (v0.8.0)
+
+Arriba a la derecha, **Historial** → botón **Ver** en la entrevista que quieras. Ves el reporte, la **Conversación completa** y puedes **Descargar PDF** otra vez. Solo aparecen las entrevistas que terminaste (con reporte), una vez cada una.
 
 ## Actualizar a la versión con Ollama + Gemini (v0.7.1)
 
@@ -23,12 +27,8 @@ Quién hace qué: **Entrevistador = Ollama** (`qwen3.5:4b`, local y gratis) · *
    - macOS/Linux: `./iniciar.sh`
    - A mano: `docker compose up --build -d`
 
-   Al final debe imprimir: `Entrevistador: ollama (qwen3.5:4b) | Evaluador: gemini (gemini-3.8-flash)`.
-5. **Espera la descarga del modelo** (solo la primera vez, 5–20 min según tu internet):
-   ```bash
-   docker compose logs -f ollama-init
-   ```
-   Cuando diga `success`, sal con `Ctrl + C`. Mientras se descarga, la página funciona con las preguntas del banco.
+   **No presiones Ctrl+C mientras construye** (ahora ves el avance). Debe imprimir: `Entrevistador: ollama (qwen3.5:4b) | Evaluador: gemini (gemini-3.8-flash)`. Si sale `None`, el mismo script reconstruye el backend.
+5. **Espera la descarga del modelo** (solo la primera vez, 5–20 min según tu internet). El script la muestra con una barra de progreso y termina con `✓ Entrevistador local (Ollama qwen3.5:4b): listo`. Mientras tanto ya puedes usar la página (usa preguntas del banco). Para revisarlo después: `docker compose exec ollama ollama list` debe mostrar `qwen3.5:4b`.
 6. **Comprueba que ambas IAs responden** (no necesitas instalar Python, corre dentro de Docker):
    ```bash
    docker compose exec backend python scripts/probar_ia.py

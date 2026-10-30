@@ -19,8 +19,14 @@ chmod 600 .env 2>/dev/null || true
 HEALTH=/tmp/interviewai_health.json
 
 levantar() {
-  echo "→ Construyendo y levantando contenedores (la primera vez tarda unos minutos)…"
-  docker compose up --build -d >/dev/null 2>&1 || true   # si la BD falla, se diagnostica abajo
+  echo "→ Construyendo y levantando contenedores. La primera vez tarda 2-5 min: NO presiones Ctrl+C."
+  docker compose up --build -d || true   # si la BD falla, se diagnostica abajo
+}
+
+# Si el backend no reporta "agentes", quedó una imagen anterior (p. ej. se interrumpió la construcción).
+backend_actualizado() {
+  python3 -c "import json,sys;sys.exit(0 if json.load(open('$HEALTH')).get('agentes',{}).get('entrevistador') else 1)" 2>/dev/null \
+    || grep -q '"entrevistador"' "$HEALTH"
 }
 
 # Devuelve el código de estado de la base de datos: ok | contrasena | esquema_desactualizado | sin_tablas | sin_conexion | sin_backend
@@ -45,6 +51,10 @@ for intento in 1 2 3; do
   echo "$codigo"
   case "$codigo" in
     ok)
+      if ! backend_actualizado; then
+        echo "→ El backend sigue con la versión anterior. Reconstruyéndolo (no presiones Ctrl+C)…"
+        docker compose up --build -d backend && sleep 5 && estado_bd >/dev/null
+      fi
       docker compose up -d >/dev/null 2>&1   # asegura que el frontend también esté arriba
       python3 - "$HEALTH" <<'PY' 2>/dev/null || true
 import json, sys
@@ -55,14 +65,19 @@ print(f"  Entrevistador: {a.get('entrevistador')} ({a.get('modelo_ollama')}) · 
 print(f"  Gemini {m(c['gemini_key'])} · Google Sign-In {m(c['google_sign_in'])} · OpenAI (opcional) {'✓' if c['openai_key'] else '-'}")
 PY
       modelo="$(grep -E '^OLLAMA_MODEL=' .env | cut -d= -f2)"; modelo="${modelo:-qwen3.5:4b}"
-      if docker compose exec -T ollama ollama list 2>/dev/null | grep -q "^${modelo}"; then
-        echo "  Entrevistador local (Ollama ${modelo}): listo ✓"
-      else
-        echo "  Entrevistador local (Ollama ${modelo}): descargándose la primera vez (~3-7 GB)."
-        echo "  Mientras tanto se usan las preguntas del banco. Avance: docker compose logs -f ollama-init"
-      fi
-      echo "✓ Listo: http://localhost:3000"
+      echo "✓ Página lista: http://localhost:3000"
       (open http://localhost:3000 || xdg-open http://localhost:3000) >/dev/null 2>&1 || true
+      if docker compose exec -T ollama ollama list 2>/dev/null | grep -q "^${modelo}"; then
+        echo "✓ Entrevistador local (Ollama ${modelo}): listo"
+      else
+        echo "→ Descargando el entrevistador local (Ollama ${modelo}, ~3.4 GB, solo la primera vez)."
+        echo "  Ya puedes usar la página: mientras tanto usa las preguntas del banco."
+        if docker compose exec ollama ollama pull "$modelo"; then
+          echo "✓ Entrevistador local (Ollama ${modelo}): listo. Las siguientes entrevistas ya lo usan."
+        else
+          echo "✗ No se terminó la descarga. Vuelve a correr ./iniciar.sh (continúa donde se quedó)."
+        fi
+      fi
       exit 0 ;;
     contrasena)
       echo "→ La base de datos guarda una contraseña anterior. Sincronizándola con tu .env (sin borrar datos)…"

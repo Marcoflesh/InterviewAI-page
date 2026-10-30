@@ -4,6 +4,16 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.8.0] - 2026-10-30 — Entrevistas pasadas, historial sin duplicados y arranque de Ollama visible`
+
+* **Bug reportado**: al volver a entrar, el historial mostraba la misma entrevista varias veces. **Causa**: el historial vivía solo en `localStorage` y `buildAndShowReport` podía ejecutarse dos veces (Enter repetido o doble clic en "Terminar" mientras se esperaba el reporte), guardando una entrada por llamada.
+* **`frontend/js/app.js`**: candados `sending` y `reportInProgress`; el chat se bloquea al terminar; una entrada por `session_id`; limpieza automática de duplicados heredados; con servidor el historial sale de la base de datos y el navegador solo guarda el resumen. `renderReport()` separa los datos de la vista y alimenta el PDF.
+* **Entrevistas pasadas (nuevo)**: botón **Ver** en el historial → reporte completo, sección "Conversación completa" (pregunta, respuesta y puntaje de cada turno), **Descargar PDF** y "Volver al historial". El PDF agrega la sección "3. Conversación completa".
+* **Backend**: `GET /api/users/me/history` devuelve solo entrevistas terminadas (con reporte) y `turn_count`; nuevo `GET /api/sessions/{id}/detail` (requiere token; 404 si es de otra persona). `/api/health` muestra el modelo correcto del Entrevistador; versión `0.8.0`.
+* **`iniciar.sh` / `iniciar.ps1`**: muestran el progreso de la construcción (antes se ocultaba y parecía congelado, lo que llevó a presionar Ctrl+C y dejar el backend viejo: "Entrevistador: None"); si el backend no reporta `agentes`, lo reconstruyen solos; descargan el modelo de Ollama con barra de progreso y avisan "listo".
+* **`docker-compose.yml`**: el puerto 3000 se liga a `127.0.0.1`.
+* **Pruebas**: 62 pytest (historial sin duplicados, detalle privado) y prueba E2E en Chromium (Enter doble, doble clic en Terminar, recarga con duplicados heredados, Ver, PDF): todo correcto, 0 errores JS.
+
 ### `[v0.7.1] - 2026-10-30 — .env claro y actualización paso a paso`
 
 * **Reporte del usuario**: el `.env` no dejaba claro que el Entrevistador es Ollama y el Evaluador Gemini (los comentarios seguían diciendo "OpenAI (Agente Entrevistador)").

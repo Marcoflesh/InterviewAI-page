@@ -1,4 +1,4 @@
-# Auditoría de Seguridad y Anonimato — InterviewAI (`v0.4.0`)
+# Auditoría de Seguridad y Anonimato — InterviewAI (`v0.8.0`)
 
 **Fecha:** 29 de octubre de 2026 · **Alcance:** backend FastAPI, frontend, Docker, base de datos, manejo de llaves y datos personales.
 
@@ -26,12 +26,14 @@ Leyenda de severidad: 🔴 Crítica · 🟠 Alta · 🟡 Media · 🟢 Baja
 | 14 | 🟢 | jsPDF se cargaba desde un CDN sin verificación de integridad. | Copia local en `frontend/vendor/` (licencia MIT incluida). |
 | 15 | 🟠 | Las llaves nuevas de Gemini (`AQ.…`) se habrían rechazado por formato, y en `v0.3.0` se enviaban en la URL, donde Google responde 404. | `v0.4.1` acepta `AQ.` y `AIza`, siempre por header. `check_apis.py` detecta también cuando se pega el ID de OpenAI (`key_…`) en lugar de la llave. |
 | 16 | 🟡 | Nada impedía commitear el `.env` localmente si se modificaba el `.gitignore`. | `scripts/install_git_hooks.sh` (pre-commit) y `push_to_github.sh` bloquean `.env` y patrones de llaves; regla de gitleaks para `AQ.`. `.env` con permisos `600`. |
+| 17 | 🟡 | El historial guardaba en `localStorage` la misma entrevista varias veces y, en modo demo, el texto completo de las respuestas. (`v0.8.0`) | Con servidor, el navegador solo guarda el resumen (fecha, puesto, puntaje); la conversación se pide a `GET /api/sessions/{id}/detail`, que exige token y responde 404 si la entrevista es de otra persona. Duplicados eliminados. |
+| 18 | 🟡 | La página (puerto 3000) quedaba abierta a toda la red local. (`v0.8.0`) | Ligada a `127.0.0.1` como la BD, el backend y Ollama. |
 
 ## 2. Anonimato y datos personales
 
 **Qué se guarda:** correo, nombre, universidad (para la cuenta) y, por sesión, el CV, la vacante y las respuestas **anonimizadas**.
 
-**Qué se anonimiza antes de guardar y antes de enviar a OpenAI/Gemini:** correos, teléfonos, CURP/RFC, matrículas `A0…`, enlaces de LinkedIn/GitHub/Instagram/Facebook/X y **tu propio nombre y apellidos** (nuevo en `v0.4.0`).
+**Qué se anonimiza antes de guardar y antes de enviar a la IA:** (Ollama corre en tu computadora y no envía nada a internet; Gemini sí recibe las respuestas anonimizadas) correos, teléfonos, CURP/RFC, matrículas `A0…`, enlaces de LinkedIn/GitHub/Instagram/Facebook/X y **tu propio nombre y apellidos** (nuevo en `v0.4.0`).
 
 **Derecho al olvido:** `DELETE /api/users/me` borra la cuenta y en cascada sesiones, turnos, evaluaciones y CSAT.
 
@@ -41,7 +43,7 @@ Leyenda de severidad: 🔴 Crítica · 🟠 Alta · 🟡 Media · 🟢 Baja
 
 - La anonimización es por patrones: nombres de terceros, empresas o direcciones escritas libremente pueden pasar. Recomienda a los usuarios no escribir datos personales.
 - **Gemini en capa gratuita:** según los [términos de la API de Gemini](https://ai.google.dev/gemini-api/terms), en los servicios no pagados Google puede usar las entradas para mejorar sus productos y personas revisoras pueden leerlas; en servicios pagados no se usan para mejorar productos. Para privacidad real, activa facturación en Google AI Studio. Los mismos términos exigen ser mayor de 18 años y no dirigir la app a menores.
-- El historial del modo demo y la copia local del historial viven en `localStorage` del navegador: en una computadora compartida, otra persona del mismo navegador podría verlo. Usa "Salir" y, en equipos públicos, una ventana privada.
+- En modo demo (sin servidor) el historial vive en `localStorage` del navegador: en una computadora compartida, otra persona del mismo navegador podría verlo. Con servidor solo queda el resumen. Usa "Salir" y, en equipos públicos, una ventana privada.
 - El token de sesión se guarda en `sessionStorage` (se borra al cerrar la pestaña). Una cookie `HttpOnly` sería más robusta, pero complica el despliegue con GitHub Pages; queda en el roadmap.
 
 ## 3. Pendientes recomendados (no bloqueantes)

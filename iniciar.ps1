@@ -20,8 +20,8 @@ if ((Test-Path .git) -and -not (Test-Path .git\hooks\pre-commit) -and (Get-Comma
   bash scripts/install_git_hooks.sh *> $null; Write-Host "OK Proteccion anti-secretos para git instalada" }
 
 function Levantar {
-  Write-Host "-> Construyendo y levantando contenedores (la primera vez tarda unos minutos)..."
-  docker compose up --build -d *> $null   # si la BD falla, se diagnostica abajo
+  Write-Host "-> Construyendo y levantando contenedores. La primera vez tarda 2-5 min: NO cierres esta ventana." -ForegroundColor Yellow
+  docker compose up --build -d   # si la BD falla, se diagnostica abajo
 }
 
 # Devuelve: ok | contrasena | esquema_desactualizado | sin_tablas | sin_conexion | sin_backend  (y el JSON de salud)
@@ -57,6 +57,12 @@ for ($intento = 1; $intento -le 3; $intento++) {
   Write-Host $code
   switch ($code) {
     "ok" {
+      if (-not $health.agentes) {
+        Write-Host "-> El backend sigue con la version anterior. Reconstruyendolo..." -ForegroundColor Yellow
+        docker compose up --build -d backend
+        Start-Sleep -Seconds 5
+        $r = Estado-BD; $health = $r[1]
+      }
       docker compose up -d *> $null   # asegura que el frontend tambien este arriba
       $c = $health.configured
       $a = $health.agentes
@@ -65,15 +71,18 @@ for ($intento = 1; $intento -le 3; $intento++) {
         ($(if ($c.gemini_key) {"OK"} else {"X"})), ($(if ($c.google_sign_in) {"OK"} else {"X"})), ($(if ($c.openai_key) {"OK"} else {"-"})))
       $modelo = (Select-String -Path .env -Pattern '^OLLAMA_MODEL=(.+)$' | Select-Object -First 1).Matches.Groups[1].Value
       if (-not $modelo) { $modelo = "qwen3.5:4b" }
+      Write-Host "Pagina lista: http://localhost:3000" -ForegroundColor Green
+      Start-Process "http://localhost:3000"
       $lista = docker compose exec -T ollama ollama list 2>$null | Out-String
       if ($lista -match [regex]::Escape($modelo)) {
-        Write-Host "  Entrevistador local (Ollama $modelo): listo" -ForegroundColor Green
+        Write-Host "Entrevistador local (Ollama $modelo): listo" -ForegroundColor Green
       } else {
-        Write-Host "  Entrevistador local (Ollama $modelo): descargandose la primera vez (~3-7 GB)." -ForegroundColor Yellow
-        Write-Host "  Mientras tanto se usan las preguntas del banco. Avance: docker compose logs -f ollama-init"
+        Write-Host "-> Descargando el entrevistador local (Ollama $modelo, ~3.4 GB, solo la primera vez)." -ForegroundColor Yellow
+        Write-Host "   Ya puedes usar la pagina: mientras tanto usa las preguntas del banco."
+        docker compose exec ollama ollama pull $modelo
+        if ($LASTEXITCODE -eq 0) { Write-Host "Entrevistador local (Ollama $modelo): listo." -ForegroundColor Green }
+        else { Write-Host "X No se termino la descarga. Vuelve a abrir iniciar.bat (continua donde se quedo)." -ForegroundColor Red }
       }
-      Write-Host "Listo: http://localhost:3000" -ForegroundColor Green
-      Start-Process "http://localhost:3000"
       exit 0
     }
     "contrasena" {

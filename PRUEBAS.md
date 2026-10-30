@@ -78,3 +78,17 @@ En el peor caso la pregunta aún no está lista y se espera el tope de 2 s; desp
 
 Meta propuesta: AUC ≥ 0.90 y exactitud ≥ 85 %. El analizador local no la cumple (web-06 y web-12 fuertes subestimadas; web-15, web-19 y web-21 débiles en 2.5).
 
+## 8. Historial y entrevistas pasadas (`v0.8.0`, 30/10/2026)
+
+Chromium + Playwright contra backend y PostgreSQL reales:
+
+| Caso | Resultado |
+|---|---|
+| Enter doble al responder | 2 respuestas en el chat (sin duplicar) |
+| Doble clic en "Terminar" | 1 reporte, 1 entrada en el historial |
+| Recargar con 3 entradas duplicadas heredadas en el navegador | quedan 1 |
+| Historial tras volver a iniciar sesión | 1 fila |
+| Ver entrevista pasada | reporte + conversación completa (2 turnos), "Volver al historial" visible, encuesta oculta |
+| Descargar PDF de la entrevista pasada | descargado, incluye "3. Conversación completa" |
+| Errores de JavaScript | 0 |
+

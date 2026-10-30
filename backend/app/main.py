@@ -7,7 +7,7 @@ from typing import List
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import delete
+from sqlalchemy import delete, func
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -173,7 +173,7 @@ def health_check():
         "database": db_state,
         "service": settings.APP_NAME,
         "version": settings.APP_VERSION,
-        "interviewer": {"provider": settings.INTERVIEWER_PROVIDER, "model": settings.OPENAI_CHAT_MODEL},
+        "interviewer": {"provider": settings.INTERVIEWER_PROVIDER, "model": {"ollama": settings.OLLAMA_MODEL, "gemini": settings.GEMINI_MODEL}.get(settings.INTERVIEWER_PROVIDER, settings.OPENAI_CHAT_MODEL)},
         "evaluator": {"provider": settings.EVALUATOR_PROVIDER, "model": settings.GEMINI_MODEL},
         "configured": {
             "openai_key": settings.openai_ready,
@@ -783,10 +783,16 @@ def get_my_history(
     db: Session = Depends(get_db),
     current_user_id: str = Depends(get_current_user_id),
 ):
+    # Solo entrevistas terminadas (con reporte): una fila por entrevista, sin duplicados.
+    turn_counts = dict(
+        db.query(MessageTurn.session_id, func.count(MessageTurn.turn_id)).group_by(MessageTurn.session_id).all()
+    )
     sessions = (
         db.query(InterviewSession)
-        .filter(InterviewSession.user_id == _parse_uuid(current_user_id, "Cuenta"))
+        .filter(InterviewSession.user_id == _parse_uuid(current_user_id, "Cuenta"),
+                InterviewSession.overall_score.isnot(None))
         .order_by(InterviewSession.started_at.desc())
+        .limit(200)
         .all()
     )
     return [
@@ -798,9 +804,46 @@ def get_my_history(
             "score_evolution_rate": float(s.score_evolution_rate or 0.0),
             "session_state": s.session_state,
             "started_at": s.started_at.isoformat() if s.started_at else None,
+            "turn_count": int(turn_counts.get(s.session_id, 0)),
         }
         for s in sessions
     ]
+
+
+@app.get("/api/sessions/{session_id}/detail", dependencies=[poll_limit])
+def get_session_detail(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """Conversación completa de una entrevista propia (preguntas, respuestas y calificaciones)."""
+    s = _get_owned_session(db, session_id, current_user_id)
+    rows = (
+        db.query(MessageTurn, ModelEvaluation)
+        .outerjoin(ModelEvaluation, MessageTurn.turn_id == ModelEvaluation.turn_id)
+        .filter(MessageTurn.session_id == s.session_id)
+        .order_by(MessageTurn.question_number.asc(), MessageTurn.created_at.asc())
+        .all()
+    )
+    turns = []
+    for t, e in rows:
+        ev = None
+        if e is not None:
+            ev = {k: getattr(e, k) for k in _EVAL_FIELDS}
+            ev.update(turn_average_score=float(e.turn_average_score), strengths=e.strengths,
+                      improvement_areas=e.improvement_areas)
+        turns.append({"question_number": t.question_number, "interviewer_question": t.interviewer_question,
+                      "candidate_response": t.candidate_response, "evaluation": ev})
+    return {
+        "session_id": str(s.session_id),
+        "career_code": s.career_code,
+        "target_role": s.target_role,
+        "started_at": s.started_at.isoformat() if s.started_at else None,
+        "overall_score": float(s.overall_score) if s.overall_score is not None else None,
+        "score_evolution_rate": float(s.score_evolution_rate or 0.0),
+        "report": s.final_report_json,
+        "turns": turns,
+    }
 
 
 @app.delete("/api/users/me")

@@ -225,7 +225,13 @@
       <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem;">Plan de acción recomendado</h3>
       <div id="rep-resources-list" style="margin-bottom: 1.5rem;"></div>
 
+      <details style="margin-bottom: 1.5rem;">
+        <summary style="cursor: pointer; font-size: 0.95rem; font-weight: 600;">Conversación completa</summary>
+        <div id="rep-transcript" style="margin-top: 0.5rem;"></div>
+      </details>
+
       <div class="no-print" style="border-top: 1px solid var(--border); padding-top: 1.25rem; margin-top: 1rem;">
+        <div id="csat-block">
         <div style="font-size: 0.85rem; margin-bottom: 0.6rem;">¿Qué tan útil te resultó esta retroalimentación?</div>
         <div style="display: flex; gap: 0.4rem; margin-bottom: 0.75rem;">
           <button type="button" class="btn btn-outline csat-star-btn" data-score="1">1</button>
@@ -235,9 +241,11 @@
           <button type="button" class="btn btn-outline csat-star-btn" data-score="5">5</button>
         </div>
         <p id="csat-thanks" class="hidden" style="font-size: 0.8rem; color: var(--green); margin-bottom: 1rem;"></p>
+        </div>
 
         <div style="display: flex; gap: 0.75rem; margin-top: 1rem; align-items: center; flex-wrap: wrap;">
           <button id="btn-print-report" type="button" class="btn btn-primary">Descargar PDF</button>
+          <button id="btn-back-to-history" type="button" class="btn btn-outline hidden">Volver al historial</button>
           <button id="btn-new-from-report" type="button" class="btn btn-outline">Practicar otra vez</button>
           <span id="pdf-download-status" class="hidden" style="font-size: 0.8rem; color: var(--green);"></span>
         </div>
@@ -250,7 +258,7 @@
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
         <div>
-          <h2 style="font-size: 1.15rem; font-weight: 600;">Tu historial personal de prácticas</h2>
+          <h2 style="font-size: 1.15rem; font-weight: 600;">Tus entrevistas pasadas</h2>
           <p id="history-owner-label" style="font-size: 0.8rem; color: var(--muted);"></p>
         </div>
         <button id="btn-back-from-history" type="button" class="btn btn-outline">Volver</button>
@@ -262,6 +270,7 @@
             <th style="padding: 0.6rem 0.75rem;">Carrera y Puesto</th>
             <th style="padding: 0.6rem 0.75rem;">Puntaje</th>
             <th style="padding: 0.6rem 0.75rem;">Evolución</th>
+            <th style="padding: 0.6rem 0.75rem;"></th>
           </tr>
         </thead>
         <tbody id="history-tbody"></tbody>

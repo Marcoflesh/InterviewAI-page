@@ -107,7 +107,8 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "3000:80"
+      # Solo tu computadora. Para probar desde tu celular en la misma red usa "3000:80".
+      - "127.0.0.1:3000:80"
 
 volumes:
   pgdata:

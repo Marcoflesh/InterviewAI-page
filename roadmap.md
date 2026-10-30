@@ -34,6 +34,7 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 
 - [x] **`v0.7.0`**: Entrevistador local gratuito (Ollama `qwen3.5:4b`), `golden_dataset` lleno (50 respuestas de referencia) y prueba externa con 26 respuestas de internet etiquetadas por sus autores (línea base local: AUC 0.93, exactitud 81 %).
 - [x] **`v0.7.1`**: `.env` explícito (Entrevistador = Ollama, Evaluador = Gemini), roles visibles en `/api/health` y scripts de medición dentro de Docker.
+- [x] **`v0.8.0`**: historial sin duplicados guardado en el servidor, vista de entrevistas pasadas con conversación completa y PDF, arranque con progreso visible y descarga de Ollama con aviso de "listo".
 - [ ] **Siguiente**: correr `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web` y `--conjunto bd --guardar-en-bd` con Gemini en la computadora del usuario y registrar los resultados aquí.
 
 ---
@@ -49,7 +50,17 @@ Estado actual: los agentes **no están entrenados**; son modelos generales (`gpt
 - [ ] **Fase E — Ciclo con usuarios**: botón "esta retroalimentación no me sirvió", revisión humana y alimentación del golden set; pruebas de sesgo (misma respuesta, distinto perfil).
 - [ ] **Fase F — Fine-tuning (opcional)**: solo con 500–1000 ejemplos de calidad y si el prompt ya no mejora; no sobre `gpt-4o-mini` (se retira el 14/01/2027 junto con sus versiones afinadas).
 
-## 4. Siguientes Funcionalidades (Fase 2 y Fase 3)
+## 4. Escalabilidad (estado en `v0.8.0`)
+
+| Pieza | Hoy | Límite aproximado | Siguiente paso |
+|---|---|---|---|
+| Backend FastAPI | 1 proceso, endpoints síncronos en *threadpool* | ~50 usuarios simultáneos medidos (turno p95 54 ms con IA simulada) | varios *workers* + Redis para el limitador y las cachés del *pipeline* |
+| Entrevistador (Ollama) | 1 modelo en tu computadora | en CPU, pocas preguntas a la vez; si tarda > 2–4 s se usa la pregunta del banco | GPU (`docker-compose.gpu.yml`) o, en público, Gemini/otro modelo hospedado |
+| Evaluador (Gemini) | capa gratuita | límites de peticiones por minuto y por día de Google | activar facturación (también mejora la privacidad) |
+| Base de datos | PostgreSQL 16 en Docker | holgado para miles de entrevistas | PostgreSQL administrado y respaldos |
+| Página pública | GitHub Pages en modo demo | sin límite práctico (estático) | desplegar el backend (Render / Cloud Run) y poner `API_BASE_URL` |
+
+## 5. Siguientes Funcionalidades (Fase 2 y Fase 3)
 
 - [ ] **Backend público para GitHub Pages**: desplegar `Dockerfile.backend` (Render / Cloud Run) con PostgreSQL administrado y configurar `API_BASE_URL`.
 - [ ] **Medir la latencia real de Ollama** en la computadora del usuario (CPU vs. GPU) y, si sobra memoria, comparar `qwen3.5:9b`.
