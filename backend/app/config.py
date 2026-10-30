@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     GEMINI_THINKING_LEVEL: str = "low"        # low | medium | high (3.8 no acepta "minimal")
     GEMINI_MAX_OUTPUT_TOKENS: int = 8192      # incluye el "pensamiento"; solo se paga lo usado
     EVALUATOR_PROVIDER: str = "gemini"      # gemini | openai | ollama
-    INTERVIEWER_PROVIDER: str = "openai"    # openai | gemini | ollama
+    INTERVIEWER_PROVIDER: str = "ollama"    # ollama (local, gratis) | gemini | openai
     LLM_TIMEOUT_SECONDS: float = 45.0
     # indicadores = rúbrica analítica de 30 criterios (recomendado) | holistico = 0-5 directo (v0.4)
     EVALUATOR_RUBRIC_MODE: str = "indicadores"
@@ -62,8 +62,10 @@ class Settings(BaseSettings):
 
     # --- Respaldo local con Ollama -----------------------------------------
     OLLAMA_BASE_URL: str = "http://ollama:11434"
-    OLLAMA_MODEL: str = "llama3.2:3b"
-    OLLAMA_ENABLED: bool = False
+    # Qwen 3.5 4B: ~3.4 GB, buen español, corre en laptops de 8 GB. Con 16 GB o GPU: qwen3.5:9b
+    OLLAMA_MODEL: str = "qwen3.5:4b"
+    OLLAMA_ENABLED: bool = True
+    OLLAMA_KEEP_ALIVE: str = "30m"           # mantiene el modelo en memoria entre preguntas
 
     # --- Sesión de usuario y seguridad -------------------------------------
     SECRET_KEY: str = ""                    # firma de tokens de sesión

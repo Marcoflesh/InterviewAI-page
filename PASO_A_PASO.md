@@ -1,4 +1,4 @@
-# Paso a Paso — InterviewAI (`v0.4.2`)
+# Paso a Paso — InterviewAI (`v0.7.0`)
 
 ## Plug & Play (lo único que necesitas para verlo funcionando)
 
@@ -12,7 +12,8 @@ El script levanta todo, instala la protección anti-secretos de git, te dice qu�
 
 | Pieza | Estado |
 |---|---|
-| Llave de OpenAI (`sk-svcacct-…`, cuenta de servicio) | ✅ En tu `.env` |
+| Entrevistador local (Ollama `qwen3.5:4b`) | ✅ Se descarga solo la primera vez que corres `iniciar` (~3.4 GB) |
+| Llave de OpenAI | ➖ Ya no se usa (vacía en tu `.env`; revócala si no la ocupas) |
 | Llave de Gemini (`AQ.…`, formato nuevo) | ✅ En tu `.env` |
 | Google Sign-In Client ID | ✅ En tu `.env` y en `frontend/js/config.js` (es público) |
 | Contraseña de PostgreSQL y `SECRET_KEY` | ✅ Generadas al azar en tu `.env` |
@@ -23,11 +24,23 @@ El script levanta todo, instala la protección anti-secretos de git, te dice qu�
 
 ---
 
+## Probar con respuestas reales de internet (v0.7.0)
+
+Con Docker encendido (`iniciar` ya llenó la base de datos):
+
+```bash
+python scripts/probar_ia.py                                            # Ollama y Gemini responden
+python scripts/evaluar_evaluador.py --modo llm --conjunto web          # 26 respuestas fuertes/débiles de 7 sitios
+python scripts/evaluar_evaluador.py --modo llm --conjunto bd --guardar-en-bd   # todo golden_dataset; guarda model_score
+```
+
+La meta propuesta es AUC ≥ 0.90 y exactitud ≥ 85 %. El script lista las respuestas mal clasificadas para revisarlas a mano. El analizador local (sin IA) saca AUC 0.93 y 81 %.
+
 ## Entrenar y medir a los agentes (v0.6.0)
 
 Lee primero `research/metodo_star.md`. Luego:
 
-0. **Confirma que la IA responde** (3 llamadas pequeñas): `python scripts/probar_ia.py`. Si OpenAI dice "no credits", agrega saldo en https://platform.openai.com/settings/organization/billing/ o pon `INTERVIEWER_PROVIDER=gemini` en `.env` para usar solo Gemini.
+0. **Confirma que la IA responde** (3 llamadas pequeñas): `python scripts/probar_ia.py`. Si Ollama dice que el modelo no está descargado, espera a `docker compose logs -f ollama-init`.
 
 1. **Mide al agente real con tus llaves** (≈ 24 llamadas, centavos):
    ```bash

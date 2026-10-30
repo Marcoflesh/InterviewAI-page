@@ -1,8 +1,8 @@
 # InterviewAI — entorno local (http://localhost:3000)
 #   docker compose up --build -d
-# Con el modelo local de respaldo (Ollama, ~2 GB extra):
-#   docker compose --profile local-llm up --build -d
-#   docker compose exec ollama ollama pull llama3.2:3b
+# El Agente Entrevistador usa un modelo LOCAL y gratuito con Ollama (por defecto qwen3.5:4b, ~3.4 GB).
+# La primera vez se descarga solo (servicio ollama-init): docker compose logs -f ollama-init
+# Con tarjeta NVIDIA: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
 #
 # Las llaves se leen de `.env` (NUNCA se suben a GitHub; ver .gitignore).
 # Los puertos de la base de datos y del backend solo escuchan en 127.0.0.1.
@@ -28,14 +28,33 @@ services:
       retries: 10
 
   ollama:
-    image: ollama/ollama:0.5.7
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.17.7}
     container_name: interviewai-ollama
     restart: unless-stopped
-    profiles: ["local-llm"]
+    environment:
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
     ports:
       - "127.0.0.1:11434:11434"
     volumes:
       - ollamadata:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # Descarga el modelo local una sola vez (queda guardado en el volumen ollamadata)
+  ollama-init:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.17.7}
+    container_name: interviewai-ollama-init
+    restart: "no"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama"]
+    command: ["pull", "${OLLAMA_MODEL:-qwen3.5:4b}"]
 
   backend:
     build:
@@ -46,6 +65,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      ollama:
+        condition: service_started
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-interviewai}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-interviewai}
       # >>> Llaves inyectadas desde .env (no se escriben aquí) <<<
@@ -56,14 +77,16 @@ services:
       EVALUATOR_PROVIDER: ${EVALUATOR_PROVIDER:-gemini}
       EVALUATOR_RUBRIC_MODE: ${EVALUATOR_RUBRIC_MODE:-indicadores}
       QUESTION_PREFETCH_AHEAD: ${QUESTION_PREFETCH_AHEAD:-2}
-      INTERVIEWER_PROVIDER: ${INTERVIEWER_PROVIDER:-openai}
+      INTERVIEWER_PROVIDER: ${INTERVIEWER_PROVIDER:-ollama}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       SECRET_KEY: ${SECRET_KEY:-}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,https://marcoflesh.github.io}
       EMAIL_MX_CHECK: ${EMAIL_MX_CHECK:-strict}
-      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
       OLLAMA_BASE_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:4b}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+      GEMINI_THINKING_LEVEL: ${GEMINI_THINKING_LEVEL:-low}
       ENABLE_FOLLOWUP_QUESTIONS: ${ENABLE_FOLLOWUP_QUESTIONS:-false}
       FOLLOWUP_STAR_THRESHOLD: ${FOLLOWUP_STAR_THRESHOLD:-3}
     ports:

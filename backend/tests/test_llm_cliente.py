@@ -83,3 +83,36 @@ def test_complete_usa_gemini_si_openai_no_tiene_saldo(fake_api):
     fake_api(handler)
     text, source = llm.complete("x", preferred="openai")
     assert source.startswith("gemini") and text.startswith("¿Me cuentas")
+
+
+def test_ollama_desactiva_pensamiento_y_mantiene_modelo(fake_api, monkeypatch):
+    monkeypatch.setattr(settings, "OLLAMA_ENABLED", True)
+    monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3.5:4b")
+    calls = fake_api(lambda r: httpx.Response(200, json={"message": {"content": "¿Me cuentas del bug más difícil?"}}))
+    text, src = llm.call_ollama("hola", system="sistema")
+    body = json.loads(calls[0].content)
+    assert src == "ollama:qwen3.5:4b" and text.startswith("¿Me cuentas")
+    assert body["think"] is False and body["stream"] is False and body["keep_alive"]
+    assert "think" not in body["options"]  # dentro de options Ollama lo ignora
+
+
+def test_ollama_modelo_no_descargado_se_pausa(fake_api, monkeypatch):
+    monkeypatch.setattr(settings, "OLLAMA_ENABLED", True)
+    calls = fake_api(lambda r: httpx.Response(404, json={"error": "model 'qwen3.5:4b' not found"}))
+    assert llm.call_ollama("hola") is None
+    assert llm.call_ollama("hola") is None
+    assert len(calls) == 1
+    assert "descargado" in llm.status()["en_pausa"]["ollama"]["motivo"]
+
+
+def test_entrevistador_prefiere_ollama_y_cae_a_gemini(fake_api, monkeypatch):
+    monkeypatch.setattr(settings, "OLLAMA_ENABLED", True)
+
+    def handler(r):
+        if "/api/chat" in str(r.url):
+            raise httpx.ConnectError("sin servidor")
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "¿Qué hiciste tú?"}]}}]})
+    fake_api(handler)
+    assert llm.provider_order("ollama")[:2] == ["ollama", "gemini"]
+    text, src = llm.complete("x", preferred="ollama")
+    assert src.startswith("gemini")

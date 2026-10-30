@@ -59,8 +59,17 @@ for ($intento = 1; $intento -le 3; $intento++) {
     "ok" {
       docker compose up -d *> $null   # asegura que el frontend tambien este arriba
       $c = $health.configured
-      Write-Host ("  OpenAI {0} | Gemini {1} | Google Sign-In {2}" -f `
-        ($(if ($c.openai_key) {"OK"} else {"X"})), ($(if ($c.gemini_key) {"OK"} else {"X"})), ($(if ($c.google_sign_in) {"OK"} else {"X"})))
+      Write-Host ("  Gemini {0} | Google Sign-In {1} | OpenAI (opcional) {2}" -f `
+        ($(if ($c.gemini_key) {"OK"} else {"X"})), ($(if ($c.google_sign_in) {"OK"} else {"X"})), ($(if ($c.openai_key) {"OK"} else {"-"})))
+      $modelo = (Select-String -Path .env -Pattern '^OLLAMA_MODEL=(.+)$' | Select-Object -First 1).Matches.Groups[1].Value
+      if (-not $modelo) { $modelo = "qwen3.5:4b" }
+      $lista = docker compose exec -T ollama ollama list 2>$null | Out-String
+      if ($lista -match [regex]::Escape($modelo)) {
+        Write-Host "  Entrevistador local (Ollama $modelo): listo" -ForegroundColor Green
+      } else {
+        Write-Host "  Entrevistador local (Ollama $modelo): descargandose la primera vez (~3-7 GB)." -ForegroundColor Yellow
+        Write-Host "  Mientras tanto se usan las preguntas del banco. Avance: docker compose logs -f ollama-init"
+      }
       Write-Host "Listo: http://localhost:3000" -ForegroundColor Green
       Start-Process "http://localhost:3000"
       exit 0

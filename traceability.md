@@ -4,6 +4,17 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.7.0] - 2026-10-30 — Entrevistador local con Ollama, base de datos llena y prueba con respuestas de internet`
+
+* **Solicitud**: cambiar ChatGPT por el mejor modelo local gratuito de Ollama, dejar Gemini igual, llenar la base de datos y empezar a evaluar con pruebas de internet.
+* **Entrevistador → Ollama `qwen3.5:4b`** (`INTERVIEWER_PROVIDER=ollama`, ~3.4 GB, gratis, sin llave). Se eligió por seguir instrucciones en español y permitir apagar el razonamiento (`"think": false`), lo que da respuestas cortas y rápidas; Gemma 4 se descartó porque su razonamiento no se puede desactivar del todo. **`llm.py`**: `call_ollama` (`/api/chat`, `keep_alive`, pausa si el modelo no está descargado o el servicio no responde) y `warm_up_ollama` al arrancar. **`docker-compose.yml`**: servicios `ollama` (`ollama/ollama:0.17.7`) y `ollama-init` (descarga el modelo la primera vez); `docker-compose.gpu.yml` opcional para NVIDIA. OpenAI queda como último respaldo opcional (llave vacía en `.env`).
+* **Evaluador y Sintetizador**: sin cambios (`gemini-3.8-flash`).
+* **`backend/app/data/pruebas_web_star.json` (nuevo)**: 26 respuestas publicadas en 7 sitios (JobTailor, Interview Query, LoopCV, KDnuggets, Big Tech Careers, PracHub, Generalist Programmer) que **su propio autor** etiqueta como fuerte (14) o débil (12). Parafraseadas al español conservando hechos y cifras.
+* **Base de datos**: modelo `GoldenDataset` y `seed_golden_dataset` (idempotente) cargan al arrancar las 26 respuestas web (fuerte = 4.0, débil = 1.0, `pending_review`) y las 24 de calibración. Banco de preguntas: 234 filas.
+* **`scripts/evaluar_evaluador.py`**: `--conjunto web` (AUC, exactitud con `--umbral`, promedios por etiqueta, mal clasificadas), `--conjunto bd` (lee `golden_dataset` desde Docker y con `--guardar-en-bd` escribe `model_score`). Usa `localhost` automáticamente fuera de Docker.
+* **Línea base medida (analizador local, sin IA)**: AUC 0.93, exactitud 81 %, promedio fuertes 2.85 vs. débiles 1.67. **No cumple** la meta propuesta (AUC ≥ 0.90 y exactitud ≥ 85 %): 2 fuertes subestimadas y 3 débiles en el límite (2.5).
+* **Pruebas**: 60 pytest (3 de Ollama, 3 del conjunto web/golden/AUC). Vinculado a **RN-07**, **RF-08 a RF-10**, **RIF** `golden_dataset`.
+
 ### `[v0.6.1] - 2026-10-30 — Corrección: la IA no calificaba en el arnés`
 
 * **Síntoma reportado**: `gemini-2.5-flash` 404 (retirado para cuentas nuevas), OpenAI 429 sin saldo y resultados idénticos al analizador local (`fuentes: {'local': 24}`).

@@ -50,8 +50,15 @@ for intento in 1 2 3; do
 import json, sys
 c = json.load(open(sys.argv[1]))["configured"]
 m = lambda b: "✓" if b else "✗"
-print(f"  OpenAI {m(c['openai_key'])} · Gemini {m(c['gemini_key'])} · Google Sign-In {m(c['google_sign_in'])}")
+print(f"  Gemini {m(c['gemini_key'])} · Google Sign-In {m(c['google_sign_in'])} · OpenAI (opcional) {'✓' if c['openai_key'] else '-'}")
 PY
+      modelo="$(grep -E '^OLLAMA_MODEL=' .env | cut -d= -f2)"; modelo="${modelo:-qwen3.5:4b}"
+      if docker compose exec -T ollama ollama list 2>/dev/null | grep -q "^${modelo}"; then
+        echo "  Entrevistador local (Ollama ${modelo}): listo ✓"
+      else
+        echo "  Entrevistador local (Ollama ${modelo}): descargándose la primera vez (~3-7 GB)."
+        echo "  Mientras tanto se usan las preguntas del banco. Avance: docker compose logs -f ollama-init"
+      fi
       echo "✓ Listo: http://localhost:3000"
       (open http://localhost:3000 || xdg-open http://localhost:3000) >/dev/null 2>&1 || true
       exit 0 ;;

@@ -2,7 +2,7 @@
 
 Plataforma web minimalista para practicar entrevistas laborales por escrito, con evaluación crítica en tiempo real (escala **0 a 5**) bajo el método **STAR**, preguntas adaptadas a la carrera y al contexto de la vacante, y reporte final descargable en PDF.
 
-- **Agentes de IA (LangGraph):** Entrevistador `gpt-4o-mini`, Evaluador y Sintetizador `gemini-3.8-flash`, con respaldo automático entre proveedores y analizador determinista local.
+- **Agentes de IA (LangGraph):** Entrevistador local `qwen3.5:4b` con Ollama (gratis), Evaluador y Sintetizador `gemini-3.8-flash`, con respaldo automático entre proveedores y analizador determinista local.
 - **Stack:** FastAPI + PostgreSQL 16 + nginx en Docker. Frontend HTML/CSS/JS sin frameworks.
 - **Privacidad:** anonimización de datos personales (incluido tu nombre) antes de guardar o enviar a la IA, sesiones con token firmado y borrado de cuenta.
 

@@ -1,4 +1,4 @@
-# Guía de Configuración de API Keys y Agentes de IA (`v0.4.0`)
+# Guía de Configuración de API Keys y Agentes de IA (`v0.7.0`)
 
 **Regla única:** las llaves secretas viven **solo** en `.env` (raíz del proyecto). Nunca en el código, nunca en el frontend, nunca en GitHub. El paso a paso completo está en [`PASO_A_PASO.md`](./PASO_A_PASO.md).
 
@@ -6,9 +6,12 @@
 
 | Agente | Modelo por defecto | Variables en `.env` | Formato de la llave |
 | :--- | :--- | :--- | :--- |
-| **Entrevistador** (adapta las preguntas a la vacante) | `gpt-4o-mini` | `OPENAI_API_KEY`, `OPENAI_CHAT_MODEL`, `INTERVIEWER_PROVIDER=openai` | empieza con `sk-` (`key_…` es solo el ID, no sirve) |
+| **Entrevistador** (adapta las preguntas a la vacante) | Ollama local `qwen3.5:4b` (gratis, corre en tu computadora dentro de Docker) | `INTERVIEWER_PROVIDER=ollama`, `OLLAMA_ENABLED=true`, `OLLAMA_MODEL` | no necesita llave |
+| Respaldo opcional del Entrevistador | `gpt-4o-mini` | `OPENAI_API_KEY` (vacía por defecto) | empieza con `sk-` |
 | **Evaluador crítico** (califica 0–5) y **Sintetizador** (ejemplos STAR del reporte) | `gemini-3.8-flash` (sin respaldo: `gemini-2.5-flash` ya no está disponible para cuentas nuevas) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `EVALUATOR_PROVIDER=gemini` | empieza con `AQ.` (formato nuevo) o `AIza` |
 | **Google Sign-In** | Google Identity Services | `GOOGLE_CLIENT_ID` | termina en `.apps.googleusercontent.com` (es público) |
+
+La primera vez, el contenedor `ollama-init` descarga el modelo (~3.4 GB; avance con `docker compose logs -f ollama-init`). Mientras tanto, la entrevista usa las preguntas del banco sin esperar. Con tarjeta NVIDIA: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d`.
 
 Si el proveedor principal falla (error, límite de uso o llave inválida), el backend reintenta una vez y luego usa el otro proveedor. Si un proveedor **no tiene saldo**, la llave es inválida o el modelo no existe, se pone **en pausa** unos minutos para no perder tiempo en cada llamada; `/api/health` muestra el último resultado de cada IA en el campo `ia`.
 
@@ -47,7 +50,8 @@ docker compose logs -f backend | grep llm      # proveedor, modelo, código HTTP
 Solo edita `.env` y reinicia (`docker compose up -d`):
 
 ```ini
-OPENAI_CHAT_MODEL=gpt-6-luna        # reemplazo recomendado por OpenAI antes del 14/01/2027
+OLLAMA_MODEL=qwen3.5:9b             # más fino; necesita ~8 GB libres de RAM o GPU
+OPENAI_CHAT_MODEL=gpt-6-luna        # solo si vuelves a usar OpenAI (gpt-4o-mini se retira el 14/01/2027)
 GEMINI_MODEL=gemini-3.8-flash
 EVALUATOR_PROVIDER=openai           # para que gpt evalúe en lugar de Gemini
 ```

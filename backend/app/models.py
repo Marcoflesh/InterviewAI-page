@@ -176,3 +176,18 @@ class UserFeedback(Base):
     student_comment = Column(Text, nullable=True)
     abandonment_reason = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class GoldenDataset(Base):
+    """Respuestas de referencia para medir al Agente Evaluador (RN-07)."""
+    __tablename__ = "golden_dataset"
+    golden_id = Column(Integer, primary_key=True)
+    career_code = Column(String(50), ForeignKey("careers.career_code"), nullable=False)
+    competency_rubric = Column(String(150), nullable=False)
+    sample_question = Column(Text, nullable=False)
+    sample_response = Column(Text, nullable=False)
+    human_expert_score = Column(Numeric(4, 2), nullable=False)
+    model_score = Column(Numeric(4, 2), nullable=True)
+    hitl_review_status = Column(String(50), nullable=False, default="approved")
+    reviewer_notes = Column(Text, nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())

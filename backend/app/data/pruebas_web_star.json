@@ -1,0 +1,296 @@
+{
+  "version": "2026-10-30",
+  "descripcion": "Respuestas de entrevista publicadas en internet que su propio autor presenta como débiles o fuertes. Traducidas y parafraseadas al español conservando hechos, cifras y la etiqueta original. Sirven como prueba externa: la etiqueta NO la puso InterviewAI.",
+  "fuentes": {
+    "JT": {
+      "nombre": "JobTailor: How to answer behavioral interview questions (STAR)",
+      "url": "https://www.jobtailor.work/blog/behavioral-interview-questions-star-method-answers"
+    },
+    "IQ": {
+      "nombre": "Interview Query: Top Data Science Behavioral Interview Questions",
+      "url": "https://www.interviewquery.com/p/data-science-behavioral-interview-questions"
+    },
+    "LC": {
+      "nombre": "LoopCV: STAR Method Interview Examples",
+      "url": "https://www.loopcv.pro/guides/star-method-interview-examples/"
+    },
+    "KD": {
+      "nombre": "KDnuggets: STAR Doesn't Work: How to Answer Behavioral Questions as a Data Scientist",
+      "url": "https://www.kdnuggets.com/star-doesnt-work-how-to-answer-behavioral-questions-as-a-data-scientist"
+    },
+    "BT": {
+      "nombre": "Big Tech Careers: Weak and Strong Answer to a Behavioral Interview Question",
+      "url": "https://newsletter.bigtechcareers.com/p/weak-and-strong-answer-to-a-behavioral"
+    },
+    "PH": {
+      "nombre": "PracHub: Top 30 Behavioral Interview Questions for Tech (2026)",
+      "url": "https://prachub.com/resources/top-30-behavioral-interview-questions-for-tech-with-answers-for-2026"
+    },
+    "GP": {
+      "nombre": "Generalist Programmer: Behavioral Interview Questions for Software Engineers (STAR)",
+      "url": "https://generalistprogrammer.com/tutorials/behavioral-interview-questions-star-method"
+    }
+  },
+  "items": [
+    {
+      "id": "web-01",
+      "fuente": "JT",
+      "career_code": "ITC",
+      "competencia": "Fracaso y aprendizaje",
+      "pregunta": "Cuéntame de una vez que fallaste.",
+      "respuesta": "Creo que mi mayor falla es que soy muy perfeccionista. A veces trabajo de más y termino agotado, así que aprendí a delegar más.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "No es una historia de fracaso: es una presunción disfrazada de vulnerabilidad."
+    },
+    {
+      "id": "web-02",
+      "fuente": "JT",
+      "career_code": "ITC",
+      "competencia": "Fracaso y aprendizaje",
+      "pregunta": "Cuéntame de una vez que fallaste.",
+      "respuesta": "Yo dirigía el lanzamiento de una función de nuestra app móvil y, para llegar a la fecha, me salté el ciclo normal de pruebas de QA. En 24 horas los reportes de fallos subieron 12% y tuve que revertir el lanzamiento, lo que nos costó una semana. Después armé una lista de verificación previa al lanzamiento que el equipo todavía usa, y la tasa de fallos se ha mantenido debajo de 1% durante seis meses.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Error real, consecuencia real y una solución con resultado medible."
+    },
+    {
+      "id": "web-03",
+      "fuente": "JT",
+      "career_code": "ITC",
+      "competencia": "Desacuerdo con una figura de autoridad",
+      "pregunta": "Cuéntame de una vez que no estuviste de acuerdo con tu jefe.",
+      "respuesta": "Siempre respeto las decisiones de mi jefe. Si no estuviera de acuerdo, le compartiría mi punto de vista de forma educada.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "Es una filosofía, no una historia: no describe ningún hecho real."
+    },
+    {
+      "id": "web-04",
+      "fuente": "JT",
+      "career_code": "ITC",
+      "competencia": "Desacuerdo con una figura de autoridad",
+      "pregunta": "Cuéntame de una vez que no estuviste de acuerdo con tu jefe.",
+      "respuesta": "Mi jefe quería eliminar la secuencia de correos de bienvenida porque casi nadie los abría, pero yo pensaba que el problema era el momento de envío. Le pedí dos semanas para probar un nuevo calendario: moví los correos de los días 1, 3 y 7 a los días 0, 1 y 3. La tasa de apertura subió de 14% a 31% y decidimos conservar la secuencia.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Específica, muestra iniciativa, tiene números y no critica al jefe."
+    },
+    {
+      "id": "web-05",
+      "fuente": "IQ",
+      "career_code": "ISD",
+      "competencia": "Uso de datos para decisiones",
+      "pregunta": "Cuéntame de una vez que usaste ciencia de datos para apoyar una decisión de negocio.",
+      "respuesta": "En una app de empleos que cobraba por cada postulación, reemplacé el modelo base de Naive Bayes por un recomendador en Elasticsearch que ponderaba puestos anteriores y escolaridad dentro de un radio de 80 km. Lo validé con una prueba A/B de dos semanas y las postulaciones subieron 10%.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Inicio, desarrollo y cierre claros, con detalles relevantes sin perderse en lo técnico."
+    },
+    {
+      "id": "web-06",
+      "fuente": "IQ",
+      "career_code": "ISD",
+      "competencia": "Uso de datos para decisiones",
+      "pregunta": "Cuéntame de una vez que usaste datos para resolver un problema.",
+      "respuesta": "En una empresa de salud, el botón para suscribirse al boletín no estaba sumando suscriptores. Revisé la analítica y vi que la gente solo leía entre la mitad y tres cuartos de cada artículo y se quedaba 2 o 3 minutos. Recomendé artículos más cortos y subir el botón de suscripción. La tasa de suscripción aumentó 50%.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Diagnostica con datos antes de proponer y liga el resultado a una métrica concreta."
+    },
+    {
+      "id": "web-07",
+      "fuente": "IQ",
+      "career_code": "ISD",
+      "competencia": "Influir con datos",
+      "pregunta": "Cuéntame de una vez que tus compañeros no estaban convencidos de un enfoque en el que creías.",
+      "respuesta": "Propuse probar un modelo en Elasticsearch contra el modelo de Naive Bayes que ya teníamos. Mis compañeros dudaban, así que preparé una presentación corta con una prueba A/B rápida. Los resultados los convencieron y, con varias iteraciones, el modelo nuevo terminó reemplazando al original.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Basada en datos, abierta a probar otras posturas y describe cómo se iteró."
+    },
+    {
+      "id": "web-08",
+      "fuente": "IQ",
+      "career_code": "ISD",
+      "competencia": "Desacuerdo sobre la dirección del proyecto",
+      "pregunta": "Cuéntame de una vez que no estuviste de acuerdo con la dirección de un proyecto.",
+      "respuesta": "Mi gerente quería empezar a construir un tablero de inmediato y yo no estaba de acuerdo. Documenté un plan que anticipaba los posibles problemas antes de empezar, y el tablero se lanzó tres semanas antes de lo previsto.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "El desacuerdo se basa en un razonamiento objetivo y termina con un resultado medible."
+    },
+    {
+      "id": "web-09",
+      "fuente": "IQ",
+      "career_code": "ISD",
+      "competencia": "Desacuerdo sobre la dirección del proyecto",
+      "pregunta": "Cuéntame de una vez que no estuviste de acuerdo con la dirección de un proyecto.",
+      "respuesta": "No estaba de acuerdo con cómo mi gerente manejaba el día a día. Sentía que no confiaba en nosotros y que era muy controlador.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "Se basa en emociones y opiniones, sin datos ni proceso."
+    },
+    {
+      "id": "web-10",
+      "fuente": "IQ",
+      "career_code": "ITC",
+      "competencia": "Proyecto destacado",
+      "pregunta": "Platícame de un proyecto del que estés orgulloso.",
+      "respuesta": "En una materia, nuestro equipo construyó un robot en Java que ganó la competencia de la clase. ¿Qué lo hacía bueno? Pues que ganó la competencia.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "Da el resultado pero no explica la estrategia ni su papel: no se puede saber cómo piensa."
+    },
+    {
+      "id": "web-11",
+      "fuente": "IQ",
+      "career_code": "ISD",
+      "competencia": "Honestidad sobre el impacto",
+      "pregunta": "Tu CV dice que un proyecto aumentó los ingresos 30%. ¿Cómo lo lograste?",
+      "respuesta": "Mi proyecto aumentó los ingresos mensuales 30%. Bueno, el aumento fue de noviembre a diciembre; de enero no sabría decirte qué pasó.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "La cifra era un salto estacional y no la puede sustentar: señal de CV inflado."
+    },
+    {
+      "id": "web-12",
+      "fuente": "LC",
+      "career_code": "ISD",
+      "competencia": "Error propio",
+      "pregunta": "Cuéntame de una vez que fallaste.",
+      "respuesta": "Llevaba unos dos años a cargo del reporte mensual de ingresos y no revisé la documentación de las consultas del analista anterior. En el cuarto mes, el director de finanzas detectó una diferencia de 12%: estaba contando dos veces una categoría que un filtro antiguo excluía. El error afectó tres meses de reportes y hubo que corregir dos. Después construí una conciliación automática contra el sistema de finanzas, que desde entonces ha detectado otros dos problemas.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Fracaso genuino, responsabilidad propia y una solución sistemática con seguimiento medible."
+    },
+    {
+      "id": "web-13",
+      "fuente": "LC",
+      "career_code": "ISD",
+      "competencia": "Trabajo bajo presión",
+      "pregunta": "Cuéntame de una vez que trabajaste bajo mucha presión.",
+      "respuesta": "Un proveedor de datos apagó su API con 48 horas de aviso y tres tableros de clientes dependían de él, con una revisión en cuatro días. Ordené las métricas por importancia, abrí cuentas de prueba con dos proveedores alternativos y en 12 horas ya tenía datos parciales fluyendo. También le escribí al cliente antes de que preguntara. Las métricas principales estuvieron listas para la revisión, las secundarias una semana después, y el equipo se cambió al nuevo proveedor de forma permanente.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Priorización rápida y comunicación proactiva; el cliente valoró la comunicación tanto como la solución."
+    },
+    {
+      "id": "web-14",
+      "fuente": "LC",
+      "career_code": "ITC",
+      "competencia": "Conflicto con un compañero",
+      "pregunta": "Cuéntame de una vez que tuviste un conflicto con un compañero.",
+      "respuesta": "Yo coordinaba el lanzamiento de un producto y el líder de ingeniería quería retrasarlo seis semanas para agregar funciones. En lugar de discutir, tuve una reunión uno a uno para entender su razonamiento y salió un problema de seguridad que yo había subestimado. Acordamos retrasar solo por ese punto y pasar las demás funciones a un plan posterior con fechas. El lanzamiento se movió dos semanas en lugar de seis.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Aborda el desacuerdo con curiosidad, llega a un acuerdo concreto y asume responsabilidad."
+    },
+    {
+      "id": "web-15",
+      "fuente": "KD",
+      "career_code": "ISD",
+      "competencia": "Error propio",
+      "pregunta": "Cuéntame de una vez que cometiste un error.",
+      "respuesta": "En un modelo de cancelación de clientes con una fecha de entrega muy apretada, olvidé quitar unas columnas que filtraban información del futuro y el modelo falló en producción. Aprendí a revisar siempre la fuga de datos.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "Cumple la forma STAR pero no muestra juicio técnico, diagnóstico ni impacto."
+    },
+    {
+      "id": "web-16",
+      "fuente": "KD",
+      "career_code": "ISD",
+      "competencia": "Error propio",
+      "pregunta": "Cuéntame de una vez que cometiste un error.",
+      "respuesta": "Mi modelo de cancelación de clientes llegó a 92% de exactitud, muy por encima del 80% histórico, y eso me hizo sospechar y auditarlo. Encontré una variable con fechas posteriores a la cancelación. Rehice el pipeline usando solo datos previos a la cancelación y validación cruzada respetando el tiempo; la exactitud bajó a 79%, que era la real. Agregué revisiones automáticas y documenté el incidente.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Muestra el razonamiento técnico, cómo detectó el problema, la corrección y la prevención."
+    },
+    {
+      "id": "web-17",
+      "fuente": "KD",
+      "career_code": "ISD",
+      "competencia": "Conflicto con un stakeholder",
+      "pregunta": "Cuéntame de una vez que tuviste un conflicto con un interesado del negocio.",
+      "respuesta": "Una gerente de marketing quería atribuir todas las conversiones a un solo canal. Le mostré que los datos no lo respaldaban y acordamos usar un modelo de atribución multicanal.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "Correcta en forma, pero sin método, cifras ni impacto: podría contarla cualquiera."
+    },
+    {
+      "id": "web-18",
+      "fuente": "KD",
+      "career_code": "ISD",
+      "competencia": "Conflicto con un stakeholder",
+      "pregunta": "Cuéntame de una vez que tuviste un conflicto con un interesado del negocio.",
+      "respuesta": "El líder de marketing afirmaba que la publicidad display generaba 60% de las conversiones, mientras que la atribución de último clic le daba 15%. Construí un modelo de regresión logística con ponderación por decaimiento en el tiempo, que subió la participación de display a 25%. También hice un tablero en Streamlit para que el equipo pudiera ajustar los supuestos de decaimiento por su cuenta.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Explica por qué eligió el método, qué midió y el impacto."
+    },
+    {
+      "id": "web-19",
+      "fuente": "KD",
+      "career_code": "ISD",
+      "competencia": "Influir en decisiones",
+      "pregunta": "Cuéntame de una vez que influiste en una decisión de negocio.",
+      "respuesta": "Me pidieron analizar el embudo de registro e hice un tablero que mostraba que la gente abandonaba en el paso 2. El equipo de producto lo usó para mejorar el registro.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "No hay diagnóstico propio, ni causa, ni resultado medible."
+    },
+    {
+      "id": "web-20",
+      "fuente": "KD",
+      "career_code": "ISD",
+      "competencia": "Influir en decisiones",
+      "pregunta": "Cuéntame de una vez que influiste en una decisión de negocio.",
+      "respuesta": "El registro tenía 62% de abandono. Con un análisis por cohortes vi que los usuarios de Android fallaban mucho más que los de iOS; la causa era un botón que quedaba oculto abajo de la pantalla en celulares pequeños. Una prueba A/B de la corrección subió la activación 18% y la retención a 30 días 6%, y agregué un tablero por tipo de dispositivo a la revisión semanal de producto.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Diagnóstico con datos, causa raíz, experimento e impacto medido."
+    },
+    {
+      "id": "web-21",
+      "fuente": "BT",
+      "career_code": "ITC",
+      "competencia": "Cliente o usuario inconforme",
+      "pregunta": "Cuéntame de una vez que resolviste un problema difícil con un cliente.",
+      "respuesta": "Lanzamos una función nueva y un cliente importante se quejó de que el sistema iba lento. Junté al equipo, vimos que la función nueva era la causa y llamé al cliente para disculparme. Hicimos un arreglo rápido, después cambiamos cómo la función usaba la base de datos y agregamos pruebas. Al final el sistema quedó más rápido y el cliente se quedó.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "Vaga: sin impacto cuantificado, poca profundidad técnica y poco detalle de su liderazgo."
+    },
+    {
+      "id": "web-22",
+      "fuente": "BT",
+      "career_code": "ITC",
+      "competencia": "Cliente o usuario inconforme",
+      "pregunta": "Cuéntame de una vez que resolviste un problema difícil con un cliente.",
+      "respuesta": "Lanzamos una función de gestión de proyectos que provocó retrasos de hasta 30 segundos a un cliente Fortune 500 con más de 10,000 proyectos. Yo armé una sala de crisis con desarrollo, QA y soporte, y llamé personalmente al director de tecnología del cliente para darle avances cada pocas horas. En 24 horas un parche bajó las operaciones a 5-10 segundos, y en la semana siguiente rediseñamos las consultas y mejoramos el caché. Las operaciones quedaron debajo de 1 segundo, el rendimiento general mejoró 15% y el cliente amplió su uso.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Específica, con profundidad técnica, liderazgo, resultados cuantificados y prevención."
+    },
+    {
+      "id": "web-23",
+      "fuente": "PH",
+      "career_code": "ITC",
+      "competencia": "Responsabilidad propia",
+      "pregunta": "Cuéntame de una vez que resolviste una caída del servicio.",
+      "respuesta": "Tuvimos una caída del servicio y la arreglamos. Todo quedó bien.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "El 'nosotros' esconde la contribución personal y no hay ningún detalle."
+    },
+    {
+      "id": "web-24",
+      "fuente": "PH",
+      "career_code": "ITC",
+      "competencia": "Fracaso y aprendizaje",
+      "pregunta": "Cuéntame de un proyecto que fracasó.",
+      "respuesta": "El proyecto fracasó porque los requisitos cambiaban todo el tiempo y así no se podía trabajar.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "Culpa a factores externos en lugar de reconocer su parte y lo que cambió."
+    },
+    {
+      "id": "web-25",
+      "fuente": "GP",
+      "career_code": "ITC",
+      "competencia": "Depuración bajo presión",
+      "pregunta": "Cuéntame de una vez que tuviste que resolver un problema bajo presión.",
+      "respuesta": "Estaba de guardia cuando el servicio de pago empezó a agotar el tiempo durante una venta relámpago: cerca de 8% de los pedidos fallaban en el pico. Primero agregué un circuit breaker, que estabilizó la tasa de errores en diez minutos. Luego rastreé el problema hasta una consulta de inventario sin índice, publiqué el índice detrás de una bandera de función después de probarlo en una réplica y agregué una prueba de carga al CI. Los pedidos fallidos bajaron a menos de 0.1%.",
+      "etiqueta": "fuerte",
+      "motivo_de_la_fuente": "Contexto breve, casi todo es lo que hizo la persona y el resultado está cuantificado con un cambio duradero."
+    },
+    {
+      "id": "web-26",
+      "fuente": "GP",
+      "career_code": "ITC",
+      "competencia": "Depuración bajo presión",
+      "pregunta": "Cuéntame de una vez que tuviste que resolver un problema bajo presión.",
+      "respuesta": "Hubo un problema en producción que nos tenía muy presionados. Al final lo arreglamos.",
+      "etiqueta": "debil",
+      "motivo_de_la_fuente": "Usa 'nosotros', no dice qué hizo, cuál era el problema ni cómo se midió."
+    }
+  ]
+}

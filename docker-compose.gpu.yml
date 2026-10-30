@@ -1,0 +1,12 @@
+# Opcional: usar tarjeta NVIDIA para el modelo local (respuestas varias veces más rápidas).
+# Requiere el NVIDIA Container Toolkit instalado.
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

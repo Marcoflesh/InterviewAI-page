@@ -66,3 +66,15 @@ Simulador de IA con latencias reales (GPT ~1.4 s, Gemini ~2.0 s, 4 % de errores)
 | `v0.5.0` · navegador, 1 usuario | 63–131 ms | | | 0 |
 
 En el peor caso la pregunta aún no está lista y se espera el tope de 2 s; después se muestra la pregunta del banco, que ya está bien redactada. En uso real (30 s o más para escribir) siempre está lista.
+
+## 7. Prueba externa con respuestas de internet (`v0.7.0`, 30/10/2026)
+
+26 respuestas publicadas en 7 sitios, etiquetadas fuerte (14) o débil (12) **por su propio autor** (`backend/app/data/pruebas_web_star.json`). Se mide si el evaluador separa unas de otras.
+
+| Evaluador | AUC | Exactitud (umbral 2.5) | Promedio fuertes | Promedio débiles |
+|---|---|---|---|---|
+| Analizador local (sin IA) | 0.93 | 81 % | 2.85 | 1.67 |
+| Gemini 3.8 Flash + rúbrica de indicadores | pendiente (`--modo llm --conjunto web` en tu computadora) | | | |
+
+Meta propuesta: AUC ≥ 0.90 y exactitud ≥ 85 %. El analizador local no la cumple (web-06 y web-12 fuertes subestimadas; web-15, web-19 y web-21 débiles en 2.5).
+

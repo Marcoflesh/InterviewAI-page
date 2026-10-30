@@ -20,7 +20,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 app = FastAPI()
-CFG = {"err429": 0.03, "err503": 0.01, "median_openai": 1.4, "median_gemini": 2.0, "errores_reales": False}
+CFG = {"err429": 0.03, "err503": 0.01, "median_openai": 1.4, "median_gemini": 2.0, "median_ollama": 3.0, "errores_reales": False}
 
 
 def fake_eval(text: str) -> dict:
@@ -81,6 +81,22 @@ async def gemini(model: str, req: Request):
     out = json.dumps(fake_eval(text)) if is_json else \
         "En un proyecto de [contexto] identifiqué [problema]; mi meta era [objetivo]. Implementé [acciones] y logré [X %] de mejora."
     return {"candidates": [{"content": {"parts": [{"text": out}]}}]}
+
+
+@app.post("/api/chat")
+async def ollama_chat(req: Request):
+    """Simula Ollama: devuelve la pregunta original (como haría un modelo que la reformula)."""
+    body = await req.json()
+    await asyncio.sleep(random.lognormvariate(0, 0.4) * CFG["median_ollama"])
+    text = body["messages"][-1]["content"]
+    m = re.search(r"Pregunta original:\s*(.+)", text)
+    return {"message": {"role": "assistant",
+                        "content": m.group(1).strip() if m else "¿Me cuentas de un proyecto donde resolviste un problema?"}}
+
+
+@app.post("/api/generate")
+async def ollama_generate(req: Request):
+    return {"response": "", "done": True}
 
 
 if __name__ == "__main__":

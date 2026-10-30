@@ -79,3 +79,12 @@ Variantes: **CAR** (Challenge, Action, Result) y **STARR** (con Reflexión) del 
 | F. Fine-tuning | Solo con 500–1000 ejemplos humanos, si el prompt deja de mejorar |
 
 **Línea base medida (analizador local sin IA, contra el set sintético de 24 respuestas):** kappa entre 0.36 y 0.74 según la dimensión y error promedio de 0.99 puntos; no cumple la meta. Subestima respuestas excelentes (5 → 2.8) y sobrevalora el relleno (0.5 → 3.7). Por eso dejó de usarse como tope de la IA en modo rúbrica. La medición del agente de IA real se corre con las llaves del usuario.
+
+## 7. Prueba externa con respuestas de internet
+
+`backend/app/data/pruebas_web_star.json` reúne 26 respuestas que sus autores publicaron como ejemplos **fuertes (14) o débiles (12)**, parafraseadas al español conservando hechos y cifras. A diferencia del set de calibración, la etiqueta no la puso InterviewAI, así que sirve como prueba independiente. Como solo hay dos etiquetas, se mide la **AUC** (probabilidad de que una fuerte reciba más puntaje que una débil) y la exactitud con un umbral, no el puntaje exacto. Todas se cargan en `golden_dataset` como `pending_review`.
+
+Fuentes: [JobTailor](https://www.jobtailor.work/blog/behavioral-interview-questions-star-method-answers), [Interview Query](https://www.interviewquery.com/p/data-science-behavioral-interview-questions), [LoopCV](https://www.loopcv.pro/guides/star-method-interview-examples/), [KDnuggets](https://www.kdnuggets.com/star-doesnt-work-how-to-answer-behavioral-questions-as-a-data-scientist), [Big Tech Careers](https://newsletter.bigtechcareers.com/p/weak-and-strong-answer-to-a-behavioral), [PracHub](https://prachub.com/resources/top-30-behavioral-interview-questions-for-tech-with-answers-for-2026), [Generalist Programmer](https://generalistprogrammer.com/tutorials/behavioral-interview-questions-star-method).
+
+Línea base del analizador local: AUC 0.93, exactitud 81 %. Limitación: las etiquetas de los autores son binarias y algunos ejemplos "débiles" están escritos para ser casi buenos, así que es una prueba de discriminación, no de calibración fina.
+

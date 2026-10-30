@@ -26,6 +26,7 @@ os.environ.update({
     "GOOGLE_CLIENT_ID": "123-test.apps.googleusercontent.com",
     "SECRET_KEY": "test-secret-key-solo-para-pruebas",
     "EMAIL_MX_CHECK": "off",
+    "OLLAMA_ENABLED": "false",
     "RATE_LIMIT_AUTH_PER_MINUTE": "1000",
     "RATE_LIMIT_TURN_PER_MINUTE": "1000",
 })

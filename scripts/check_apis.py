@@ -60,10 +60,24 @@ def main() -> int:
     env = load_env(ENV)
     ok = True
 
+    model = env.get("OLLAMA_MODEL", "qwen3.5:4b")
+    print(f"\n[Ollama local] modelo {model}")
+    st, body = get("http://localhost:11434/api/tags", {})
+    if st == 200:
+        names = [m.get("name", "") for m in body.get("models", [])]
+        if any(n in (model, f"{model}:latest") for n in names):
+            print("  ✓ Ollama encendido y el modelo ya está descargado.")
+        else:
+            print(f"  … Ollama encendido pero el modelo aún no está (se descarga solo; mira: docker compose logs -f ollama-init). Modelos: {names}")
+    else:
+        print("  ✗ Ollama no responde en localhost:11434. ¿Ya corriste iniciar / docker compose up -d?"); ok = False
+
     key = env.get("OPENAI_API_KEY", "")
     model = env.get("OPENAI_CHAT_MODEL", "gpt-4o-mini")
-    print(f"\n[OpenAI] llave {mask(key)} · modelo {model}")
-    if key.startswith("key_"):
+    print(f"\n[OpenAI, opcional] llave {mask(key)} · modelo {model}")
+    if not key:
+        print("  – Sin llave: no se usa (el entrevistador es Ollama).")
+    elif key.startswith("key_"):
         print("  ✗ Pegaste el ID de la llave ('key_…'), no la llave secreta. En https://platform.openai.com/api-keys")
         print("    crea una nueva y copia el valor que empieza con 'sk-' (solo se muestra una vez)."); ok = False
     elif not key.startswith("sk-"):

@@ -209,27 +209,56 @@ def call_openai(prompt: str, system: Optional[str] = None, json_mode: bool = Fal
 
 def call_ollama(prompt: str, system: Optional[str] = None, json_mode: bool = False,
                 max_tokens: int = 800) -> Optional[Tuple[str, str]]:
-    if not settings.OLLAMA_ENABLED:
+    """Modelo local con Ollama (gratis). `think: false` evita el modo de razonamiento,
+    que en modelos como Qwen 3.5 multiplica el tiempo de respuesta."""
+    if not settings.OLLAMA_ENABLED or _is_disabled("ollama"):
         return None
     model = settings.OLLAMA_MODEL
     messages = ([{"role": "system", "content": system}] if system else []) + [
         {"role": "user", "content": prompt}
     ]
-    body = {"model": model, "messages": messages, "stream": False,
-            "options": {"temperature": 0.1, "num_predict": max_tokens}}
+    body = {"model": model, "messages": messages, "stream": False, "think": False,
+            "keep_alive": settings.OLLAMA_KEEP_ALIVE,
+            "options": {"temperature": 0.4, "num_predict": max_tokens}}
     if json_mode:
         body["format"] = "json"
+        body["options"]["temperature"] = 0.1
     started = time.perf_counter()
     try:
-        resp = _client.post(f"{settings.OLLAMA_BASE_URL}/api/chat", json=body)
+        resp = _client.post(f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/chat", json=body)
         _log("ollama", model, resp.status_code, started)
         if resp.status_code != 200:
+            detail = f"HTTP {resp.status_code}: {resp.text[:300]}"
+            logger.warning("ollama error %s", detail)
+            _record("ollama", False, detail, model)
+            if resp.status_code == 404:
+                _disable("ollama", 120, f"el modelo {model} aún no está descargado (docker compose logs ollama-init)")
             return None
         text = (resp.json().get("message", {}).get("content") or "").strip()
+        _record("ollama", bool(text), f"{int((time.perf_counter() - started) * 1000)} ms", model)
         return (text, f"ollama:{model}") if text else None
-    except Exception as exc:
-        _log("ollama", model, type(exc).__name__, started)
+    except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+        _record("ollama", False, f"sin conexión: {exc}"[:240], model)
+        _disable("ollama", 60, f"no hay servidor de Ollama en {settings.OLLAMA_BASE_URL}")
         return None
+    except Exception as exc:
+        detail = f"{type(exc).__name__}: {str(exc)[:160]}"
+        logger.warning("ollama falló: %s", detail)
+        _record("ollama", False, detail, model)
+        return None
+
+
+def warm_up_ollama() -> None:
+    """Carga el modelo en memoria al arrancar para que la primera pregunta no tarde."""
+    if not settings.OLLAMA_ENABLED:
+        return
+    try:
+        _client.post(f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/generate",
+                     json={"model": settings.OLLAMA_MODEL, "prompt": "", "keep_alive": settings.OLLAMA_KEEP_ALIVE},
+                     timeout=120)
+        logger.info("Modelo local %s cargado en memoria", settings.OLLAMA_MODEL)
+    except Exception as exc:
+        logger.info("Ollama aún no disponible para precargar (%s)", type(exc).__name__)
 
 
 _PROVIDERS = {"gemini": call_gemini, "openai": call_openai, "ollama": call_ollama}
@@ -249,7 +278,7 @@ def strip_emojis(text: str) -> str:
 def provider_order(preferred: str) -> List[str]:
     preferred = (preferred or "").lower()
     order = [preferred] if preferred in _PROVIDERS else []
-    return order + [p for p in ("gemini", "openai", "ollama") if p not in order]
+    return order + [p for p in ("ollama", "gemini", "openai") if p not in order]
 
 
 def complete(prompt: str, preferred: str, system: Optional[str] = None,

@@ -1,4 +1,4 @@
-# Documento de Handoff y Continuidad Técnica — InterviewAI (`v0.4.0`)
+# Documento de Handoff y Continuidad Técnica — InterviewAI (`v0.7.0`)
 
 **Fecha de actualización:** 29 de octubre de 2026
 **Repositorio:** `https://github.com/Marcoflesh/InterviewAI-page.git`
@@ -98,8 +98,17 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - Diagnóstico: `python scripts/probar_ia.py` y el campo `ia` de `/api/health`.
 - Pendiente: confirmar con las llaves reales (este entorno no tiene salida a Google ni a OpenAI).
 
-## 13. Próximos pasos inmediatos
+## 13. `v0.7.0` — Ollama, base de datos llena y prueba con internet (30/10/2026)
 
-1. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
-2. Pegar los resultados reales de `stress_test_agents.py` en `PRUEBAS.md` §5 y decidir viabilidad con los criterios ahí definidos.
-3. Elegir hosting del backend para la versión pública en GitHub Pages.
+- **Entrevistador**: Ollama local `qwen3.5:4b` (gratis). Servicios `ollama` + `ollama-init` en Compose; la primera vez descarga ~3.4 GB (`docker compose logs -f ollama-init`). Mientras no está listo, el backend usa las preguntas del banco sin esperar. GPU NVIDIA: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d`.
+- **Gemini** sigue como Evaluador y Sintetizador. OpenAI solo como respaldo si alguien vuelve a poner llave con saldo.
+- **Datos**: `golden_dataset` se llena solo al arrancar (26 web + 24 calibración); `reviewer_notes` guarda fuente, URL y etiqueta original. Puntajes web representativos (4.0/1.0) y en `pending_review`: no son calificaciones humanas reales.
+- **Medición**: `scripts/evaluar_evaluador.py --conjunto web|bd`. Analizador local: AUC 0.93 / exactitud 81 %. Falta la medición con Gemini (este entorno no tiene salida a Google ni a Ollama).
+- **Elección de modelo**: `qwen3.5:4b` sobre `ministral-3:3b` (español) y Gemma 4 (razonamiento no desactivable, más lento). Alternativa si hay ≥ 16 GB de RAM o GPU: `OLLAMA_MODEL=qwen3.5:9b`.
+
+## 14. Próximos pasos inmediatos
+
+1. Usuario: `./iniciar.sh` (descarga el modelo), `python scripts/probar_ia.py` y `python scripts/evaluar_evaluador.py --modo llm --conjunto web`; pegar los resultados.
+2. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
+3. Pegar los resultados reales de `stress_test_agents.py` en `PRUEBAS.md` §5 y decidir viabilidad con los criterios ahí definidos.
+4. Elegir hosting del backend para la versión pública en GitHub Pages.

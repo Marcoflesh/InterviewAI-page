@@ -72,6 +72,11 @@ def _more_worker_threads() -> None:
     # Las llamadas a los agentes de IA bloquean un hilo varios segundos: más hilos = más usuarios.
     import anyio.to_thread
     anyio.to_thread.current_default_thread_limiter().total_tokens = 100
+    import threading
+
+    from app.llm import warm_up_ollama
+
+    threading.Thread(target=warm_up_ollama, daemon=True).start()
 
 
 @app.on_event("startup")
@@ -81,10 +86,11 @@ def _report_database_state() -> None:
         logger.info("Base de datos lista.")
         try:
             from app.database import SessionLocal
-            from app.services.question_seed import seed_question_bank
+            from app.services.question_seed import seed_golden_dataset, seed_question_bank
 
             with SessionLocal() as db:
                 seed_question_bank(db)
+                seed_golden_dataset(db)
         except Exception:
             logger.exception("No se pudo cargar el banco de preguntas investigado")
     else:
