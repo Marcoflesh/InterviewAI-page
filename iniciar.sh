@@ -18,6 +18,22 @@ chmod 600 .env 2>/dev/null || true
 
 HEALTH=/tmp/interviewai_health.json
 
+# Traer la última versión del repositorio (solo avanza, nunca borra cambios tuyos).
+if [ -d .git ]; then
+  if git pull --ff-only -q 2>/tmp/interviewai_pull.txt; then
+    echo "✓ Versión: $(git log --oneline -1)"
+  else
+    echo "✗ No se pudo actualizar con git pull:"; sed 's/^/    /' /tmp/interviewai_pull.txt
+    echo "  Si dice que tienes cambios locales: git stash && git pull   (y vuelve a correr ./iniciar.sh)"
+  fi
+fi
+
+# Ollama de Docker usa el puerto 11434; si ya lo ocupa un Ollama instalado en tu computadora, usar otro.
+if ! grep -q '^OLLAMA_HOST_PORT=' .env && (ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | grep -q '[:.]11434 '; then
+  echo "→ El puerto 11434 ya lo usa otro programa (¿Ollama instalado fuera de Docker?). Uso 11435 para el de InterviewAI."
+  printf '\nOLLAMA_HOST_PORT=11435\n' >> .env
+fi
+
 levantar() {
   echo "→ Construyendo y levantando contenedores. La primera vez tarda 2-5 min: NO presiones Ctrl+C."
   docker compose up --build -d || true   # si la BD falla, se diagnostica abajo
@@ -87,8 +103,18 @@ PY
       read -r -p "  ¿Reiniciarla? Se borran solo las cuentas y entrevistas de prueba locales (s/n): " r
       if [[ "$r" =~ ^[sSyY] ]]; then docker compose down -v && levantar; else echo "Sin reiniciar no puede funcionar. Saliendo."; exit 1; fi ;;
     *)
-      echo "✗ El backend no respondió. Últimos logs:"
-      docker compose logs backend --tail 30
+      echo "✗ El backend no respondió. Estado de los contenedores:"
+      docker compose ps -a
+      if [ -z "$(docker compose ps -a -q backend 2>/dev/null)" ]; then
+        echo "  El contenedor del backend ni siquiera se creó. Causas comunes:"
+        echo "   - Falló la construcción: corre  docker compose up --build -d  y lee el error en rojo."
+        echo "   - Disco lleno: docker system df   (libera con  docker system prune)"
+        echo "   - Un puerto ocupado (5432, 8000, 3000 u 11434) por otro programa."
+      else
+        echo "  Últimos logs del backend:"
+        docker compose logs backend --tail 40
+      fi
+      echo "  Copia todo esto y compártelo."
       exit 1 ;;
   esac
 done

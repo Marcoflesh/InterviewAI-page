@@ -19,6 +19,13 @@ try { icacls .env /inheritance:r /grant:r "$($env:USERNAME):(R,W)" *> $null } ca
 if ((Test-Path .git) -and -not (Test-Path .git\hooks\pre-commit) -and (Get-Command bash -ErrorAction SilentlyContinue)) {
   bash scripts/install_git_hooks.sh *> $null; Write-Host "OK Proteccion anti-secretos para git instalada" }
 
+# Traer la ultima version del repositorio (solo avanza, nunca borra cambios tuyos).
+if ((Test-Path .git) -and (Get-Command git -ErrorAction SilentlyContinue)) {
+  git pull --ff-only -q
+  if ($LASTEXITCODE -eq 0) { Write-Host ("OK Version: " + (git log --oneline -1)) }
+  else { Write-Host "X No se pudo actualizar con git pull. Si dice que tienes cambios locales: git stash; git pull" -ForegroundColor Yellow }
+}
+
 function Levantar {
   Write-Host "-> Construyendo y levantando contenedores. La primera vez tarda 2-5 min: NO cierres esta ventana." -ForegroundColor Yellow
   docker compose up --build -d   # si la BD falla, se diagnostica abajo
@@ -97,8 +104,11 @@ for ($intento = 1; $intento -le 3; $intento++) {
       else { Write-Host "Sin reiniciar no puede funcionar. Saliendo." -ForegroundColor Red; exit 1 }
     }
     default {
-      Write-Host "X El backend no respondio. Ultimos logs:" -ForegroundColor Red
-      docker compose logs backend --tail 30
+      Write-Host "X El backend no respondio. Estado de los contenedores:" -ForegroundColor Red
+      docker compose ps -a
+      Write-Host "Ultimos logs del backend (si esta vacio, el contenedor no se creo: corre 'docker compose up --build -d' y lee el error):"
+      docker compose logs backend --tail 40
+      Write-Host "Copia todo esto y compartelo."
       exit 1
     }
   }

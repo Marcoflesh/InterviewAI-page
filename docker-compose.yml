@@ -34,7 +34,8 @@ services:
     environment:
       OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
     ports:
-      - "127.0.0.1:11434:11434"
+      # Si ya tienes Ollama instalado en tu computadora (ocupa el 11434), pon OLLAMA_HOST_PORT=11435 en .env
+      - "127.0.0.1:${OLLAMA_HOST_PORT:-11434}:11434"
     volumes:
       - ollamadata:/root/.ollama
     healthcheck:
@@ -65,8 +66,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      ollama:
-        condition: service_started
+      # Sin dependencia de Ollama: si Ollama no arranca, el backend funciona igual
+      # (usa las preguntas del banco) en lugar de no levantarse.
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-interviewai}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-interviewai}
       # >>> Llaves inyectadas desde .env (no se escriben aquí) <<<

@@ -119,7 +119,12 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - Incidente del usuario: Ctrl+C durante `docker compose up --build` dejó el backend viejo (`Entrevistador: None`). `iniciar` ahora enseña el progreso y se auto-repara.
 - GitHub Pages sigue fallando con "Get Pages site failed": falta activar Settings → Pages → Source: GitHub Actions (solo el dueño puede).
 
-## 16. Próximos pasos inmediatos
+## 16. `v0.8.1` — Arranque robusto (30/10/2026)
+
+- `backend` ya no tiene `depends_on: ollama`; un fallo de Ollama (imagen sin descargar, puerto 11434 ocupado por un Ollama nativo) impedía crear el backend (`sin_backend`, logs vacíos).
+- `iniciar` actualiza el repo solo (`git pull --ff-only`) y muestra `docker compose ps -a` al fallar.
+
+## 17. Próximos pasos inmediatos
 
 1. Usuario: seguir "Actualizar a la versión con Ollama + Gemini" de `PASO_A_PASO.md` y pegar la salida de `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web`.
 2. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).

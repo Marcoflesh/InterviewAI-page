@@ -4,6 +4,12 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.8.1] - 2026-10-30 — El backend arranca aunque Ollama falle`
+
+* **Reporte**: `./iniciar.sh` → `sin_backend` sin logs. La salida mostraba el texto del script anterior (no se aplicó `git pull`) y el contenedor del backend no llegó a crearse.
+* **`docker-compose.yml`**: el backend ya no depende de Ollama (si Ollama no arranca, se usa el banco de preguntas). Puerto de Ollama configurable con `OLLAMA_HOST_PORT` por si ya hay un Ollama instalado en la computadora.
+* **`iniciar.sh` / `iniciar.ps1`**: hacen `git pull --ff-only` al inicio e imprimen la versión; detectan el puerto 11434 ocupado; si el backend no responde muestran `docker compose ps -a`, distinguen "no se creó" de "se cayó" y listan causas comunes.
+
 ### `[v0.8.0] - 2026-10-30 — Entrevistas pasadas, historial sin duplicados y arranque de Ollama visible`
 
 * **Bug reportado**: al volver a entrar, el historial mostraba la misma entrevista varias veces. **Causa**: el historial vivía solo en `localStorage` y `buildAndShowReport` podía ejecutarse dos veces (Enter repetido o doble clic en "Terminar" mientras se esperaba el reporte), guardando una entrada por llamada.
