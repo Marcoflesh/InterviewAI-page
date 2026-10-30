@@ -1,40 +1,39 @@
 # InterviewAI — Simulador Inteligente de Entrevistas Laborales
 
-Plataforma web minimalista de práctica de entrevistas laborales por escrito con evaluación en tiempo real bajo la metodología **STAR** (Situación, Tarea, Acción y Resultado), preguntas aleatorias por carrera profesional, orquestación de agentes con **LangGraph**, inferencia local con **Ollama**, persistencia en **PostgreSQL** y despliegue reproducible en **Docker**.
+Plataforma web minimalista para practicar entrevistas laborales por escrito, con evaluación crítica en tiempo real (escala **0 a 5**) bajo el método **STAR**, preguntas adaptadas a la carrera y al contexto de la vacante, y reporte final descargable en PDF.
 
-## Características Principales
+- **Agentes de IA (LangGraph):** Entrevistador `gpt-4o-mini`, Evaluador y Sintetizador `gemini-3.8-flash`, con respaldo automático entre proveedores y analizador determinista local.
+- **Stack:** FastAPI + PostgreSQL 16 + nginx en Docker. Frontend HTML/CSS/JS sin frameworks.
+- **Privacidad:** anonimización de datos personales (incluido tu nombre) antes de guardar o enviar a la IA, sesiones con token firmado y borrado de cuenta.
 
-- **Inicio de Sesión con Google**: Pantalla de bienvenida limpia centrada en autenticación con Google.
-- **Interfaz Minimalista y 100% Basada en Texto**: Sin saturación visual, sin etiquetas técnicas de requerimientos en pantalla y sin grabación de voz.
-- **Banco de 120 Preguntas Aleatorias en 8 Carreras**: Selección aleatoria sin repetición para Ingeniería de Software (`ITC`), Ciencia de Datos e IA (`ISD`), Ingeniería Industrial (`IIS`), Mecatrónica (`IMT`), Finanzas y Consultoría (`LAF`), Marketing y Producto (`LMC`), Biomédica y Biotecnología (`IBT`) y Arquitectura/Diseño/UX (`ARQ`).
-- **Orquestación con LangGraph + Ollama**: Evaluación automática de cada respuesta calificando de 1 a 5 Situación, Tarea, Acción, Resultado, Claridad Técnica y Pertinencia, avanzando de forma fluida entre preguntas sin repreguntas innecesarias.
-- **Privacidad y Anonimización**: Sanitización automática de datos personales (correos, teléfonos, matrículas, identificadores) antes de guardar en PostgreSQL.
-- **Reporte Final y Plan de Acción**: Identificación de las 2 respuestas más débiles con ejemplos redactados de mejora, recursos de estudio por carrera y descarga en PDF.
+## Inicio rápido (localhost)
 
-## Requisitos Previos
+```bash
+cp .env.example .env          # llena tus llaves (ver PASO_A_PASO.md)
+python scripts/check_apis.py  # verifica llaves sin gastar saldo
+docker compose up --build -d
+```
 
-- [Docker](https://docs.docker.com/get-docker/) y Docker Compose instalados.
+Abre **http://localhost:3000** · API: http://localhost:8000/docs
 
-## Ejecución Rápida con Docker
+## GitHub Pages
 
-1. Copia el archivo de variables de entorno:
-   ```bash
-   cp .env.example .env
-   ```
-2. Levanta los contenedores (PostgreSQL, Ollama, Backend FastAPI/LangGraph y Frontend Nginx):
-   ```bash
-   docker compose up --build -d
-   ```
-3. Descarga el modelo en el contenedor de Ollama (solo la primera vez):
-   ```bash
-   docker exec -it interviewai-ollama ollama pull llama3.2:3b
-   ```
-4. Abre la aplicación en tu navegador:
-   - **Aplicación Web**: `http://localhost:3000`
-   - **Documentación API (Swagger)**: `http://localhost:8000/docs`
+El workflow `.github/workflows/pages.yml` publica `frontend/` en `https://marcoflesh.github.io/InterviewAI-page/`. Sin un backend desplegado la página funciona en **Modo demo** (evaluación local). Detalles en [`PASO_A_PASO.md`](./PASO_A_PASO.md#paso-7--publicar-en-github-pages).
 
-## Documentación del Proyecto
+## Documentación
 
-- [`roadmap.md`](./roadmap.md): Estado de las funcionalidades pasadas, actuales y siguientes iteraciones.
-- [`handoff.md`](./handoff.md): Documento de continuidad técnica, arquitectura y decisiones tomadas.
-- [`traceability.md`](./traceability.md): Bitácora de cambios y matriz de trazabilidad frente al SRS.
+| Archivo | Contenido |
+| :--- | :--- |
+| [`PASO_A_PASO.md`](./PASO_A_PASO.md) | Lo que tienes que hacer tú: llaves, Google Sign-In, Docker, pruebas y Pages. |
+| [`GUIA_CONFIGURACION_APIS.md`](./GUIA_CONFIGURACION_APIS.md) | Qué modelo usa cada agente y dónde se configura. |
+| [`SEGURIDAD.md`](./SEGURIDAD.md) | Auditoría de seguridad y anonimato. |
+| [`PRUEBAS.md`](./PRUEBAS.md) | Resultados de pruebas automáticas, de navegador, de carga y de los agentes. |
+| [`roadmap.md`](./roadmap.md) · [`handoff.md`](./handoff.md) · [`traceability.md`](./traceability.md) | Evolución, continuidad técnica y trazabilidad con el SRS. |
+
+## Pruebas
+
+```bash
+cd backend && TEST_DATABASE_URL=postgresql://usuario:pass@localhost:5432/interviewai_test python -m pytest -q
+python scripts/stress_test_agents.py        # agentes reales con tus llaves
+python scripts/load_test_backend.py         # carga sobre el backend en Docker
+```

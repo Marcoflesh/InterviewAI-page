@@ -1,142 +1,43 @@
-# Guía Exacta de Configuración de API Keys y Agentes de IA (`gpt-4o-mini`, `gemini-3.8-flash` y Google OAuth)
+# Guía de Configuración de API Keys y Agentes de IA (`v0.4.0`)
 
-Este documento detalla **la ruta exacta de cada archivo, el número de línea y los pasos** donde debes colocar tus llaves API para cargar tus agentes de IA (**`gpt-4o-mini`** para el Agente Entrevistador/Chat y **`gemini-3.8-flash`** para el Agente Evaluador Crítico) y el verificador oficial de **Google Sign-In**.
+**Regla única:** las llaves secretas viven **solo** en `.env` (raíz del proyecto). Nunca en el código, nunca en el frontend, nunca en GitHub. El paso a paso completo está en [`PASO_A_PASO.md`](./PASO_A_PASO.md).
 
-## Resumen Rápido: ¿Qué modelo usa cada Agente?
+## ¿Qué modelo usa cada agente?
 
-| Agente en LangGraph | Modelo Configurado | Variable de Entorno | Función Principal | 
-| ----- | ----- | ----- | ----- | 
-| **Agente Entrevistador (Chat)** | `gpt-4o-mini` | `OPENAI_API_KEY` | Contextualiza las preguntas aleatorias de la carrera según el **Contexto de la vacante** y el currículum del candidato. | 
-| **Agente Evaluador Crítico (LLM-as-a-Judge)** | `gemini-3.8-flash` | `GEMINI_API_KEY` | Evalúa de forma crítica y objetiva cada respuesta en escala **0 a 5** (`Situación`, `Tarea`, `Acción`, `Resultado`, `Claridad técnica`, `Pertinencia`) y redacta los ejemplos de mejora del reporte final. | 
-| **Verificador Oficial Google Sign-In** | Google Identity Services | `GOOGLE_CLIENT_ID` | Carga el botón y popup oficial de `accounts.google.com/gsi/client` y verifica criptográficamente el token JWT del usuario. | 
+| Agente | Modelo por defecto | Variables en `.env` | Formato de la llave |
+| :--- | :--- | :--- | :--- |
+| **Entrevistador** (adapta las preguntas a la vacante) | `gpt-4o-mini` | `OPENAI_API_KEY`, `OPENAI_CHAT_MODEL`, `INTERVIEWER_PROVIDER=openai` | empieza con `sk-` |
+| **Evaluador crítico** (califica 0–5) y **Sintetizador** (ejemplos STAR del reporte) | `gemini-3.8-flash` (respaldo `gemini-2.5-flash`) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `EVALUATOR_PROVIDER=gemini` | empieza con `AIza` |
+| **Google Sign-In** | Google Identity Services | `GOOGLE_CLIENT_ID` | termina en `.apps.googleusercontent.com` (es público) |
 
-## Paso 1 (Principal y Recomendado): Configurar el archivo `.env` en la raíz
+Si el proveedor principal falla (error, límite de uso o llave inválida), el backend reintenta una vez y luego usa el otro proveedor. Si ninguno responde, usa el analizador determinista local. La respuesta de cada turno indica quién evaluó (`evaluator_source`).
 
-Cuando trabajas con Docker (`docker compose up --build`), **solo necesitas poner tus llaves en un único archivo (`.env`)** y Docker las inyecta automáticamente a todos los módulos del backend.
+## Dónde se leen las llaves (no necesitas editar estos archivos)
 
-1. **Ruta del archivo**:
+| Archivo | Qué hace |
+| :--- | :--- |
+| `.env` | Tus valores reales (en `.gitignore` y `.dockerignore`). |
+| `docker-compose.yml` | Pasa las variables de `.env` al contenedor `backend`. |
+| `backend/app/config.py` | Lee y valida el formato de las llaves (avisa en los logs si una no tiene el formato correcto). |
+| `backend/app/llm.py` | Único cliente de Gemini/OpenAI/Ollama: llave en *header*, reintento y logs sin secretos. |
+| `backend/app/agents/evaluator.py`, `interviewer.py`, `synthesizer.py` | Prompts de cada agente; llaman a `llm.py`. |
+| `backend/app/auth.py` | Verifica el JWT de Google con `GOOGLE_CLIENT_ID`. |
+| `frontend/js/config.js` | Solo datos públicos: `API_BASE_URL` y `GOOGLE_CLIENT_ID`. **Sin llaves.** |
 
-   * Plantilla base: `InterviewAI-page/.env.example`
+## Comprobar que todo está bien
 
-   * Archivo activo a crear en la raíz: `InterviewAI-page/.env`
-
-2. **Comando para crearlo**:
-
-   ```
-   cp .env.example .env
-   
-   ```
-
-3. **Líneas exactas donde debes pegar tus llaves en `.env`** (Líneas **19 a 36**):
-
+```bash
+python scripts/check_apis.py                   # valida llaves sin gastar saldo
+curl http://localhost:8000/api/health          # con Docker encendido: qué está configurado
+docker compose logs -f backend | grep llm      # proveedor, modelo, código HTTP y latencia de cada llamada
 ```
-# [Línea 19-20] Pega aquí tu llave de OpenAI (sk-...) para cargar gpt-4o-mini:
-OPENAI_API_KEY=sk-proj-TU_LLAVE_REAL_DE_OPENAI_AQUI
-OPENAI_CHAT_MODEL=gpt-4o-mini
 
-# [Línea 23-24] Pega aquí tu llave de Google AI Studio (AIza...) para cargar gemini-3.8-flash:
-GEMINI_API_KEY=AIzaSyTU_LLAVE_REAL_DE_GEMINI_AQUI
+## Cambiar de modelo
+
+Solo edita `.env` y reinicia (`docker compose up -d`):
+
+```ini
+OPENAI_CHAT_MODEL=gpt-6-luna        # reemplazo recomendado por OpenAI antes del 14/01/2027
 GEMINI_MODEL=gemini-3.8-flash
-
-# [Línea 27 y 30] Proveedores activos para cada agente:
-EVALUATOR_PROVIDER=gemini
-INTERVIEWER_PROVIDER=openai
-
-# [Línea 36] Pega aquí tu Client ID de Google Cloud Console para el login oficial de Google:
-GOOGLE_CLIENT_ID=1234567890-abcdefg.apps.googleusercontent.com
-
+EVALUATOR_PROVIDER=openai           # para que gpt evalúe en lugar de Gemini
 ```
-
-## Paso 2: Archivos del Backend donde se leen y ejecutan tus API Keys
-
-Todos los archivos de código ya tienen comentarios marcados con `# >>> ... <<<` indicando dónde se leen y utilizan tus llaves:
-
-### 1. Configuración Central del Backend
-
-* **Ruta del archivo**: `InterviewAI-page/backend/app/config.py`
-
-* **Líneas exactas**: **Líneas 18 a 33**
-
-* **Qué hace**: Lee `OPENAI_API_KEY`, `OPENAI_CHAT_MODEL` (`gpt-4o-mini`), `GEMINI_API_KEY`, `GEMINI_MODEL` (`gemini-3.8-flash`) y `GOOGLE_CLIENT_ID` desde `.env`. Si no usas `.env`, puedes pegar tus llaves en el segundo parámetro de `os.getenv(...)` en esas líneas:
-
-  ```
-  # Línea 18 de backend/app/config.py:
-  OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")  # <-- PON AQUÍ TU API KEY DE OPENAI EN .env
-  OPENAI_CHAT_MODEL: str = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
-  
-  # Línea 21 de backend/app/config.py:
-  GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")  # <-- PON AQUÍ TU API KEY DE GEMINI EN .env
-  GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-  
-  ```
-
-### 2. Agente Evaluador Crítico (`gemini-3.8-flash` y `gpt-4o-mini`)
-
-* **Ruta del archivo**: `InterviewAI-page/backend/app/agents/evaluator.py`
-
-* **Líneas exactas**:
-
-  * **Líneas 332 a 361**: Bloque `# >>> OPCIÓN 1: AGENTE EVALUADOR CON GEMINI 3.8 FLASH (GEMINI_API_KEY EN .env) <<<` que llama a `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent`.
-
-  * **Líneas 363 a 390**: Bloque `# >>> OPCIÓN 2: AGENTE EVALUADOR CON GPT-4o MINI (OPENAI_API_KEY EN .env) <<<` que llama a `https://api.openai.com/v1/chat/completions`.
-
-### 3. Agente Entrevistador y Contextualizador de la Vacante (`gpt-4o-mini` y `gemini-3.8-flash`)
-
-* **Ruta del archivo**: `InterviewAI-page/backend/app/agents/interviewer.py`
-
-* **Líneas exactas**:
-
-  * **Líneas 29 a 52**: Bloque `# >>> AGENTE ENTREVISTADOR CON GPT-4o MINI (OPENAI_API_KEY EN .env) <<<` que adapta cada pregunta aleatoria de la carrera al **Contexto de la vacante** y al **Puesto objetivo**.
-
-  * **Líneas 54 a 78**: Bloque `# >>> AGENTE ENTREVISTADOR CON GEMINI 3.8 FLASH (GEMINI_API_KEY EN .env) <<<`.
-
-### 4. Sintetizador del Reporte Final y Ejemplos STAR (`gemini-3.8-flash` y `gpt-4o-mini`)
-
-* **Ruta del archivo**: `InterviewAI-page/backend/app/agents/synthesizer.py`
-
-* **Líneas exactas**:
-
-  * **Líneas 25 a 49**: Bloque `# >>> SÍNTESIS DE REPORTE CON GEMINI 3.8 FLASH (GEMINI_API_KEY EN .env) <<<`.
-
-  * **Líneas 51 a 74**: Bloque `# >>> SÍNTESIS DE REPORTE CON GPT-4o MINI (OPENAI_API_KEY EN .env) <<<`.
-
-### 5. Verificador Oficial de Google Sign-In (`GOOGLE_CLIENT_ID`)
-
-* **Ruta en Backend**: `InterviewAI-page/backend/app/auth.py` (**Líneas 99 a 132**) — Verifica criptográficamente el token JWT emitido por Google usando `google.oauth2.id_token.verify_oauth2_token`.
-
-* **Ruta en Frontend**: `InterviewAI-page/frontend/js/app.js` (**Líneas 16 a 29**) — Objeto `AGENT_CONFIG`:
-
-  ```
-  // Líneas 16 a 29 de frontend/js/app.js:
-  const AGENT_CONFIG = {
-    GOOGLE_CLIENT_ID: "", // <-- PON AQUÍ TU GOOGLE_CLIENT_ID.apps.googleusercontent.com (o en .env)
-    OPENAI_API_KEY: "",   // <-- PON AQUÍ TU OPENAI_API_KEY EN .env (o aquí si abres el HTML sin backend)
-    OPENAI_CHAT_MODEL: "gpt-4o-mini",
-    GEMINI_API_KEY: "",   // <-- PON AQUÍ TU GEMINI_API_KEY EN .env (o aquí si abres el HTML sin backend)
-    GEMINI_MODEL: "gemini-3.8-flash"
-  };
-  
-  ```
-
-## Paso 3: Cómo obtener el `GOOGLE_CLIENT_ID` oficial en 2 minutos
-
-1. Entra a [Google Cloud Console — Credentials](https://www.google.com/search?q=https://console.cloud.google.com/apis/credentials).
-
-2. Haz clic en **Create Credentials** -> **OAuth client ID**.
-
-3. En **Application type**, elige **Web application**.
-
-4. En **Authorized JavaScript origins**, agrega:
-
-   * `http://localhost:3000`
-
-   * `http://localhost:8000`
-
-5. Copia el **Client ID** generado (`xxxx.apps.googleusercontent.com`) y pégalo en la variable `GOOGLE_CLIENT_ID` de tu archivo `.env` (y/o en la línea 19 de `frontend/js/app.js`).
-
-6. Reinicia los contenedores:
-
-   ```
-   docker compose up --build -d
-   
-   ```
