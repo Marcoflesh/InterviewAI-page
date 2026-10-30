@@ -4,6 +4,13 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.10.0] - 2026-10-30 — Listo para GitHub Pages`
+
+* **Ollama confirmado en la máquina del usuario** (`ollama 0.40.13`, `qwen3.5:4b` descargado).
+* **Pages con backend local (`?local=1`)**: la página publicada usa `http://localhost:8000` de la misma computadora (solo localhost, recordado en el navegador; `?local=0` lo quita). En la insignia "Modo demo" aparece el enlace "usar mi computadora". Backend: cabecera `Access-Control-Allow-Private-Network` en la verificación previa para orígenes permitidos.
+* **Modo demo**: el analizador del navegador reconoce secuencias de verbos en primera persona ("le pedí…, le expliqué…, escribí…"), solo si hay varios; el ejemplo STAR ya no usa el saludo de la pregunta como tema. Mismo ajuste en el analizador del servidor (internet AUC 0.93 / 81 %, enfoque 100 %, buenas 4.17).
+* **Verificación de publicación**: simulación del paso de `pages.yml` (sin secretos en lo publicado, 516 KB, rutas relativas) y prueba en Chromium sobre un dominio distinto de localhost con subruta `/InterviewAI-page/`: modo demo y `?local=1` completos (registro, entrevista, reporte, PDF, historial, entrevista pasada), 0 errores JS, 0 peticiones fallidas. 67 pytest.
+
 ### `[v0.9.0] - 2026-10-30 — La calificación pondera lo que pide cada pregunta`
 
 * **Reporte del usuario (PDF de su entrevista)**: preguntas que piden una sola parte ("¿Cómo estructuraste tu explicación?", "¿Qué plan seguiste?") bajaban la nota por no traer un Resultado que nadie pidió; la retroalimentación exigía STAR completo y vocabulario técnico en preguntas de trabajo en equipo. Además, ese reporte lo calificó el analizador local (no Gemini).

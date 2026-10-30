@@ -1,4 +1,4 @@
-# Paso a Paso — InterviewAI (`v0.8.0`)
+# Paso a Paso — InterviewAI (`v0.10.0`)
 
 ## Ver tus entrevistas pasadas (v0.8.0)
 
@@ -183,15 +183,25 @@ Copia la salida en `PRUEBAS.md` (sección 5) y compárala con los criterios de v
 
 ## Paso 7 — Publicar en GitHub Pages
 
-1. En GitHub → repositorio → *Settings → Pages → Build and deployment → Source:* **GitHub Actions**. (El workflow ya existe; solo falta este clic. Después avísame o haz cualquier push y se publica.)
-2. *Settings → Secrets and variables → Actions → Variables*: crea `GOOGLE_CLIENT_ID` (es público). **Nunca** pongas ahí las llaves de OpenAI o Gemini.
-3. Haz un push a `main` (o corre el workflow manualmente). La página queda en `https://marcoflesh.github.io/InterviewAI-page/`.
+**Una sola vez (solo tú puedes, GitHub no deja hacerlo desde fuera):**
 
-**Importante:** GitHub Pages solo sirve archivos estáticos; no puede ejecutar el backend ni guardar llaves. Sin backend, la página funciona en **Modo demo** (evaluación local, datos solo en el navegador). Para tener los agentes de IA en la versión pública:
+1. https://github.com/Marcoflesh/InterviewAI-page/settings/pages → *Build and deployment → Source:* **GitHub Actions**.
+2. https://github.com/Marcoflesh/InterviewAI-page/actions/workflows/pages.yml → **Run workflow** → *main* → **Run workflow**. En 1–2 minutos queda en verde.
+3. Abre **https://marcoflesh.github.io/InterviewAI-page/**.
+4. Para Google Sign-In en Pages: en Google Cloud Console (Paso 3) agrega el origen `https://marcoflesh.github.io` si no está.
 
-1. Despliega el backend (`Dockerfile.backend`) en un servicio con contenedores, por ejemplo Render o Google Cloud Run, con un PostgreSQL administrado (por ejemplo Neon o Supabase) cargado con `database/init.sql`.
-2. Pon tus llaves como variables de entorno **de ese servicio** y `ALLOWED_ORIGINS=https://marcoflesh.github.io`.
-3. En GitHub crea la variable `API_BASE_URL` con la URL `https://…` de tu backend y vuelve a desplegar Pages.
+Desde ahí, cada push que cambie `frontend/` vuelve a publicar solo.
+
+**Cómo funciona la página publicada:**
+
+| Quién la abre | Qué pasa |
+|---|---|
+| Cualquier persona | **Modo demo**: entrevista completa con el banco de preguntas, calificación en el navegador (misma regla de enfoque), reporte, historial y PDF. Los datos se quedan en su navegador. |
+| Tú, con Docker encendido (`./iniciar.sh`) | Abre **https://marcoflesh.github.io/InterviewAI-page/?local=1** (o el enlace "usar mi computadora" junto a "Modo demo"). La página usa tu backend: Ollama, Gemini y la base de datos. Chrome/Edge preguntan una vez si permites acceso a la red local: acepta. Se recuerda; `?local=0` lo quita. |
+
+Nota: `?local=1` solo puede conectarse a `http://localhost:8000` de la misma computadora, así que un enlace no puede mandar datos a otro servidor. Funciona en Chrome, Edge y Firefox; Safari bloquea esa conexión.
+
+**Versión pública con IA para todos (después):** desplegar `Dockerfile.backend` en Render o Cloud Run con PostgreSQL administrado, llaves como variables de ese servicio, `ALLOWED_ORIGINS=https://marcoflesh.github.io` y la variable de GitHub `API_BASE_URL` con su URL. Ollama necesita una máquina con mucha memoria; en la nube conviene que el entrevistador sea Gemini (`INTERVIEWER_PROVIDER=gemini`).
 
 ## Paso 8 — Antes del 14 de enero de 2027
 

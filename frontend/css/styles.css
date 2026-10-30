@@ -429,6 +429,7 @@ body {
   font-weight: 500;
   color: var(--muted);
 }
+.mode-badge a { color: inherit; text-decoration: underline; }
 button:disabled { opacity: 0.55; cursor: progress; }
 
 /* Indicador discreto mientras el entrevistador responde */

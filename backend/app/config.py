@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     )
 
     APP_NAME: str = "InterviewAI API"
-    APP_VERSION: str = "0.8.0"
+    APP_VERSION: str = "0.10.0"
     DATABASE_URL: str = "postgresql://interviewai:interviewai_secret@db:5432/interviewai"
 
     # --- Agentes de IA (las llaves viven SOLO en .env) ---------------------

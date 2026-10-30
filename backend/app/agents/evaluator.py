@@ -228,6 +228,9 @@ def _critical_star_analyzer(
         "levant", "diagnostic", "correg", "modific", "integr", "despleg", "prob",
         "reemplac", "sustitu", "divid", "prioric", "lider", "establec", "defini",
     ]
+    # Verbos en primera persona al contar lo que uno hizo. Solo suman si hay varios (una secuencia
+    # de pasos): "le expliqué bien" solo no es una acción concreta.
+    first_person_steps = ["pedi", "explique", "escribi", "agregue", "instale", "cambie", "ensene", "mostre", "compare", "busque", "organice", "priorice", "hice", "resolvi", "hable con", "decidi", "prepare", "separe", "actualice", "comprobe", "reproduje", "aisle"]
     result_stems = [
         "resultad", "logr", "reduj", "reduci", "increment", "aument", "mejor",
         "ahorr", "permit", "final", "consegu", "impact", "paso de", "bajo a",
@@ -238,6 +241,8 @@ def _critical_star_analyzer(
     sit_hits = sum(1 for s in sit_stems if s in norm)
     task_hits = sum(1 for s in task_stems if s in norm)
     act_hits = sum(1 for s in action_stems if s in norm)
+    steps = sum(1 for s in first_person_steps if s in norm)
+    act_hits += max(0, steps - 1)
     res_hits = sum(1 for s in result_stems if s in norm)
 
     # Si no tiene relación alguna con la pregunta ni léxico técnico ni estructura, cae a 0-1

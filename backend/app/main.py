@@ -103,6 +103,11 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Cache-Control"] = "no-store"
+    # La página de GitHub Pages (https) puede usar el backend de TU computadora (?local=1).
+    # Chrome pide permiso de "red local" y, en la verificación previa, esta cabecera.
+    if (request.method == "OPTIONS" and request.headers.get("access-control-request-private-network")
+            and request.headers.get("origin") in settings.allowed_origins_list):
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
     return response
 
 

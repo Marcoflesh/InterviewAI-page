@@ -12,7 +12,21 @@ const PUBLIC_CONFIG = Object.assign(
   { API_BASE_URL: "", GOOGLE_CLIENT_ID: "" },
   window.INTERVIEWAI_CONFIG || {}
 );
-const API_BASE = String(PUBLIC_CONFIG.API_BASE_URL || "").replace(/\/+$/, "");
+// En GitHub Pages no hay servidor: la página funciona en "Modo demo". Con ?local=1 usa el backend
+// que corre en TU computadora (Docker encendido), y lo recuerda en este navegador (?local=0 lo quita).
+// Solo se permite localhost: un enlace no puede mandar tus datos a otro servidor.
+const LOCAL_BACKEND = "http://localhost:8000";
+const ON_STATIC_HOST = !/^(localhost|127\.0\.0\.1|)$/.test(location.hostname);
+const USE_LOCAL_BACKEND = (() => {
+  if (!ON_STATIC_HOST || PUBLIC_CONFIG.API_BASE_URL) return false;
+  try {
+    const flag = new URLSearchParams(location.search).get("local");
+    if (flag === "1") localStorage.setItem("interviewai_local_backend", "1");
+    if (flag === "0") localStorage.removeItem("interviewai_local_backend");
+    return localStorage.getItem("interviewai_local_backend") === "1";
+  } catch (_) { return false; }
+})();
+const API_BASE = USE_LOCAL_BACKEND ? LOCAL_BACKEND : String(PUBLIC_CONFIG.API_BASE_URL || "").replace(/\/+$/, "");
 const TOKEN_KEY = "interviewai_token";
 
 function escapeHtml(value) {
@@ -70,7 +84,16 @@ async function detectBackend() {
   // se muestra la causa real para que se pueda arreglar.
   appState.backendOnline = !!(r.data && r.data.service);
   const badge = document.getElementById("mode-badge");
-  if (badge) badge.classList.toggle("hidden", appState.backendOnline);
+  if (badge) {
+    badge.classList.toggle("hidden", appState.backendOnline);
+    if (ON_STATIC_HOST && !appState.backendOnline) {
+      // Enlace para usar el InterviewAI completo que corre en la computadora de quien presenta.
+      const link = USE_LOCAL_BACKEND ? "?local=0" : "?local=1";
+      badge.innerHTML = USE_LOCAL_BACKEND
+        ? `Modo demo · no encontré InterviewAI en esta computadora (<a href="${link}">quitar</a>)`
+        : `Modo demo · <a href="${link}" title="Usa el servidor de esta computadora (Docker encendido)">usar mi computadora</a>`;
+    }
+  }
   if (appState.backendOnline && r.data.database && !r.data.database.ok) {
     showAuthFeedback("Servidor con problema: " + r.data.database.detail);
   }
@@ -788,7 +811,9 @@ function evaluateResponseCritical(questionText, responseText, careerCode, role) 
     "calcul", "entren", "limpi", "reorganic", "utilic", "utiliz", "cree", "crea",
     "levant", "diagnostic", "correg", "modific", "integr", "despleg", "prob",
     "reemplac", "sustitu", "divid", "prioric", "lider", "establec", "defini"
-  ];
+    ];
+  // Verbos en primera persona: solo suman si hay varios (una secuencia de pasos).
+  const firstPersonSteps = ["pedi", "explique", "escribi", "agregue", "instale", "cambie", "ensene", "mostre", "compare", "busque", "organice", "priorice", "hice", "resolvi", "hable con", "decidi", "prepare", "separe", "actualice", "comprobe", "reproduje", "aisle"];
   const resultStems = [
     "resultad", "logr", "reduj", "reduci", "increment", "aument", "mejor",
     "ahorr", "permit", "final", "consegu", "impact", "paso de", "bajo a",
@@ -798,7 +823,8 @@ function evaluateResponseCritical(questionText, responseText, careerCode, role) 
 
   const sitHits = sitStems.filter((s) => norm.includes(s)).length;
   const taskHits = taskStems.filter((s) => norm.includes(s)).length;
-  const actHits = actionStems.filter((s) => norm.includes(s)).length;
+  const steps = firstPersonSteps.filter((s) => norm.includes(s)).length;
+  const actHits = actionStems.filter((s) => norm.includes(s)).length + Math.max(0, steps - 1);
   const resHits = resultStems.filter((s) => norm.includes(s)).length;
 
   // Si el usuario escribió texto desconectado de la pregunta, sin acciones y sin términos técnicos -> 0/5
@@ -962,8 +988,13 @@ function describeFocus(focus) {
 function buildQuestionSpecificStarExample(questionText, careerCode, role) {
   const careerObj = CAREER_CATALOG.find((c) => c.code === careerCode) || CAREER_CATALOG[0];
   const sampleTools = careerObj.lexicon.slice(0, 4).join(", ");
-  const shortTopic = questionText.split(".")[0].replace(/^¿/, "");
-  return `Ante el reto de "${shortTopic}" para el puesto de ${role} (Situación), mi objetivo era resolver la falla cumpliendo los requerimientos técnicos y el tiempo límite (Tarea). Diagnosticué la causa raíz e implementé directamente la solución utilizando ${sampleTools}, validando cada cambio con pruebas controladas (Acción). Como resultado, reduje la tasa de incidentes en un [X %] y optimicé el tiempo de respuesta en un [Y %] (Resultado; usa tus cifras reales).`;
+  // Tema de la pregunta sin saludos ni transiciones ("Hola, gracias por tu tiempo. Empecemos.")
+  const sentences = String(questionText || "").split(/(?<=[.?!])\s+/).map((x) => x.trim());
+  const greeting = /^(hola|gracias|muchas gracias|empecemos|entiendo|de acuerdo|perfecto|muy bien|vamos con|ok)\b/i;
+  const topic = (sentences.find((x) => x.length > 25 && !greeting.test(x)) || sentences.pop() || "")
+    .replace(/^¿|[?.!]$/g, "");
+  const shortTopic = topic.length > 110 ? topic.slice(0, 107) + "…" : topic;
+  return `Sobre "${shortTopic}", para el puesto de ${role} (Situación), mi objetivo era resolver la falla cumpliendo los requerimientos técnicos y el tiempo límite (Tarea). Diagnosticué la causa raíz e implementé directamente la solución utilizando ${sampleTools}, validando cada cambio con pruebas controladas (Acción). Como resultado, reduje la tasa de incidentes en un [X %] y optimicé el tiempo de respuesta en un [Y %] (Resultado; usa tus cifras reales).`;
 }
 
 // =============================================================================

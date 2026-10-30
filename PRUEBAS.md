@@ -104,3 +104,15 @@ Chromium + Playwright contra backend y PostgreSQL reales:
 | Set de internet (sin retroceso) | AUC 0.93 / 81 % | AUC 0.93 / 81 % |
 
 Respuestas reales del usuario (calificación local): pregunta 1 de 2.33 a 3.00 (pedía "cómo lo resolviste"); pregunta 2 de 2.83 a 1.91 (respuesta hipotética: ahora se le pide contar un caso real); preguntas 3 y 4 casi igual porque sí pedían plan/entregable y la respuesta era general.
+
+## 10. Simulación de GitHub Pages (`v0.10.0`, 30/10/2026)
+
+Mismo paso de `pages.yml` (config pública, sin `nginx.conf`), servido en un dominio distinto de localhost con la subruta `/InterviewAI-page/`, Chromium + Playwright:
+
+| Modo | Registro | Entrevista | Reporte y PDF | Historial y entrevista pasada | Errores JS |
+|---|---|---|---|---|---|
+| Demo (sin servidor) | ✓ | ✓ | ✓ | ✓ | 0 |
+| `?local=1` (backend de la computadora) | ✓ | ✓ | ✓ | ✓ | 0 |
+
+Archivos publicados: 516 KB, sin llaves ni contraseñas (escaneo de patrones `AQ.`, `AIza`, `sk-`, `ghp_`, `POSTGRES_PASSWORD`, `SECRET_KEY`).
+

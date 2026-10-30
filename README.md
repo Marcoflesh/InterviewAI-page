@@ -17,7 +17,7 @@ Abre **http://localhost:3000** · API: http://localhost:8000/docs
 
 ## GitHub Pages
 
-El workflow `.github/workflows/pages.yml` publica `frontend/` en `https://marcoflesh.github.io/InterviewAI-page/`. Sin un backend desplegado la página funciona en **Modo demo** (evaluación local). Detalles en [`PASO_A_PASO.md`](./PASO_A_PASO.md#paso-7--publicar-en-github-pages).
+El workflow `.github/workflows/pages.yml` publica `frontend/` en `https://marcoflesh.github.io/InterviewAI-page/`. Sin un backend desplegado la página funciona en **Modo demo** (evaluación local). Con Docker encendido en tu computadora, `https://marcoflesh.github.io/InterviewAI-page/?local=1` usa tu backend completo (Ollama + Gemini + PostgreSQL). Detalles en [`PASO_A_PASO.md`](./PASO_A_PASO.md#paso-7--publicar-en-github-pages).
 
 ## Documentación
 

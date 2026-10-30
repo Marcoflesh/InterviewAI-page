@@ -142,7 +142,13 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - El reporte que mandó el usuario lo calificó el analizador local: falta confirmar con `docker compose exec backend python scripts/probar_ia.py` por qué Gemini no respondió en su máquina.
 - `focus` va en el resultado de la evaluación pero no se guarda en BD (no hay columna); la nota ponderada sí.
 
-## 21. Próximos pasos inmediatos
+## 21. `v0.10.0` — GitHub Pages (30/10/2026)
+
+- `frontend/js/app.js`: `ON_STATIC_HOST`, `USE_LOCAL_BACKEND` (`?local=1|0`, `localStorage interviewai_local_backend`) → `API_BASE = http://localhost:8000`. Solo localhost por seguridad.
+- `main.py` `security_headers`: `Access-Control-Allow-Private-Network: true` en OPTIONS de orígenes permitidos (Chrome Local Network Access).
+- Pages sigue sin activarse: es el único paso pendiente y solo lo puede hacer el dueño del repo.
+
+## 22. Próximos pasos inmediatos
 
 1. Usuario: seguir "Actualizar a la versión con Ollama + Gemini" de `PASO_A_PASO.md` y pegar la salida de `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web`.
 2. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
