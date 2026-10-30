@@ -6,8 +6,8 @@
 
 | Agente | Modelo por defecto | Variables en `.env` | Formato de la llave |
 | :--- | :--- | :--- | :--- |
-| **Entrevistador** (adapta las preguntas a la vacante) | `gpt-4o-mini` | `OPENAI_API_KEY`, `OPENAI_CHAT_MODEL`, `INTERVIEWER_PROVIDER=openai` | empieza con `sk-` |
-| **Evaluador crítico** (califica 0–5) y **Sintetizador** (ejemplos STAR del reporte) | `gemini-3.8-flash` (respaldo `gemini-2.5-flash`) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `EVALUATOR_PROVIDER=gemini` | empieza con `AIza` |
+| **Entrevistador** (adapta las preguntas a la vacante) | `gpt-4o-mini` | `OPENAI_API_KEY`, `OPENAI_CHAT_MODEL`, `INTERVIEWER_PROVIDER=openai` | empieza con `sk-` (`key_…` es solo el ID, no sirve) |
+| **Evaluador crítico** (califica 0–5) y **Sintetizador** (ejemplos STAR del reporte) | `gemini-3.8-flash` (respaldo `gemini-2.5-flash`) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `EVALUATOR_PROVIDER=gemini` | empieza con `AQ.` (formato nuevo) o `AIza` |
 | **Google Sign-In** | Google Identity Services | `GOOGLE_CLIENT_ID` | termina en `.apps.googleusercontent.com` (es público) |
 
 Si el proveedor principal falla (error, límite de uso o llave inválida), el backend reintenta una vez y luego usa el otro proveedor. Si ninguno responde, usa el analizador determinista local. La respuesta de cada turno indica quién evaluó (`evaluator_source`).
@@ -23,6 +23,13 @@ Si el proveedor principal falla (error, límite de uso o llave inválida), el ba
 | `backend/app/agents/evaluator.py`, `interviewer.py`, `synthesizer.py` | Prompts de cada agente; llaman a `llm.py`. |
 | `backend/app/auth.py` | Verifica el JWT de Google con `GOOGLE_CLIENT_ID`. |
 | `frontend/js/config.js` | Solo datos públicos: `API_BASE_URL` y `GOOGLE_CLIENT_ID`. **Sin llaves.** |
+
+## Proteger tus llaves
+
+- `chmod 600 .env` (macOS/Linux) para que solo tu usuario lo lea.
+- `bash scripts/install_git_hooks.sh` instala un *pre-commit* que bloquea commits con `.env` o con llaves (`sk-`, `AIza`, `AQ.`, `ghp_`).
+- En Google Cloud, **restringe** la llave de Gemini a *Generative Language API*. En OpenAI, ponle **límite de gasto mensual** al proyecto.
+- Las llaves `AQ.` solo funcionan en el header `x-goog-api-key`; el backend ya las envía así (con `?key=` en la URL fallan con 404).
 
 ## Comprobar que todo está bien
 

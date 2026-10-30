@@ -24,6 +24,8 @@ Leyenda de severidad: 🔴 Crítica · 🟠 Alta · 🟡 Media · 🟢 Baja
 | 12 | 🟡 | El validador de correo bloqueaba correos reales (`@uam.mx`, `@me.com`, `@itam.mx`, `@outlook.es`, `@mail.com`…) y decía ser *fail-closed* pero aceptaba todo si no había DNS. | Detección de errores de dedo solo contra proveedores grandes (Damerau-Levenshtein). Verificación MX con `dnspython` + DNS-over-HTTPS; `EMAIL_MX_CHECK=strict` rechaza si no se puede verificar. |
 | 13 | 🟢 | Ejemplos STAR con cifras inventadas ("reduje 38%"), que enseñan a mentir en una entrevista. | El agente usa marcadores `[X %]` para que el candidato ponga sus datos reales. |
 | 14 | 🟢 | jsPDF se cargaba desde un CDN sin verificación de integridad. | Copia local en `frontend/vendor/` (licencia MIT incluida). |
+| 15 | 🟠 | Las llaves nuevas de Gemini (`AQ.…`) se habrían rechazado por formato, y en `v0.3.0` se enviaban en la URL, donde Google responde 404. | `v0.4.1` acepta `AQ.` y `AIza`, siempre por header. `check_apis.py` detecta también cuando se pega el ID de OpenAI (`key_…`) en lugar de la llave. |
+| 16 | 🟡 | Nada impedía commitear el `.env` localmente si se modificaba el `.gitignore`. | `scripts/install_git_hooks.sh` (pre-commit) y `push_to_github.sh` bloquean `.env` y patrones de llaves; regla de gitleaks para `AQ.`. `.env` con permisos `600`. |
 
 ## 2. Anonimato y datos personales
 
@@ -32,6 +34,8 @@ Leyenda de severidad: 🔴 Crítica · 🟠 Alta · 🟡 Media · 🟢 Baja
 **Qué se anonimiza antes de guardar y antes de enviar a OpenAI/Gemini:** correos, teléfonos, CURP/RFC, matrículas `A0…`, enlaces de LinkedIn/GitHub/Instagram/Facebook/X y **tu propio nombre y apellidos** (nuevo en `v0.4.0`).
 
 **Derecho al olvido:** `DELETE /api/users/me` borra la cuenta y en cascada sesiones, turnos, evaluaciones y CSAT.
+
+**Llaves compartidas por chat o zip:** cada copia de una llave fuera de tu `.env` (zips, chats, capturas) es un riesgo. Lo más seguro es restringir cada llave a su API, ponerle límite de gasto y rotarla al terminar el semestre o si sospechas que se filtró.
 
 **Limitaciones honestas:**
 

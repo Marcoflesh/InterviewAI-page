@@ -48,7 +48,14 @@ docker compose up --build -d          # http://localhost:3000
 
 Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_backend.py`, `scripts/stress_test_agents.py`.
 
-## 5. Próximos pasos inmediatos
+## 5. Actualización `v0.4.1` (misma fecha)
+
+- El usuario entregó una llave nueva de Gemini con formato `AQ.` (Google cambió el formato en 2026; solo funciona por header `x-goog-api-key`, que `llm.py` ya usa). Se agregó soporte en `config.py` y `check_apis.py`.
+- Para OpenAI entregó `key_…`, que es el **ID** de la llave, no el secreto; el `.env` conserva la `sk-proj-…` anterior hasta que cree una nueva.
+- Se le entregó un `.env` completo (no versionado) con secretos aleatorios para PostgreSQL y `SECRET_KEY`. Si ya había un volumen `pgdata` con la contraseña vieja, debe correr `docker compose down -v`.
+- Nuevos guardas: `scripts/install_git_hooks.sh`, regla gitleaks `AQ.`, patrones ampliados en `push_to_github.sh`.
+
+## 6. Próximos pasos inmediatos
 
 1. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
 2. Pegar los resultados reales de `stress_test_agents.py` en `PRUEBAS.md` §5 y decidir viabilidad con los criterios ahí definidos.

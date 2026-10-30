@@ -14,10 +14,13 @@ El `.zip` del proyecto incluía tu archivo `.env` con llaves reales.
 
 ## Paso 1 — Crear la llave correcta de Gemini
 
-1. Entra a https://aistudio.google.com/apikey → *Create API key*. Debe empezar con **`AIza`**.
-2. Recomendado para privacidad: activa facturación en ese proyecto. En la capa gratuita Google puede usar las entradas para mejorar sus productos (ver `SEGURIDAD.md`).
+1. ✅ **Hecho (29/10/2026):** ya tienes una llave nueva con formato `AQ.` y quedó en tu `.env`. Google cambió el formato de `AIza…` a `AQ.…`; el backend acepta ambos.
+2. **OpenAI:** lo que mandaste (`key_…`) es el **ID** de la llave, no la llave secreta. En https://platform.openai.com/api-keys crea una nueva y copia el valor que empieza con `sk-` (solo se muestra una vez). Mientras tanto, tu `.env` conserva la `sk-proj-…` anterior para que la app funcione; cámbiala en cuanto tengas la nueva.
+3. Recomendado para privacidad: activa facturación en ese proyecto. En la capa gratuita Google puede usar las entradas para mejorar sus productos (ver `SEGURIDAD.md`).
 
 ## Paso 2 — Llenar `.env`
+
+✅ **Hecho:** te entregué un `.env` listo con contraseña de PostgreSQL y `SECRET_KEY` generadas al azar, tu llave de Gemini y tu Client ID. Cópialo a la raíz del proyecto (reemplaza el tuyo), corre `chmod 600 .env` y `bash scripts/install_git_hooks.sh`. Si lo quieres hacer a mano:
 
 ```bash
 cp .env.example .env

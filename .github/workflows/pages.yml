@@ -36,8 +36,11 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, os
+          import re
+          src = open("frontend/js/config.js").read()
+          default_cid = (re.search(r'GOOGLE_CLIENT_ID:\s*"([^"]*)"', src) or [None, ""])[1]
           cfg = {"API_BASE_URL": os.environ.get("API_BASE_URL", ""),
-                 "GOOGLE_CLIENT_ID": os.environ.get("GOOGLE_CLIENT_ID", "")}
+                 "GOOGLE_CLIENT_ID": os.environ.get("GOOGLE_CLIENT_ID") or default_cid}
           open("frontend/js/config.js", "w").write(
               "// Generado por pages.yml (configuración pública, sin secretos)\n"
               f"window.INTERVIEWAI_CONFIG = {json.dumps(cfg)};\n")

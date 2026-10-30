@@ -25,3 +25,10 @@ commits = [
   "af8b7ff3053cdf51a846963bcff6541e6896525e",
   "a0b4299d0aa23a9c63d707c8bc3a7d67dfeaf8a1",
 ]
+
+# Formato nuevo de llaves de Google AI Studio ("AQ.…"), aún no cubierto por las reglas por defecto
+[[rules]]
+id = "google-ai-studio-key-aq"
+description = "Llave de Gemini con formato AQ."
+regex = '''\bAQ\.[A-Za-z0-9_-]{30,}'''
+keywords = ["aq."]

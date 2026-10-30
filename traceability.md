@@ -4,6 +4,14 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.4.1] - 2026-10-29 — Llaves reales configuradas de forma segura`
+
+* **`backend/app/config.py`, `scripts/check_apis.py`, `.env.example`**: soporte del formato nuevo de llaves de Gemini `AQ.` (además de `AIza`) y detección del ID de OpenAI `key_…` pegado por error.
+* **`scripts/install_git_hooks.sh` (nuevo), `push_to_github.sh`, `.gitleaks.toml`**: bloqueo de `.env` y de llaves (`sk-`, `AIza`, `AQ.`, `ghp_`, `github_pat_`) antes de cada commit y en CI.
+* **`frontend/js/config.js`, `.github/workflows/pages.yml`**: `GOOGLE_CLIENT_ID` público como valor por defecto (GitHub Pages lo conserva si no hay variable del repositorio).
+* **`.env` local (no versionado)**: generado con contraseña de BD y `SECRET_KEY` aleatorias, llave de Gemini `AQ.` y Client ID; permisos `600`.
+* **Docs**: `PASO_A_PASO.md`, `GUIA_CONFIGURACION_APIS.md`, `SEGURIDAD.md` (hallazgos 15 y 16).
+
 ### `[v0.4.0] - 2026-10-29 — Auditoría técnica, Google Sign-In corregido, seguridad, anonimato, Docker, GitHub Pages y pruebas de estrés`
 
 * **Seguridad y autenticación (`backend/app/security.py` nuevo, `auth.py`, `main.py`, `schemas.py`)**: tokens de sesión HMAC-SHA256; el usuario se toma del token (cierra IDOR en historial, reporte, turnos y CSAT); `GOOGLE_CLIENT_ID` obligatorio como audiencia del JWT; mensajes de error de Google accionables (origen, reloj, Client ID); límites de peticiones; CORS restringido; login sin enumeración de cuentas; PBKDF2 a 310k iteraciones compatible con cuentas previas; `DELETE /api/users/me` (derecho al olvido); `GET /api/users/me/history`.

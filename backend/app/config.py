@@ -18,6 +18,8 @@ logger = logging.getLogger("interviewai.config")
 _ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
 _LOCAL_ENV = Path(".env")
 
+GEMINI_KEY_PREFIXES = ("AIza", "AQ.")
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -78,8 +80,8 @@ class Settings(BaseSettings):
 
     @property
     def gemini_ready(self) -> bool:
-        # Las llaves de Google AI Studio empiezan con "AIza"
-        return bool(self.GEMINI_API_KEY) and self.GEMINI_API_KEY.startswith("AIza")
+        # Google AI Studio: formato clásico "AIza…" o el nuevo "AQ.…" (2026)
+        return bool(self.GEMINI_API_KEY) and self.GEMINI_API_KEY.startswith(GEMINI_KEY_PREFIXES)
 
     @property
     def google_signin_ready(self) -> bool:
@@ -96,8 +98,11 @@ if not settings.SECRET_KEY:
 
 if settings.GEMINI_API_KEY and not settings.gemini_ready:
     logger.error(
-        "GEMINI_API_KEY no tiene formato de llave de Google AI Studio (debe empezar con 'AIza'). "
+        "GEMINI_API_KEY no tiene formato de llave de Google AI Studio (debe empezar con 'AIza' o 'AQ.'). "
         "El evaluador usará el siguiente proveedor disponible."
     )
 if settings.OPENAI_API_KEY and not settings.openai_ready:
-    logger.error("OPENAI_API_KEY no tiene formato válido (debe empezar con 'sk-').")
+    if settings.OPENAI_API_KEY.startswith("key_"):
+        logger.error("OPENAI_API_KEY contiene el ID de la llave ('key_…'), no la llave secreta ('sk-…').")
+    else:
+        logger.error("OPENAI_API_KEY no tiene formato válido (debe empezar con 'sk-').")

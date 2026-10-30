@@ -12,7 +12,7 @@ git add -A
 if git diff --cached --name-only | grep -Eq '(^|/)\.env$'; then
   echo "ERROR: .env está en el commit. Revisa .gitignore." >&2; exit 1
 fi
-if git diff --cached -U0 | grep -Eq '^\+.*(sk-proj-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{35}|ghp_[A-Za-z0-9]{30,})'; then
+if git diff --cached -U0 | grep -Eq '^\+.*(sk-(proj-)?[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{35}|AQ\.[A-Za-z0-9_-]{30,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,})'; then
   echo "ERROR: parece que hay una llave real en los cambios. No se subió nada." >&2; exit 1
 fi
 

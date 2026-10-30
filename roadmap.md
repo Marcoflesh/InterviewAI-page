@@ -21,7 +21,8 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 - [x] **Docker endurecido** (puertos internos en `127.0.0.1`, backend sin root, healthchecks, Ollama opcional) y rendimiento ×2.6 bajo carga.
 - [x] **GitHub**: repositorio publicado, workflow de GitHub Pages (con Modo demo sin backend) y CI con pytest + gitleaks.
 - [x] **Pruebas**: 32 pytest con PostgreSQL real, 17 E2E en Chromium, carga hasta 100 usuarios simultáneos, scripts de estrés para las APIs reales.
-- [ ] **Pendiente del usuario**: revocar/rotar llaves expuestas, configurar orígenes de Google, correr `stress_test_agents.py` con llaves reales (ver `PASO_A_PASO.md`).
+- [x] **`v0.4.1`**: llave de Gemini `AQ.` y Client ID configurados en `.env` seguro; soporte del formato `AQ.`; pre-commit anti-secretos.
+- [ ] **Pendiente del usuario**: revocar el token `ghp_`, crear una llave secreta de OpenAI `sk-…` (se recibió el ID `key_…`), configurar orígenes de Google y correr `check_apis.py` y `stress_test_agents.py` en su computadora (ver `PASO_A_PASO.md`).
 
 ---
 
