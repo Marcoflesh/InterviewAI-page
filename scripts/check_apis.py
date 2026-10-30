@@ -62,7 +62,14 @@ def main() -> int:
 
     model = env.get("OLLAMA_MODEL", "qwen3.5:4b")
     print(f"\n[Ollama local] modelo {model}")
-    st, body = get("http://localhost:11434/api/tags", {})
+    import subprocess
+    try:
+        out = subprocess.run(["docker", "compose", "exec", "-T", "ollama", "ollama", "list"],
+                             capture_output=True, text=True, timeout=20)
+        st, body = (200, {"models": [{"name": l.split()[0]} for l in out.stdout.splitlines()[1:] if l.strip()]}) \
+            if out.returncode == 0 else (0, {})
+    except Exception:
+        st, body = 0, {}
     if st == 200:
         names = [m.get("name", "") for m in body.get("models", [])]
         if any(n in (model, f"{model}:latest") for n in names):
@@ -70,7 +77,7 @@ def main() -> int:
         else:
             print(f"  … Ollama encendido pero el modelo aún no está (se descarga solo; mira: docker compose logs -f ollama-init). Modelos: {names}")
     else:
-        print("  ✗ Ollama no responde en localhost:11434. ¿Ya corriste iniciar / docker compose up -d?"); ok = False
+        print("  ✗ El contenedor de Ollama no responde. ¿Ya corriste iniciar / docker compose up -d?"); ok = False
 
     key = env.get("OPENAI_API_KEY", "")
     model = env.get("OPENAI_CHAT_MODEL", "gpt-4o-mini")

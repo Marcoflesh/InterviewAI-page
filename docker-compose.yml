@@ -33,9 +33,9 @@ services:
     restart: unless-stopped
     environment:
       OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
-    ports:
-      # Si ya tienes Ollama instalado en tu computadora (ocupa el 11434), pon OLLAMA_HOST_PORT=11435 en .env
-      - "127.0.0.1:${OLLAMA_HOST_PORT:-11434}:11434"
+    # Sin puertos hacia tu computadora: el backend le habla por la red interna de Docker
+    # (http://ollama:11434). Así no choca con un Ollama que ya tengas instalado y nadie
+    # de fuera puede usarlo. Para revisarlo: docker compose exec ollama ollama list
     volumes:
       - ollamadata:/root/.ollama
     healthcheck:

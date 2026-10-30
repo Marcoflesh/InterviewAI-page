@@ -248,7 +248,7 @@ def _prepare_llm():
     if not (settings.gemini_ready or settings.openai_ready or settings.OLLAMA_ENABLED):
         sys.exit("No hay ningún proveedor de IA configurado en .env (corre scripts/probar_ia.py).")
     if not IN_DOCKER and "//ollama:" in settings.OLLAMA_BASE_URL:
-        settings.OLLAMA_BASE_URL = "http://localhost:11434"
+        settings.OLLAMA_BASE_URL = "http://localhost:11434"  # fuera de Docker; lo recomendado es: docker compose exec backend python scripts/...
     print(f"Evaluador: {settings.EVALUATOR_PROVIDER} · Gemini {settings.GEMINI_MODEL} (listo={settings.gemini_ready}) · "
           f"rúbrica {ARGS.rubrica}\n")
 

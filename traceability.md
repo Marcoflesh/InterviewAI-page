@@ -4,6 +4,11 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.8.2] - 2026-10-30 — Ollama de Docker sin puerto en la computadora`
+
+* **Error reportado**: `ports are not available: 127.0.0.1:11434 … address already in use` (el usuario ya tiene Ollama instalado fuera de Docker; con Docker Desktop + WSL la detección por `ss` no lo ve).
+* **`docker-compose.yml`**: el servicio `ollama` ya no publica puertos; el backend usa `http://ollama:11434` por la red interna. Menos superficie expuesta y sin choques. **`check_apis.py`** revisa Ollama con `docker compose exec`. Se retira `OLLAMA_HOST_PORT` y la detección de puerto de `iniciar.sh`.
+
 ### `[v0.8.1] - 2026-10-30 — El backend arranca aunque Ollama falle`
 
 * **Reporte**: `./iniciar.sh` → `sin_backend` sin logs. La salida mostraba el texto del script anterior (no se aplicó `git pull`) y el contenedor del backend no llegó a crearse.

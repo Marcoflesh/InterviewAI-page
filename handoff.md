@@ -124,7 +124,11 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - `backend` ya no tiene `depends_on: ollama`; un fallo de Ollama (imagen sin descargar, puerto 11434 ocupado por un Ollama nativo) impedía crear el backend (`sin_backend`, logs vacíos).
 - `iniciar` actualiza el repo solo (`git pull --ff-only`) y muestra `docker compose ps -a` al fallar.
 
-## 17. Próximos pasos inmediatos
+## 17. `v0.8.2` — Puerto de Ollama (30/10/2026)
+
+- El usuario tiene un Ollama nativo en el 11434. El contenedor `ollama` ya no publica puertos; todo lo que lo usa corre dentro de Docker (`docker compose exec backend python scripts/...`).
+
+## 18. Próximos pasos inmediatos
 
 1. Usuario: seguir "Actualizar a la versión con Ollama + Gemini" de `PASO_A_PASO.md` y pegar la salida de `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web`.
 2. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).

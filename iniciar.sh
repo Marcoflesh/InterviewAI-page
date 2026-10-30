@@ -28,11 +28,6 @@ if [ -d .git ]; then
   fi
 fi
 
-# Ollama de Docker usa el puerto 11434; si ya lo ocupa un Ollama instalado en tu computadora, usar otro.
-if ! grep -q '^OLLAMA_HOST_PORT=' .env && (ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | grep -q '[:.]11434 '; then
-  echo "→ El puerto 11434 ya lo usa otro programa (¿Ollama instalado fuera de Docker?). Uso 11435 para el de InterviewAI."
-  printf '\nOLLAMA_HOST_PORT=11435\n' >> .env
-fi
 
 levantar() {
   echo "→ Construyendo y levantando contenedores. La primera vez tarda 2-5 min: NO presiones Ctrl+C."
@@ -109,7 +104,7 @@ PY
         echo "  El contenedor del backend ni siquiera se creó. Causas comunes:"
         echo "   - Falló la construcción: corre  docker compose up --build -d  y lee el error en rojo."
         echo "   - Disco lleno: docker system df   (libera con  docker system prune)"
-        echo "   - Un puerto ocupado (5432, 8000, 3000 u 11434) por otro programa."
+        echo "   - Un puerto ocupado (5432, 8000 o 3000) por otro programa."
       else
         echo "  Últimos logs del backend:"
         docker compose logs backend --tail 40

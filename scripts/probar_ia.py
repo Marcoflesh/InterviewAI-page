@@ -27,7 +27,7 @@ from app.config import settings  # noqa: E402
 
 # Desde tu computadora, Ollama de Docker se alcanza en localhost (dentro de Docker se llama "ollama")
 if not IN_DOCKER and "//ollama:" in settings.OLLAMA_BASE_URL:
-    settings.OLLAMA_BASE_URL = "http://localhost:11434"
+    settings.OLLAMA_BASE_URL = "http://localhost:11434"  # fuera de Docker; lo recomendado es: docker compose exec backend python scripts/...
 
 
 def probar(nombre, fn, **kw):

@@ -36,6 +36,7 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 - [x] **`v0.7.1`**: `.env` explícito (Entrevistador = Ollama, Evaluador = Gemini), roles visibles en `/api/health` y scripts de medición dentro de Docker.
 - [x] **`v0.8.0`**: historial sin duplicados guardado en el servidor, vista de entrevistas pasadas con conversación completa y PDF, arranque con progreso visible y descarga de Ollama con aviso de "listo".
 - [x] **`v0.8.1`**: el backend arranca aunque Ollama falle; `iniciar` se actualiza solo y explica por qué no levantó.
+- [x] **`v0.8.2`**: Ollama de Docker sin puerto publicado (no choca con un Ollama instalado).
 - [ ] **Siguiente**: correr `docker compose exec backend python scripts/evaluar_evaluador.py --modo llm --conjunto web` y `--conjunto bd --guardar-en-bd` con Gemini en la computadora del usuario y registrar los resultados aquí.
 
 ---
