@@ -4,6 +4,14 @@ Este archivo funciona como registro de cambios (changelog) y matriz de trazabili
 
 ## 1. Bitácora de Cambios (Changelog)
 
+### `[v0.6.1] - 2026-10-30 — Corrección: la IA no calificaba en el arnés`
+
+* **Síntoma reportado**: `gemini-2.5-flash` 404 (retirado para cuentas nuevas), OpenAI 429 sin saldo y resultados idénticos al analizador local (`fuentes: {'local': 24}`).
+* **Causa**: Gemini 3.8 Flash usa tokens de salida para "pensar"; con 1200–2000 de margen devolvía 200 sin texto (`finishReason=MAX_TOKENS`) y el cliente lo descartaba sin registrar el motivo. Además, `--rubrica holistico` se aplicaba después de cargar la configuración y no surtía efecto.
+* **`backend/app/llm.py`**: margen `GEMINI_MAX_OUTPUT_TOKENS=8192` y `GEMINI_THINKING_LEVEL=low` para Gemini 3.x; motivo explícito de cada falla (vacío, bloqueo, HTTP, excepción); cortacircuitos (sin saldo, llave inválida, modelo inexistente); sin reintento en 429 por falta de saldo; `status()` expuesto en `/api/health` (`ia`). **`config.py`**: sin respaldo `gemini-2.5-flash`; `LLM_TIMEOUT_SECONDS=45`.
+* **`scripts/evaluar_evaluador.py`**: aplica `--rubrica` correctamente, muestra fuente y tiempo por respuesta y se detiene con diagnóstico si 3 seguidas no las califica la IA. **`scripts/probar_ia.py` (nuevo)**: diagnóstico real de cada proveedor. **`scripts/mock_llm_server.py --errores-reales`** reproduce los errores reportados.
+* **Pruebas**: 54 pytest (5 nuevas en `tests/test_llm_cliente.py`).
+
 ### `[v0.6.0] - 2026-10-30 — Investigación STAR, banco de preguntas y calibración de agentes`
 
 * **`research/metodo_star.md` (nuevo)**: origen (entrevista conductual, DDI Targeted Selection), evidencia de validez (McDaniel et al. 1994; escalas ancladas), estructura STAR/STARR/CAR, señales de respuestas excelentes y de alerta, y prácticas de LLM-as-judge (Zheng et al. 2023; Arize). Fuentes citadas.

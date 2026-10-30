@@ -37,10 +37,13 @@ class Settings(BaseSettings):
     OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.8-flash"
-    GEMINI_FALLBACK_MODEL: str = "gemini-2.5-flash"
+    # gemini-2.5-flash ya no está disponible para cuentas nuevas (404): sin respaldo por defecto
+    GEMINI_FALLBACK_MODEL: str = ""
+    GEMINI_THINKING_LEVEL: str = "low"        # low | medium | high (3.8 no acepta "minimal")
+    GEMINI_MAX_OUTPUT_TOKENS: int = 8192      # incluye el "pensamiento"; solo se paga lo usado
     EVALUATOR_PROVIDER: str = "gemini"      # gemini | openai | ollama
     INTERVIEWER_PROVIDER: str = "openai"    # openai | gemini | ollama
-    LLM_TIMEOUT_SECONDS: float = 20.0
+    LLM_TIMEOUT_SECONDS: float = 45.0
     # indicadores = rúbrica analítica de 30 criterios (recomendado) | holistico = 0-5 directo (v0.4)
     EVALUATOR_RUBRIC_MODE: str = "indicadores"
     # Cuánto esperar a que el Agente Entrevistador termine de redactar una pregunta

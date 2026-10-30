@@ -27,7 +27,8 @@ Este documento registra la evolución iterativa de **InterviewAI**, diferenciand
 - [x] **`v0.4.4`**: el registro ya indica "mínimo 8 caracteres" (coincide con la validación real).
 - [x] **`v0.5.0`**: el entrevistador responde al instante (preguntas preparadas por adelantado y evaluación en segundo plano), sin emojis y con preguntas humanizadas.
 - [x] **`v0.6.0`**: investigación STAR, 58 preguntas nuevas con fuentes, rúbrica de 30 indicadores, set de calibración y arnés de medición.
-- [ ] **Pendiente del usuario**: correr `scripts/evaluar_evaluador.py --modo llm` con sus llaves y conseguir 2–3 calificadores humanos; activar GitHub Pages (Settings → Pages → GitHub Actions), agregar orígenes en Google Cloud, revocar el token `ghp_` y la llave `sk-proj-` vieja, y correr `stress_test_agents.py` en su computadora.
+- [x] **`v0.6.1`**: la IA ya califica en el arnés (margen de tokens para Gemini 3.x, diagnóstico de fallas, pausa a proveedores sin saldo).
+- [ ] **Pendiente del usuario**: agregar saldo en OpenAI o usar `INTERVIEWER_PROVIDER=gemini`; correr `scripts/probar_ia.py` y `scripts/evaluar_evaluador.py --modo llm` con sus llaves y conseguir 2–3 calificadores humanos; activar GitHub Pages (Settings → Pages → GitHub Actions), agregar orígenes en Google Cloud, revocar el token `ghp_` y la llave `sk-proj-` vieja, y correr `stress_test_agents.py` en su computadora.
 
 ---
 

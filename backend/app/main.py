@@ -44,6 +44,7 @@ from app.services.anonymizer import anonymize_pii, extract_auxiliary_features
 from app.services.question_selector import select_randomized_questions_for_career
 from app.agents.graph import interview_graph
 from app.agents import pipeline
+from app.llm import status as llm_status
 from app.agents.interviewer import FINAL_MESSAGE, compose_message
 from app.agents.synthesizer import synthesize_final_report
 
@@ -174,6 +175,7 @@ def health_check():
             "google_sign_in": settings.google_signin_ready,
             "ollama": settings.OLLAMA_ENABLED,
         },
+        "ia": llm_status(),
     }
     return body if db_state["ok"] else JSONResponse(status_code=503, content=body)
 

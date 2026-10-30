@@ -101,8 +101,6 @@ def report_human_agreement(items):
 
 
 def evaluate(item, mode):
-    if mode == "llm":
-        os.environ["EVALUATOR_RUBRIC_MODE"] = ARGS.rubrica
     from app.agents import evaluator
     from app.services.anonymizer import extract_auxiliary_features
 
@@ -126,22 +124,39 @@ def evaluate(item, mode):
 def main():
     items = load_reference(ARGS)
     if ARGS.modo == "llm":
+        from app import llm
         from app.config import settings
+        settings.EVALUATOR_RUBRIC_MODE = ARGS.rubrica  # se aplica antes de evaluar (antes no surtía efecto)
         if not (settings.gemini_ready or settings.openai_ready):
             sys.exit("No hay llaves válidas en .env (corre scripts/check_apis.py).")
+        print(f"Evaluador: {settings.EVALUATOR_PROVIDER} · Gemini {settings.GEMINI_MODEL} (listo={settings.gemini_ready}) · "
+              f"OpenAI {settings.OPENAI_CHAT_MODEL} (listo={settings.openai_ready}) · rúbrica {ARGS.rubrica}\n")
     report_human_agreement(items)
     preds, refs, rows, sources = defaultdict(list), defaultdict(list), [], defaultdict(int)
     t0 = time.time()
+    local_streak = 0
     for it in items:
+        t_item = time.time()
         got, src = evaluate(it, ARGS.modo)
         sources[src.split(":")[0]] += 1
+        if ARGS.modo == "llm":
+            print(f"  {it['id']:8s} {src:32s} {time.time() - t_item:5.1f} s")
+            local_streak = local_streak + 1 if src.startswith("local") else 0
+            if local_streak >= 3:
+                from app import llm
+                print("\nALTO: las últimas 3 respuestas las calificó el analizador local, NO la IA.")
+                print("Así que esta medición no serviría. Estado de los proveedores:")
+                print(json.dumps(llm.status(), ensure_ascii=False, indent=2))
+                print("\nCorre  python scripts/probar_ia.py  y comparte lo que imprima.")
+                sys.exit(2)
         for d in DIMS:
             preds[d].append(int(got[d]))
             refs[d].append(int(it["esperado"][d]))
         rows.append({"id": it["id"], "nivel": it.get("nivel"), "esperado": it["esperado"], "obtenido": got,
                      "fuente": src})
-        sys.stdout.write(".")
-        sys.stdout.flush()
+        if ARGS.modo != "llm":
+            sys.stdout.write(".")
+            sys.stdout.flush()
     print(f"\n{len(items)} respuestas en {time.time() - t0:.1f} s · fuentes: {dict(sources)}\n")
 
     summary = {}

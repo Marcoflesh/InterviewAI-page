@@ -27,6 +27,8 @@ El script levanta todo, instala la protección anti-secretos de git, te dice qu�
 
 Lee primero `research/metodo_star.md`. Luego:
 
+0. **Confirma que la IA responde** (3 llamadas pequeñas): `python scripts/probar_ia.py`. Si OpenAI dice "no credits", agrega saldo en https://platform.openai.com/settings/organization/billing/ o pon `INTERVIEWER_PROVIDER=gemini` en `.env` para usar solo Gemini.
+
 1. **Mide al agente real con tus llaves** (≈ 24 llamadas, centavos):
    ```bash
    python scripts/evaluar_evaluador.py --modo llm --rubrica indicadores

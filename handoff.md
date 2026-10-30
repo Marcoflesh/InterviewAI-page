@@ -90,7 +90,15 @@ Pruebas: `backend/tests` (pytest con `TEST_DATABASE_URL`), `scripts/load_test_ba
 - **Evaluador**: modo `indicadores` por defecto; acepta también el JSON anterior (`star_*`). En modo indicadores el tope "analizador + 2" está desactivado porque el analizador subestima respuestas excelentes; el bloqueo de inyección sigue activo.
 - **Siguiente paso de mayor impacto**: golden dataset humano (`datos/golden/LEEME.md`) y correr el arnés con IA real.
 
-## 12. Próximos pasos inmediatos
+## 12. `v0.6.1` — Por qué la IA no calificaba (30/10/2026)
+
+- Gemini 3.x consume tokens de salida al "pensar": con `maxOutputTokens` bajo responde 200 vacío (`finishReason=MAX_TOKENS`). Ahora se usa `GEMINI_MAX_OUTPUT_TOKENS=8192` y `thinkingLevel=low`.
+- `gemini-2.5-flash` responde 404 para cuentas nuevas: se eliminó como respaldo.
+- La cuenta de OpenAI del usuario no tiene saldo: el cortacircuitos la pausa 10 min y todo usa Gemini.
+- Diagnóstico: `python scripts/probar_ia.py` y el campo `ia` de `/api/health`.
+- Pendiente: confirmar con las llaves reales (este entorno no tiene salida a Google ni a OpenAI).
+
+## 13. Próximos pasos inmediatos
 
 1. Usuario: Pasos 0 a 6 de `PASO_A_PASO.md` (revocar token de GitHub, rotar llave de OpenAI, llave real de Gemini, orígenes de Google, prueba de estrés real).
 2. Pegar los resultados reales de `stress_test_agents.py` en `PRUEBAS.md` §5 y decidir viabilidad con los criterios ahí definidos.

@@ -7,10 +7,12 @@
 | Agente | Modelo por defecto | Variables en `.env` | Formato de la llave |
 | :--- | :--- | :--- | :--- |
 | **Entrevistador** (adapta las preguntas a la vacante) | `gpt-4o-mini` | `OPENAI_API_KEY`, `OPENAI_CHAT_MODEL`, `INTERVIEWER_PROVIDER=openai` | empieza con `sk-` (`key_…` es solo el ID, no sirve) |
-| **Evaluador crítico** (califica 0–5) y **Sintetizador** (ejemplos STAR del reporte) | `gemini-3.8-flash` (respaldo `gemini-2.5-flash`) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `EVALUATOR_PROVIDER=gemini` | empieza con `AQ.` (formato nuevo) o `AIza` |
+| **Evaluador crítico** (califica 0–5) y **Sintetizador** (ejemplos STAR del reporte) | `gemini-3.8-flash` (sin respaldo: `gemini-2.5-flash` ya no está disponible para cuentas nuevas) | `GEMINI_API_KEY`, `GEMINI_MODEL`, `EVALUATOR_PROVIDER=gemini` | empieza con `AQ.` (formato nuevo) o `AIza` |
 | **Google Sign-In** | Google Identity Services | `GOOGLE_CLIENT_ID` | termina en `.apps.googleusercontent.com` (es público) |
 
-Si el proveedor principal falla (error, límite de uso o llave inválida), el backend reintenta una vez y luego usa el otro proveedor. Si ninguno responde, usa el analizador determinista local. La respuesta de cada turno indica quién evaluó (`evaluator_source`).
+Si el proveedor principal falla (error, límite de uso o llave inválida), el backend reintenta una vez y luego usa el otro proveedor. Si un proveedor **no tiene saldo**, la llave es inválida o el modelo no existe, se pone **en pausa** unos minutos para no perder tiempo en cada llamada; `/api/health` muestra el último resultado de cada IA en el campo `ia`.
+
+**Gemini 3.x "piensa" antes de responder** y ese razonamiento consume tokens de salida: por eso el backend le da hasta `GEMINI_MAX_OUTPUT_TOKENS=8192` (solo se cobra lo usado) con `GEMINI_THINKING_LEVEL=low`. Con menos margen, la respuesta llega vacía (`finishReason=MAX_TOKENS`). Si ninguno responde, usa el analizador determinista local. La respuesta de cada turno indica quién evaluó (`evaluator_source`).
 
 ## Dónde se leen las llaves (no necesitas editar estos archivos)
 
@@ -34,6 +36,7 @@ Si el proveedor principal falla (error, límite de uso o llave inválida), el ba
 ## Comprobar que todo está bien
 
 ```bash
+python scripts/probar_ia.py                    # llamada real a cada IA: dice exactamente por qué falla (centavos)
 python scripts/check_apis.py                   # valida llaves sin gastar saldo
 curl http://localhost:8000/api/health          # con Docker encendido: qué está configurado
 docker compose logs -f backend | grep llm      # proveedor, modelo, código HTTP y latencia de cada llamada

@@ -20,7 +20,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 app = FastAPI()
-CFG = {"err429": 0.03, "err503": 0.01, "median_openai": 1.4, "median_gemini": 2.0}
+CFG = {"err429": 0.03, "err503": 0.01, "median_openai": 1.4, "median_gemini": 2.0, "errores_reales": False}
 
 
 def fake_eval(text: str) -> dict:
@@ -50,6 +50,9 @@ async def maybe_fail(median: float):
 @app.post("/v1/chat/completions")
 async def openai(req: Request):
     body = await req.json()
+    if CFG["errores_reales"]:
+        return JSONResponse({"error": {"message": "You have no credits remaining.", "type": "insufficient_quota",
+                                       "code": "credit_balance_exhausted"}}, status_code=429)
     if fail := await maybe_fail(CFG["median_openai"]):
         return fail
     text = body["messages"][-1]["content"]
@@ -62,6 +65,15 @@ async def openai(req: Request):
 @app.post("/v1beta/models/{model}:generateContent")
 async def gemini(model: str, req: Request):
     body = await req.json()
+    if CFG["errores_reales"]:
+        if model == "gemini-2.5-flash":
+            return JSONResponse({"error": {"code": 404, "message": "This model models/gemini-2.5-flash is no longer available to new users."}}, status_code=404)
+        if body.get("generationConfig", {}).get("maxOutputTokens", 0) < 4000:
+            # Gemini 3.x: el "pensamiento" se acaba el margen y no queda texto
+            await asyncio.sleep(1.5)
+            return {"candidates": [{"content": {"role": "model"}, "finishReason": "MAX_TOKENS"}],
+                    "usageMetadata": {"thoughtsTokenCount": body["generationConfig"]["maxOutputTokens"] - 3,
+                                      "candidatesTokenCount": 0}}
     if fail := await maybe_fail(CFG["median_gemini"]):
         return fail
     text = body["contents"][-1]["parts"][0]["text"]
@@ -74,5 +86,8 @@ async def gemini(model: str, req: Request):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=9999)
+    ap.add_argument("--errores-reales", action="store_true",
+                    help="simula OpenAI sin saldo, gemini-2.5 retirado y respuestas vacías con poco margen de tokens")
     a = ap.parse_args()
+    CFG["errores_reales"] = a.errores_reales
     uvicorn.run(app, host="127.0.0.1", port=a.port, log_level="warning")
